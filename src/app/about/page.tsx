@@ -1,9 +1,7 @@
-import BodyHead from "@/components/BodyHead";
 import Link from "next/link";
 
 const Editor = () => (
   <div className="flex flex-col h-full">
-    <BodyHead />
 
     <div className="flex justify-center p-8 mt-6">
         <div className="flex-grow max-w-5xl">
