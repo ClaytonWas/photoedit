@@ -4,7 +4,6 @@ import Link from "next/link";
 import { CanvasInteraction } from "./CanvasInteraction";
 import ImageEditor from "../scripts/core/imageEditor";
 import Dropdown from "./TaskbarDropdown";
-import "../styles.css";
 
 function PhotoEditor() {
   const canvasRef = useRef(null);

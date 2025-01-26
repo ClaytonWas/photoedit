@@ -1,5 +1,4 @@
-import './styles.css';
-import App from './components/App'
+import App from '@/components/App'
 
 const Editor = () => (
   <div className="flex h-full">
