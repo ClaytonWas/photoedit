@@ -119,6 +119,8 @@ function PhotoEditor() {
             ]}
           />
         </nav>
+
+        <Link href="/about" className="bg-[var(--background-indent)] rounded-xs shadow-lg text-[var(--text)] text-xs md:text-base hover:bg-[var(--background-secondary-hover)] px-1">About</Link>
       </div>
 
       {/* Hidden file input */}
