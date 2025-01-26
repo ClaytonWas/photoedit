@@ -5,26 +5,15 @@ const Editor = () => (
 
     <div className="flex justify-center p-8 mt-6">
         <div className="flex-grow max-w-5xl">
-            <p className="text-[var(--foreground)]">Built for Desktop</p>
-            <Link href='/photoedits/editor.html' className='text-[var(--foreground)] hover:underline hover:text-[var(--hyperlink)]'>
-              <p className='text-md text-[var(--hyperlink)]'>Use Photoedits</p>
+            <p className="">In Development. Built for Desktop.</p>
+            <Link href='/editor.html' className='text-blue hover:underline hover:text-sky-600'>
+              <p className='text-md text-[var(--hyperlink)]'>Use Photoedits 1</p>
             </Link>
-            <p className="text-[var(--foreground-text-secondary)] text-sm">A serverless version of photoedits deployed with static routing.</p>
-            <Link href='/photoedits' className='text-[var(--foreground)] hover:underline hover:text-[var(--hyperlink)]'>
-              <p className='text-md text-[var(--hyperlink)]'>Use Photoedits 2</p>
-            </Link>
-            <p className="text-[var(--foreground-text-secondary)] text-sm">In development.</p>
+            <p className="text-sm">A serverless version of photoedits deployed with static routing.</p>
             <ul className="flex flex-col mt-10 gap-2 text-sm">
               <li>
-                <Link href='https://webappphotoedits.onrender.com/' className='text-[var(--header-text-secondary)] underline decoration-dotted hover:decoration-solid hover:text-[var(--foreground-text-secondary-hover)]'>
-                  <p>Web Deployment</p>
-                </Link>
-                <p className="text-xs text-[var(--header-text-secondary)]">with Render and Express</p>
-              </li>
-
-              <li>
-                <Link href='https://github.com/ClaytonWas/Photoedits' className='text-[var(--header-text-secondary)] underline decoration-dotted hover:decoration-solid hover:text-[var(--foreground-text-secondary-hover)]'>
-                  <p>GitHub Repository</p>
+                <Link href='https://github.com/ClaytonWas/photoedit' className='text-blue underline decoration-dotted hover:decoration-solid hover:text-sky-600'>
+                  <p>Repository</p>
                 </Link>
               </li>
             </ul>
