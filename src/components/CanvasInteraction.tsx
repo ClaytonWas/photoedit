@@ -1,4 +1,3 @@
-// CanvasInteraction.js
 import { useState, useRef, useEffect } from 'react';
 
 export function CanvasInteraction() {
@@ -6,7 +5,7 @@ export function CanvasInteraction() {
   const [startPoint, setStartPoint] = useState({ x: 0, y: 0 });
   const [currentTranslate, setCurrentTranslate] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
-  const canvasDivRef = useRef(null);
+  const canvasDivRef = useRef<HTMLDivElement>(null); // Specify the type here
 
   const updateTransform = () => {
     if (canvasDivRef.current) {
@@ -15,7 +14,7 @@ export function CanvasInteraction() {
     }
   };
 
-  const handleMouseDown = (event) => {
+  const handleMouseDown = (event: React.MouseEvent) => {
     setIsPanning(true);
     setStartPoint({
       x: event.clientX - currentTranslate.x,
@@ -23,7 +22,7 @@ export function CanvasInteraction() {
     });
   };
 
-  const handleMouseMove = (event) => {
+  const handleMouseMove = (event: React.MouseEvent) => {
     if (!isPanning) return;
     setCurrentTranslate({
       x: event.clientX - startPoint.x,
@@ -36,9 +35,10 @@ export function CanvasInteraction() {
     setIsPanning(false);
   };
 
-  const handleWheel = (event) => {
+  const handleWheel = (event: WheelEvent) => {
     event.preventDefault();
-    const rect = canvasDivRef.current.getBoundingClientRect();
+    const rect = canvasDivRef.current?.getBoundingClientRect();
+    if (!rect) return;
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
     const beforeTransformX = (mouseX - currentTranslate.x) / scale;
@@ -71,6 +71,6 @@ export function CanvasInteraction() {
     scale,
     handleMouseDown,
     handleMouseMove,
-    handleMouseUpOrLeave
+    handleMouseUpOrLeave,
   };
 }
