@@ -1,0 +1,399 @@
+@font-face {
+    font-family: 'Inter';
+    src: url('/photoedits/fonts/Inter-Regular.woff2') format('woff2'),
+        url('/photoedits/fonts/Inter-Regular.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('/photoedits/public/fonts/Inter-Italic.woff2') format('woff2'),
+        url('/photoedits/public/fonts/Inter-Italic.woff') format('woff');
+    font-weight: normal;
+    font-style: italic;
+    font-display: swap;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    
+    box-sizing: border-box;
+}
+
+/* Taskbar */
+.taskbar {
+    display: flex;
+
+    margin: 0;
+    padding: 0;
+
+    color: white;
+    background-color: #2d2d2d;
+}
+
+#icon {
+    position: relative;
+
+    padding: 10px;
+}
+
+.taskbarItem {
+    z-index: 5;
+    position: relative;
+    padding: 10px 20px 10px 10px;
+    margin-left: 5px;
+    cursor: pointer;
+    color: white;
+}
+
+.taskbarItem:hover {
+    background-color: #3d3d3d;
+}
+
+.taskbarItem span {
+    padding-right: 100px;
+}
+
+.taskbarItemDropdown {
+    display: none;
+    position: absolute;
+    list-style-type: none;
+    top: 38px;
+    left: 0;
+    width: 100%;
+    background-color: #2d2d2d;
+}
+
+.taskbarItem:hover > .taskbarItemDropdown {
+    display: block;
+}
+
+.taskbarItemDropdown li {
+    position: relative;
+    padding: 10px;
+    cursor: pointer;
+    color: white;
+}
+
+.taskbarItemDropdown li:hover {
+    background-color: #3d3d3d;
+}
+
+.taskbarItemDropdownIsSubmenu {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    width: 100%;
+    background-color: #2d2d2d;
+    list-style-type: none;
+}
+
+.taskbarItemDropdownContainsSubmenu:hover > .taskbarItemDropdownIsSubmenu {
+    display: block;
+}
+
+.taskbarItemDropdownIsSubmenu li {
+    color: white;
+    cursor: pointer;
+}
+
+.taskbarItemDropdownIsSubmenu li:hover {
+    background-color: #3d3d3d;
+}
+
+.taskbarModuleTitle {
+    display: flex;
+    
+    justify-content: space-between;
+
+    background-color: #2d2d2d;
+}
+
+.taskbarModuleTitle p {
+    padding-top: 1%;
+    padding-bottom: 1%;
+    padding-left: 3%;
+
+    font-weight: bold;
+}
+
+.taskbarModuleTitle button {
+    width: 20%;
+    right: 0%;
+}
+
+.taskbarModuleOneLine {
+    padding-top: 1%;
+    justify-content: space-between;
+    display: flex;
+    padding-inline: 5%;
+}
+
+.taskbarModuleOneLine input {
+    max-width: 30%;
+
+    color: white;
+    background-color:#2d2d2d;
+}
+
+.taskbarModuleSubmit {
+    margin: 2%;
+    float: right;
+}
+
+.resizeModule {
+    z-index: 6;
+    display: none;
+
+    position: absolute;
+
+    top: 20%;
+    left: 0%;
+
+    width: 20vw;
+
+    color: white;
+    background-color: #3d3d3d;
+}
+
+.cropModule {
+    z-index: 6;
+    display: none;
+
+    position: absolute;
+
+    top: 35%;
+    left: 0%;
+
+    width: 20vw;
+
+    color: white;
+    background-color: #3d3d3d;
+}
+
+.hsvModule {
+    z-index: 6;
+    display: none;
+
+    position: absolute;
+
+    top: 20%;
+    left: 20%;
+
+    width: 20vw;
+
+    color: white;
+    background-color: #3d3d3d;
+}
+/* Taskbar End */
+
+.wrapImageAndLayerModules {
+    display: flex;
+}
+
+/* Image Module */
+.imageModule {
+    display: flex;
+    flex-direction: column;
+    
+    height: calc(100vh - 40px);
+    width: 80vw;
+}
+
+/* Image Viewing Module */
+.imageViewingModule {
+    z-index: 1;
+    cursor: grab;
+
+    overflow: hidden;
+
+    height: 100%;    
+    width: 100%;
+
+    border: 2px solid #383838;
+    background-color: #4d4d4d;
+}
+
+.imageViewingModule:active {
+    cursor: grabbing;
+}
+
+/* This is calculated when the image is loaded in. */
+#imageCanvasDiv {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+
+    transform-origin: 0 0;
+}
+
+#imageCanvas {
+    max-width: 100%;
+    max-height: 100%;
+
+    border: 2px solid #656565;
+}
+
+/* Image Viewing Module End */
+
+
+/* Image Context Modules */
+.contextModules {
+    display: flex;
+
+    width: 80vw;
+    height: 15vh;
+
+
+    border: 2px solid #464646;
+    background-color: #5d5d5d;
+}
+
+.contextModules > div {
+    border: 2px solid #595959;
+}
+
+
+/* Image Data Module */
+.imageDataModule {
+    color: white;
+
+    width: 20vw;
+}
+
+.imageDataModuleSection {
+    display: flex;
+    justify-content: space-between;
+}
+
+.sectionLabel {
+    float: left;
+    font-weight: bold;
+}
+
+.sectionValue {
+    float: right;
+}
+/* Image Data Module End */
+
+
+/* Image Context Modules End */
+
+
+/* Image Module End */
+
+/* Layers Module */
+.layersModule {
+    display: flex;
+    flex-direction: column;
+
+    height: calc(100vh - 40px);
+    width: 20vw;
+
+    border: 2px solid #464646;
+    background-color: #545454;
+}
+
+.layersModule > div{
+    border: 2px solid #595959;
+}
+
+#currentLayerSelector {
+    min-height: 70vh;
+}
+
+#layersSelector {
+    position: relative;
+    
+    overflow-y: auto;
+
+    flex: 1;
+    
+    background-color: #545454;
+}
+
+#layersList {
+    max-height: 100%;
+
+    color: white;
+}
+
+#layersControls {
+    display: flex;
+
+    bottom: 0;
+
+    background-color: #545454;
+}
+
+#layersControls button {
+    margin: 1%;
+}
+
+.layerDiv {
+    display: flex;
+    cursor: pointer;
+}
+
+.layerDiv:hover {
+    background-color: #4d4d4d;
+}
+
+.selectedLayerDiv {
+    background-color: #6d6d6d !important;
+}
+
+.layerDivName {
+    width: 80vw;
+}
+
+.layerDivToggleVisibility {
+    width: 20vw;
+}
+/* Layers Module End */
+
+/* Layer Properties Module */
+.layerPropertiesOpacity {
+    color: white;
+}
+
+.layerPropertiesOpacity p {
+    font-weight: bold;
+}
+
+.layerPropertiesOpacity input {
+    color: white;
+    background-color:#2d2d2d;
+
+    width: 25%;
+}
+
+.effectParameter {
+    color: white;
+}
+
+.effectParameter p {
+    font-weight: bold;
+}
+
+.effectParameter input {
+    color: white;
+    background-color:#2d2d2d;
+
+    width: 25%;
+}
+/* Layer Properties Module End */

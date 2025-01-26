@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/photoedits/images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/photoedits/styles/styles.css">
+    <script type="module" src="/photoedits/scripts/taskbarHandler.js"></script>
+    <script type="module" src="/photoedits/scripts/canvasHandler.js"></script>
+    <script type="module" src="/photoedits/scripts/layersHandler.js"></script>
+
+    <title>PhotoEdits</title>
+</head>
+<body>
+    <!-- Taskbar -->
+    <div class="taskbar">
+        <img id="icon" src="/photoedits/images/icon.png">
+        <div class="taskbarItem">
+            <span>File</span>
+            <ul class="taskbarItemDropdown">
+                <li id="openFile">Open</li>
+                <input id="uploadFile" type="file" accept="image/*" style="display: none;">
+                <li id="quickExport">Quick Export</li>
+                <li id="resize">Resize</li>
+                <li id="cursorCrop">Cursor Crop</li>
+                <li id="crop">Crop</li>
+            </ul>
+        </div>
+
+        <div class="taskbarItem">
+            <span>Edit</span>
+            <ul class="taskbarItemDropdown">
+                <li>Undo (not working)</li>
+                <li>Redo (not working)</li>
+            </ul>
+        </div>
+
+        <div class="taskbarItem">
+            <span>Image</span>
+            <ul class="taskbarItemDropdown">
+                <li class="taskbarItemDropdownContainsSubmenu" id="rotateImage">Rotate ▶
+                    <ul class="taskbarItemDropdownIsSubmenu">
+                        <li id="rotateCW90">Rotate 90°</li>
+                        <li id="rotateCCW90">Rotate -90°</li>
+                    </ul>
+                </li>
+                <li id="hsv">HSV Adjustment</li>
+            </ul>
+        </div>
+
+        <div class="taskbarItem">
+            <span>Filter</span>
+            <ul class="taskbarItemDropdown">
+                <li id="greyscale">Greyscale</li>
+                <li id="sepia">Sepia</li>
+                <li id="filmEffects">Film Effects</li>
+                <li id="paintedStylization">Painted</li>
+            </ul>
+        </div>
+
+        <div class="taskbarItem">
+            <span>Visualizations</span>
+            <ul class="taskbarItemDropdown">
+                <li class="taskbarItemDropdownContainsSubmenu">Spatial Geometry ▶
+                    <ul class="taskbarItemDropdownIsSubmenu">
+                        <li id="pointsInSpace">Points In Space</li>
+                        <li id="vectorsInSpace">Vectors In Space</li>
+                    </ul>
+                </li>
+                <li class="taskbarItemDropdownContainsSubmenu">Edge Detection ▶
+                    <ul class="taskbarItemDropdownIsSubmenu">
+                        <li class="taskbarItemDropdownContainsSubmenu">Sobel ▶
+                            <ul class="taskbarItemDropdownIsSubmenu">
+                                <li id="sobelEdges">Regular</li>
+                                <li id="sobelEdgesColouredDirections">Coloured Directions</li>
+                            </ul>
+                        </li>
+                        <li class="taskbarItemDropdownContainsSubmenu">Prewire ▶
+                            <ul class="taskbarItemDropdownIsSubmenu">
+                                <li id="prewireEdges">Regular</li>
+                                <li id="prewireEdgesColouredDirections">Coloured Directions</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="taskbarItem" id="resetImage">
+            <span>Reset Image</span>
+        </div>
+    </div>
+    <!-- /Taskbar -->
+
+    <!-- Taskbar Modules -->
+    <div class="resizeModule" id="resizeModule">
+        <div class="taskbarModuleTitle">
+                <p>Resize</p>
+                <button class="taskbarModuleClose" id="cancelResize">x</button>
+        </div>
+        <div class="taskbarModuleContent">
+                <div class="taskbarModuleOneLine">
+                    <p>Width</p>
+                    <input type="number" type="text" placeholder="pixels" id="resizeWidth">
+                </div>
+                <div class="taskbarModuleOneLine">
+                    <p>Height</p>
+                    <input type="number" type="text" placeholder="pixels" id="resizeHeight">
+                </div>
+                <div class="taskbarModuleOneLine">
+                    <p>Constrained</p>
+                    <input type="checkbox" id="constrainedCheckbox">
+                </div>
+                <div class="taskbarModuleOneLine" id="resizeScaleDIV" style="display: none;">
+                    <p>Scale</p>
+                    <input type="number" min="0" max="5" value="1" step=".1" id="resizeScale">
+                </div>
+                <div class="taskbarModuleOneLine">
+                  <p>Interpolation</p>
+                  <select id="interpolationType">
+                    <option value="Default">Default</option>
+                    <option value="Nearest Neighbour">Nearest Neighbour</option>
+                    <option value="Bilinear">Bilinear</option>
+                  </select>
+                </div>
+        </div>
+        <button class="taskbarModuleSubmit" id="resizeSubmit">Resize</button>
+    </div>
+
+    <div class="cropModule" id="cropModule">
+        <div class="taskbarModuleTitle">
+                <p>Crop</p>
+                <button class="taskbarModuleClose" id="cancelCrop">x</button>
+        </div>
+        <div class="taskbarModuleContent">
+            <div class="taskbarModuleOneLine">
+                <p>Start Width</p>
+                <input type="number" type="text" placeholder="pixels" id="cropStartWidth">
+            </div>
+            <div class="taskbarModuleOneLine">
+                <p>Start Height</p>
+                <input type="number" type="text" placeholder="pixels" id="cropStartHeight">
+            </div>
+        </div>
+        <div class="taskbarModuleContent">
+                <div class="taskbarModuleOneLine">
+                    <p>End Width</p>
+                    <input type="number" type="text" placeholder="pixels" id="cropEndWidth">
+                </div>
+                <div class="taskbarModuleOneLine">
+                    <p>End Height</p>
+                    <input type="number" type="text" placeholder="pixels" id="cropEndHeight">
+                </div>
+        </div>
+        <button class="taskbarModuleSubmit" id="cropSubmit">Crop</button>
+    </div>
+
+    <div class="hsvModule" id="hsvModule">
+        <div class="taskbarModuleTitle">
+            <p>Hue-Saturation Value Adjustment</p>
+            <button class="taskbarModuleClose" id="hsvCancel">x</button>
+        </div>
+        <div class="taskbarModuleContent">
+            <div class="taskbarModuleOneLine">
+                <p>Hue</p>
+                <input type="range" min="-180" max="180" step="1" value="0" id="hueSlider">
+            </div>
+            <div class="taskbarModuleOneLine">
+                <p>Saturation</p>
+                <input type="range" min="0" max="200" step="1" value="100" id="saturationSlider">
+            </div>
+            <div class="taskbarModuleOneLine">
+                <p>Brightness</p>
+                <input type="range" min="0" max="200" step="1" value="100" id="brightnessSlider">
+            </div>
+        </div>
+        <button class="taskbarModuleSubmit" id="hsvReset">Reset</button>
+    </div>
+
+    <!-- Wrapper For Image And Layer Modules-->
+    <div class="wrapImageAndLayerModules">
+        <!-- Image Module -->
+        <div class="imageModule">
+            <!-- Image Viewing Module -->
+            <div class="imageViewingModule">
+                <div id="imageCanvasDiv">
+                    <canvas id="imageCanvas"></canvas>
+                </div>
+            </div>
+            <!-- /Image Viewing Module -->
+            <!-- Modules That Provide Image Context And Data -->
+            <div class="contextModules">
+                <!-- Image Data Module -->
+                <div class="imageDataModule">
+                    <div class="imageDataModuleSection">
+                        <p>Original Image Data</p>
+                    </div>
+                    <div class="imageDataModuleSection">
+                        <p class="sectionLabel" id="titleName"></p>
+                        <p class="sectionValue" id="imageName"></p>
+                    </div>
+                    <div class="imageDataModuleSection">
+                        <p class="sectionLabel" id="titleDimensions"></p>
+                        <p class="sectionValue" id="imageDimensions"></p>
+                    </div>
+                    <div class="imageDataModuleSection">
+                        <p class="sectionLabel" id="titleExtension"></p>
+                        <p class="sectionValue" id="imageExtension"></p>
+                    </div>
+                </div>
+                <!-- /Image Data Module -->
+                <!-- Modified Image Data Module -->
+                <div class="imageDataModule">
+                    <div class="imageDataModuleSection">
+                        <p>Current Image Data</p>
+                    </div>
+                    <div class="imageDataModuleSection">
+                        <p class="sectionLabel" id="titleNameModified"></p>
+                        <p class="sectionValue" id="imageNameModified"></p>
+                    </div>
+                    <div class="imageDataModuleSection">
+                        <p class="sectionLabel" id="titleDimensionsModified"></p>
+                        <p class="sectionValue" id="imageDimensionsModified"></p>
+                    </div>
+                    <div class="imageDataModuleSection">
+                        <p class="sectionLabel" id="titleExtensionModified"></p>
+                        <p class="sectionValue" id="imageExtensionModified"></p>
+                    </div>
+                </div>
+                <!-- /Modified Image Data Module -->
+            </div>
+            <!-- /Modules That Provide Image Context And Data -->
+        </div>
+
+        <!-- Layers Module -->
+        <div class="layersModule">
+            <div id="currentLayerSelector">
+                <!-- This area should be dynamically populated with a filters parameters for quick edits. -->
+            </div>
+            <div id="layersSelector">
+                <ul id="layersList">
+                    <!-- Layers added here. -->
+                </ul>
+            </div>
+            <div id="layersControls">
+                <button id="addLayer">Add Layer</button>
+                <button id="deleteLayer">Delete Layer</button>
+            </div>
+        </div>
+        <!-- /Layers Module -->
+    
+    </div>
+    <!-- /Wrapper For Image And Layer Modules-->
+</body>
+</html>
