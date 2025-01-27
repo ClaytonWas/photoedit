@@ -18,7 +18,7 @@ function TaskbarDropdown({ title, items }: TaskbarDropdownProps) {
     return (
         <div className="relative w-12 text-sm text-[var(--text)] md:w-24 md:text-lg cursor-pointer">
             <button
-                className="w-full text-left border border-transparent rounded-t bg-[var(--taskbar-indent)] hover:border-[var(--accent)] hover:bg-[var(--taskbar-hover)] md:pl-2"
+                className="w-full text-left border border-b-transparent border-[var(--accent)] rounded-t bg-[var(--taskbar-indent)] hover:border-[var(--accent)] hover:bg-[var(--taskbar-hover)] md:pl-2"
                 onClick={() => setIsOpen(!isOpen)}
             >
                 {title}
@@ -28,7 +28,7 @@ function TaskbarDropdown({ title, items }: TaskbarDropdownProps) {
                     {items.map((item, index) => (
                         <li
                             key={index}
-                            className="pb-2 md:pb-0 px-1 pr-4 first:border-t border-b rounded-sm border-[var(--accent)] hover:bg-[var(--taskbar-dropdown-indent-hover)] text-nowrap min-w-24"
+                            className="pb-2 md:pb-0 px-1 pr-4 border border-transparent rounded-sm border-b-[var(--accent)] hover:bg-[var(--taskbar-dropdown-indent-hover)] text-nowrap min-w-24 first:hover:border-t-[var(--accent)]"
                             onClick={() => {
                                 if (item.onClick) {
                                     item.onClick(); // Explicitly call the function

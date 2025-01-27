@@ -3,13 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #5f4009;
-  --taskbar-indent: #f8cc53;
+  --background:  #aa833f;
+  --taskbar-indent: #fbce6e;
   --taskbar-hover: #e3a344;
   --taskbar-dropdown-indent: #fbce6e;
   --taskbar-dropdown-indent-hover: #fab957;
-  --canvas-background: #f8cc53;
-  --accent: #432a00;
+  --canvas-background: #fbce6e;
+  --accent: #554e43;
   --text: #000000;
 }
 
@@ -17,9 +17,9 @@
   :root {
     --background: #18181B;
     --taskbar-indent: #22262f;
-    --taskbar-hover: #41444b;
-    --taskbar-dropdown-indent: #1c1f24;
-    --taskbar-dropdown-indent-hover: #262632;
+    --taskbar-hover: #575961;
+    --taskbar-dropdown-indent: #22262f;
+    --taskbar-dropdown-indent-hover: #41444b;
     --canvas-background: #22262f;
     --accent: #333344;
     --text: #fffdf5;
