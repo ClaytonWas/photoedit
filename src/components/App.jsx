@@ -95,8 +95,8 @@ function PhotoEditor() {
   return (
     <main className="flex flex-col h-screen">
       {/* Taskbar */}
-      <div className="flex justify-between bg-[var(--background)] w-full px-2 pt-1 text-lg">
-        <nav className="flex gap-2">
+      <div className="flex justify-between bg-[var(--background)] w-full px-2 pt-1 text-lg border-b border-[var(--accent)]">
+        <nav className="flex">
           <Dropdown
             title="File"
             items={[
@@ -120,7 +120,7 @@ function PhotoEditor() {
           />
         </nav>
 
-        <Link href="/about" className="text-[var(--text)] text-xs rounded-t md:text-base bg-[var(--taskbar-indent)] hover:bg-[var(--taskbar-hover)] border border-transparent hover:border-[var(--accent)] px-1">About</Link>
+        <Link href="/about" className="border border-[var(--accent)] border-b-transparent text-[var(--text)] text-xs rounded-t md:text-base bg-[var(--taskbar-indent)] hover:bg-[var(--taskbar-hover)] px-2">About</Link>
       </div>
 
       {/* Hidden file input */}

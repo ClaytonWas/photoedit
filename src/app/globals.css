@@ -3,12 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --background:  #aa833f;
-  --taskbar-indent: #fbce6e;
-  --taskbar-hover: #e3a344;
-  --taskbar-dropdown-indent: #fbce6e;
-  --taskbar-dropdown-indent-hover: #fab957;
-  --canvas-background: #fbce6e;
+  --background:  #b2becc;
+  --taskbar-indent: #e8eef5;
+  --taskbar-hover: #CBD5E1;
+  --taskbar-dropdown-indent: #94A3B8;
+  --taskbar-dropdown-indent-hover: #CBD5E1;
+  --canvas-background: #E2E8F0;
   --accent: #554e43;
   --text: #000000;
 }
