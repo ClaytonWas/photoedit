@@ -1,23 +1,21 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { CanvasInteraction } from "./CanvasInteraction";
-import ImageEditor from "../scripts/core/imageEditor";
-import Dropdown from "./TaskbarDropdown";
+import ImageEditor from "@/scripts/core/imageEditor";
+import { CanvasInteraction } from "@/components/CanvasInteraction";
+import Navbar from "@/components/Navbar";
 
 function PhotoEditor() {
   const canvasRef = useRef(null);
-  const fileInputRef = useRef(null); // Reference for file input
+  const fileInputRef = useRef(null);
   const [imageEditor, setImageEditor] = useState(null);
   const { canvasDivRef, handleMouseDown, handleMouseMove, handleMouseUpOrLeave } = CanvasInteraction();
 
   const uploadImage = async () => {
     fileInputRef.current?.click();
 
-    const file = fileInputRef.current?.files[0]; // Access the file input
+    const file = fileInputRef.current?.files[0];
     if (!file) return;
 
-    // Reset editor (if needed)
     if (imageEditor) {
       setImageEditor(null);
     }
@@ -25,23 +23,20 @@ function PhotoEditor() {
     const reader = new FileReader();
     const image = new Image();
 
-    // Extract metadata from the file
     const name = file.name.substring(0, file.name.lastIndexOf("."));
     const type = file.type;
     const extension = type.slice(6);
     const canvas = canvasRef.current;
 
-    // Load image data into the Image instance
     reader.onload = () => {
       image.src = reader.result;
     };
 
     image.onload = () => {
       const editor = new ImageEditor(image, name, type, extension, canvas);
-      setImageEditor(editor); // Save the instance to state
-      window.imageEditor = editor; // Optional: Expose globally for debugging
+      setImageEditor(editor);
+      window.imageEditor = editor;
 
-      // Dispatch a custom event for ImageEditor readiness
       const imageEditorInstantiationEvent = new CustomEvent("imageEditorReady", {
         detail: { instance: editor },
       });
@@ -59,19 +54,17 @@ function PhotoEditor() {
     }
   
     const exportAnchor = document.createElement("a");
-    exportAnchor.href = imageEditor.canvas.toDataURL(imageEditor.type); // Access the canvas and type from imageEditor
+    exportAnchor.href = imageEditor.canvas.toDataURL(imageEditor.type);
     exportAnchor.download = `${imageEditor.name}_PhotoEditsExport.${imageEditor.extension}`;
     exportAnchor.click();
   };
-  
 
   const setHSV = () => {
     if (!imageEditor || !imageEditor.context) {
       console.error("No image to modify HSV!");
       return;
     }
-
-    imageEditor.changeCanvasHSV(25, 100, 100)
+    imageEditor.changeCanvasHSV(25, 100, 100);
   };
   
   const setSepia = (intensity) => {
@@ -79,7 +72,6 @@ function PhotoEditor() {
       console.error("No image to apply the sepia filter!");
       return;
     }
-  
     imageEditor.changeCanvasSepia(intensity);
   };
 
@@ -88,7 +80,6 @@ function PhotoEditor() {
       console.error("No image to rotate!");
       return;
     }
-  
     imageEditor.rotate(degrees);
   };
 
@@ -97,52 +88,28 @@ function PhotoEditor() {
       console.error("No image to rotate!");
       return;
     }
-  
     imageEditor.changeCanvasGrayscale(intensity);
   };
 
   return (
     <main className="flex flex-col h-screen">
-      {/* Taskbar */}
-      <div className="flex justify-between bg-[var(--background)] w-full px-2 pt-1 text-lg border-b border-[var(--accent)]">
-        <nav className="flex">
-          <Dropdown
-            title="File"
-            items={[
-              { label: "Open", onClick: uploadImage },
-              { label: "Export", onClick: quickExport },
-            ]}
-          />
-          <Dropdown
-            title="Image"
-            items={[
-              { label: "Rotate 90", onClick: () => setRotate(90) },
-              { label: "Rotate 180", onClick: () => setRotate(180) },
-            ]}
-          />
-          <Dropdown
-            title="Filters"
-            items={[
-              { label: "HSV", onClick: setHSV },
-              { label: "Sepia", onClick: () => setSepia(100) },
-              { label: "Grayscale", onClick: () => setGrayscale(100) },
-            ]}
-          />
-        </nav>
+      <Navbar
+        onUpload={uploadImage}
+        onExport={quickExport}
+        onRotate={setRotate}
+        onHSV={setHSV}
+        onSepia={setSepia}
+        onGrayscale={setGrayscale}
+      />
 
-        <Link href="/about" className="border border-[var(--accent)] border-b-transparent text-[var(--text)] text-xs rounded-t md:text-base bg-[var(--taskbar-indent)] hover:bg-[var(--taskbar-hover)] px-2">About</Link>
-      </div>
-
-      {/* Hidden file input */}
       <input
         type="file"
         ref={fileInputRef}
-        style={{ display: "none" }} // Hide the input
+        style={{ display: "none" }}
         accept="image/*"
-        onChange={uploadImage} // Trigger image upload
+        onChange={uploadImage}
       />
 
-      {/* Canvas Area */}
       <div
         className="flex-1 flex justify-center items-center overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
