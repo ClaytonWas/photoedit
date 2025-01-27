@@ -74,22 +74,31 @@ function PhotoEditor() {
     imageEditor.changeCanvasHSV(25, 100, 100)
   };
   
-  const setSepia = () => {
+  const setSepia = (intensity) => {
     if (!imageEditor || !imageEditor.context || !imageEditor.canvas) {
       console.error("No image to apply the sepia filter!");
       return;
     }
   
-    imageEditor.changeCanvasSepia(100);
+    imageEditor.changeCanvasSepia(intensity);
   };
 
-  const rotate = (degrees) => {
+  const setRotate = (degrees) => {
     if (!imageEditor || !imageEditor.context) {
       console.error("No image to rotate!");
       return;
     }
   
     imageEditor.rotate(degrees);
+  };
+
+  const setGrayscale = (intensity) => {
+    if (!imageEditor || !imageEditor.context) {
+      console.error("No image to rotate!");
+      return;
+    }
+  
+    imageEditor.changeCanvasGrayscale(intensity);
   };
 
   return (
@@ -107,15 +116,16 @@ function PhotoEditor() {
           <Dropdown
             title="Image"
             items={[
-              { label: "Rotate 90", onClick: () => rotate(90) },
-              { label: "Rotate 180", onClick: () => rotate(180) },
+              { label: "Rotate 90", onClick: () => setRotate(90) },
+              { label: "Rotate 180", onClick: () => setRotate(180) },
             ]}
           />
           <Dropdown
             title="Filters"
             items={[
               { label: "HSV", onClick: setHSV },
-              { label: "Sepia", onClick: setSepia },
+              { label: "Sepia", onClick: () => setSepia(100) },
+              { label: "Grayscale", onClick: () => setGrayscale(100) },
             ]}
           />
         </nav>

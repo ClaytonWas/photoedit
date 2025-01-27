@@ -201,6 +201,25 @@ export default class ImageEditor {
         this.image.src = this.canvas.toDataURL(this.TYPE);
     }
 
+    changeCanvasGrayscale(intensity) {
+        // Reset canvas and reapply base image
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.context.drawImage(this.image, 0, 0);
+    
+        // Apply filter
+        this.context.filter = `
+            grayscale(${intensity}%)
+        `;
+        this.context.drawImage(this.image, 0, 0);
+    
+        // Reset the filter
+        this.context.filter = "none";
+    
+        // Update the modified image state
+        this.image = new Image();
+        this.image.src = this.canvas.toDataURL(this.TYPE);
+    }
+
     crop(originHeight, originWidth, endHeight, endWidth) {
         let newHeight = Math.abs(endHeight - originHeight);
         let newWidth = Math.abs(endWidth - originWidth);
