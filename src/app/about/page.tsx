@@ -38,7 +38,7 @@ const Editor = () => (
           <p className="p-4">
             <ul className="list-decimal ml-14 space-y-2">
               <li>WASM Implementation and Compiler Commands</li>
-              <li>File Extension Support (I use .cr3's so this is a big deal for me.)</li>
+              <li>File Extension Support (.cr3, .raw, etc.)</li>
               <li>LUT Import/Export</li>
               <li>Canvas Front End with .css renders to make previews quick. This will be a seperate editor processor which will store commands sent to canvas and only draw them in the backend when it exports the image.</li>
               <li>Command Line Interface</li>

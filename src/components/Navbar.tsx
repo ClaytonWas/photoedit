@@ -2,7 +2,19 @@
 import Link from "next/link";
 import Dropdown from "@/components/TaskbarDropdown";
 
-const Navbar = ({ onUpload, onExport, onRotate, onHSV, onSepia, onGrayscale }) => {
+import React from "react";
+
+// Define types for the props that the Navbar component will receive
+interface NavbarProps {
+  onUpload: () => void;
+  onExport: () => void;
+  onRotate: (degrees: number) => void;
+  onHSV: () => void;
+  onSepia: (intensity: number) => void;
+  onGrayscale: (intensity: number) => void;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ onUpload, onExport, onRotate, onHSV, onSepia, onGrayscale }) => {
   return (
     <div className="flex justify-between bg-[var(--background)] w-full px-2 pt-1 text-lg border-b border-[var(--accent)]">
       <nav className="flex">
@@ -16,8 +28,8 @@ const Navbar = ({ onUpload, onExport, onRotate, onHSV, onSepia, onGrayscale }) =
         <Dropdown
           title="Image"
           items={[
-            { label: "Rotate 90", onClick: () => onRotate(90) },
-            { label: "Rotate 180", onClick: () => onRotate(180) },
+            { label: "Rotate 90°", onClick: () => onRotate(90) },
+            { label: "Rotate 180°", onClick: () => onRotate(180) },
           ]}
         />
         <Dropdown
