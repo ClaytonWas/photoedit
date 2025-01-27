@@ -16,19 +16,19 @@ function TaskbarDropdown({ title, items }: TaskbarDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div className="relative w-12 text-sm text-[var(--text)] md:w-24 md:text-lg">
+        <div className="relative w-12 text-sm text-[var(--text)] md:w-24 md:text-lg cursor-pointer">
             <button
-                className="w-full text-left border border-transparent rounded-sm bg-[var(--background-indent)] hover:border-[var(--accent)] hover:bg-[var(--background-secondary-hover)] hover:font-semibold md:hover:font-medium md:pl-2"
+                className="w-full text-left border border-transparent rounded-t bg-[var(--taskbar-indent)] hover:border-[var(--accent)] hover:bg-[var(--taskbar-hover)] md:pl-2"
                 onClick={() => setIsOpen(!isOpen)}
             >
                 {title}
             </button>
             {isOpen && (
-                <ul className="absolute bg-[var(--background-indent)] z-50 border border-[var(--counter-intensity)] rounded-xs shadow-lg text-xs md:text-base">
+                <ul className="absolute bg-[var(--taskbar-dropdown-indent)] z-50 shadow-lg text-xs md:text-base border-x border-[var(--accent)]">
                     {items.map((item, index) => (
                         <li
                             key={index}
-                            className="pb-2 md:pb-0 px-1 pr-4 border-b rounded-sm border-[var(--background)] hover:border hover:border-[var(--accent)] hover:bg-[var(--background-secondary-hover)] hover:font-semibold md:hover:font-medium cursor-pointer text-nowrap min-w-24"
+                            className="pb-2 md:pb-0 px-1 pr-4 first:border-t border-b rounded-sm border-[var(--accent)] hover:bg-[var(--taskbar-dropdown-indent-hover)] text-nowrap min-w-24"
                             onClick={() => {
                                 if (item.onClick) {
                                     item.onClick(); // Explicitly call the function

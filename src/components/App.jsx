@@ -95,7 +95,7 @@ function PhotoEditor() {
   return (
     <main className="flex flex-col h-screen">
       {/* Taskbar */}
-      <div className="flex justify-between bg-[var(--background)] w-full px-2 py-1 text-lg">
+      <div className="flex justify-between bg-[var(--background)] w-full px-2 pt-1 text-lg">
         <nav className="flex gap-2">
           <Dropdown
             title="File"
@@ -120,7 +120,7 @@ function PhotoEditor() {
           />
         </nav>
 
-        <Link href="/about" className="bg-[var(--background-indent)] rounded-xs shadow-lg text-[var(--text)] text-xs md:text-base hover:bg-[var(--background-secondary-hover)] px-1">About</Link>
+        <Link href="/about" className="text-[var(--text)] text-xs rounded-t md:text-base bg-[var(--taskbar-indent)] hover:bg-[var(--taskbar-hover)] border border-transparent hover:border-[var(--accent)] px-1">About</Link>
       </div>
 
       {/* Hidden file input */}
@@ -134,7 +134,7 @@ function PhotoEditor() {
 
       {/* Canvas Area */}
       <div
-        className="flex-1 flex justify-center items-center overflow-hidden bg-[var(--background-secondary-hover)] cursor-grab active:cursor-grabbing"
+        className="flex-1 flex justify-center items-center overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUpOrLeave}

@@ -1,41 +1,30 @@
 import Link from "next/link";
 
 const Editor = () => (
-  <div className="flex flex-col h-screen bg-[var(--background)] text-[var(--text)]">
-    <div className="flex justify-center py-12">
-      <div className="flex-grow max-w-5xl p-6 bg-[var(--background-secondary)] rounded-sm shadow-lg">
-        <p className="text-lg mb-4">Built for Desktop</p>
+  <div className="flex flex-col h-screen bg-[var(--taskbar-indent)] text-[var(--text)]">
+    <div className="flex-grow p-56">
+      <Link href="/" className="text-[var(--text)] underline hover:text-[var(--accent)] dark:hover:text-rose-800">
+        <p className="text-xl font-semibold">photoedit</p>
+      </Link>
 
-        <Link
-          href="/"
-          className="text-[var(--accent)] hover:underline hover:text-[var(--accent-hover)]"
-        >
-          <p className="text-xl font-semibold">Photoedit</p>
-        </Link>
-
-        <p className="text-sm text-[var(--counter-intesity)] mb-6">
-          In development.
-        </p>
-
-        <ul className="flex flex-col gap-4">
-          <li>
-            <Link
-              href="/editor.html"
-              className="text-[var(--counter-intensity)] underline decoration-dotted hover:decoration-solid hover:decoration-[var(--accent-hover-secondary)] hover:text-[var(--accent-hover-secondary)]"
-              >
-              Photoedits Old
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="https://github.com/ClaytonWas/photoedit"
-              className="text-[var(--counter-intensity)] underline decoration-dotted hover:decoration-solid hover:decoration-[var(--accent-hover-secondary)] hover:text-[var(--accent-hover-secondary)]"
+      <ul className="flex flex-col gap">
+        <li>
+          <Link
+            href="/editor.html"
+            className="underline decoration-dotted hover:decoration-solid hover:text-[var(--accent)] dark:hover:text-rose-800"
             >
-              Repository
-            </Link>
-          </li>
-        </ul>
-      </div>
+            Photoedits Old
+          </Link>
+        </li>
+        <li>
+          <Link
+            href="https://github.com/ClaytonWas/photoedit"
+            className="underline decoration-dotted hover:decoration-solid hover:text-[var(--accent)] dark:hover:text-rose-800"
+          >
+            Repository
+          </Link>
+        </li>
+      </ul>
     </div>
   </div>
 );

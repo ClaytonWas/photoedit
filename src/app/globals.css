@@ -3,27 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --background: #f7f2da;
-  --background-indent: #f2eacc;
-  --background-secondary: #dcdfc1;
-  --background-secondary-hover: #d6dc9d;
-  --accent: #196637;
-  --accent-hover: #10aa62;
-  --accent-hover-secondary: #02855e;
-  --counter-intensity: #6c75aa;
+  --background: #5f4009;
+  --taskbar-indent: #f8cc53;
+  --taskbar-hover: #e3a344;
+  --taskbar-dropdown-indent: #fbce6e;
+  --taskbar-dropdown-indent-hover: #fab957;
+  --canvas-background: #f8cc53;
+  --accent: #432a00;
   --text: #000000;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #262626;
-    --background-indent: #323030;
-    --background-secondary: #373737;
-    --background-secondary-hover: #4b4848;
-    --accent: #c89eed;
-    --accent-hover: #947bd3;
-    --accent-hover-secondary: #7f63c7;
-    --counter-intensity: #535353;
-    --text: #efe8f2;
+    --background: #18181B;
+    --taskbar-indent: #22262f;
+    --taskbar-hover: #41444b;
+    --taskbar-dropdown-indent: #1c1f24;
+    --taskbar-dropdown-indent-hover: #262632;
+    --canvas-background: #22262f;
+    --accent: #333344;
+    --text: #fffdf5;
   }
 }
