@@ -16,7 +16,7 @@ function TaskbarDropdown({ title, items }: TaskbarDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div className="relative w-12 text-sm text-[var(--text)] my-1 ml-2 md:w-24 md:text-lg cursor-pointer">
+        <div className="relative min-w-16 text-sm text-[var(--text)] m-1 pr-1 md:w-24 md:text-lg cursor-pointer">
             <button
                 className="w-full text-left border border-[var(--accent)] rounded-t bg-[var(--taskbar-indent)] hover:border-[var(--accent)] hover:bg-[var(--taskbar-hover)] pl-2"
                 onClick={() => setIsOpen(!isOpen)}
