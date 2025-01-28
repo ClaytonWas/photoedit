@@ -1,54 +1,60 @@
-import React from 'react';
-import { DockviewReact, DockviewReadyEvent, IDockviewPanelProps } from 'dockview';
+import React, { RefObject } from 'react';
+import { DockviewReact, DockviewReadyEvent } from 'dockview';
 
-const DockviewExample = () => {
-    const onReady = (event: DockviewReadyEvent) => {
-        // Add panels to the dockview
-        event.api.addPanel({
-            id: 'panel_1',
-            component: 'default',
-            title: 'Panel 1',
-        });
-    
-        event.api.addPanel({
-            id: 'panel_2',
-            component: 'default',
-            title: 'Panel 2',
-        });
-    
-        event.api.addPanel({
-            id: 'panel_3',
-            component: 'default',
-            title: 'Panel 3',
-        });
-    
-        // You can customize the layout here
-        event.api.addPanel({
-            id: 'panel_4',
-            component: 'default',
-            title: 'Panel 4',
-            position: { referencePanel: 'panel_1', direction: 'right' },
-        });
-    };
-    
+interface DockviewExampleProps {
+  canvasRef: RefObject<HTMLCanvasElement>;
+  canvasDivRef: RefObject<HTMLDivElement>;
+  handleMouseDown: React.MouseEventHandler<HTMLDivElement>;
+  handleMouseMove: React.MouseEventHandler<HTMLDivElement>;
+  handleMouseUpOrLeave: React.MouseEventHandler<HTMLDivElement>;
+}
 
-    const components = {
-        default: (props: IDockviewPanelProps<{ title: string }>) => {
-            return (
-                <div style={{ padding: '20px', color: 'white' }}>
-                    {props.params.title}
-                </div>
-            );
+const DockviewExample: React.FC<DockviewExampleProps> = ({
+  canvasRef,
+  canvasDivRef,
+  handleMouseDown,
+  handleMouseMove,
+  handleMouseUpOrLeave,
+}) => {
+  const onReady = (event: DockviewReadyEvent) => {
+    const canvasPanel = event.api.addPanel({
+      id: 'canvasPanel',
+      component: 'canvasComponent',
+      title: 'Canvas',
+    });
+  };
+
+  return (
+    <DockviewReact
+      onReady={onReady}
+      components={{
+        canvasComponent: () => {
+          return (
+            <div
+              className="flex-1 flex justify-center items-center overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUpOrLeave}
+              onMouseLeave={handleMouseUpOrLeave}
+            >
+              <div
+                ref={canvasDivRef}
+                className="relative w-full h-full max-w-full max-h-full"
+                style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+              >
+                <canvas
+                  ref={canvasRef}
+                  id="imageCanvas"
+                  className="max-w-full max-h-full object-contain"
+                ></canvas>
+              </div>
+            </div>
+          );
         },
-    };
-
-    return (
-        <DockviewReact
-            onReady={onReady}
-            components={components}
-            className="dockview-theme-abyss"
-        />
-    );
+      }}
+      className="dockview-theme-light dark:dockview-theme-abyss h-full w-full"
+    />
+  );
 };
 
 export default DockviewExample;

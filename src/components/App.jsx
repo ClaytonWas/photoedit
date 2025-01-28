@@ -9,10 +9,8 @@ import 'dockview/dist/styles/dockview.css';
 function PhotoEditor() {
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
-  const resizerRef = useRef(null);
   const [imageEditor, setImageEditor] = useState(null);
   const { canvasDivRef, handleMouseDown, handleMouseMove, handleMouseUpOrLeave } = CanvasInteraction();
-
   const uploadImage = async () => {
     fileInputRef.current?.click();
 
@@ -77,6 +75,7 @@ function PhotoEditor() {
     }
     imageEditor.changeCanvasSepia(intensity);
   };
+
   const setRotate = (degrees) => {
     if (!imageEditor || !imageEditor.context) {
       console.error("No image to rotate!");
@@ -84,6 +83,7 @@ function PhotoEditor() {
     }
     imageEditor.rotate(degrees);
   };
+
   const setGrayscale = (intensity) => {
     if (!imageEditor || !imageEditor.context) {
       console.error("No image to rotate!");
@@ -91,7 +91,6 @@ function PhotoEditor() {
     }
     imageEditor.changeCanvasGrayscale(intensity);
   };
-
 
   return (
     <main className="flex flex-col h-screen">
@@ -112,32 +111,17 @@ function PhotoEditor() {
         onChange={uploadImage}
       />
 
-      <div className="flex-1 flex">
-        <div className="relative bg-[var(--background)] border-r border-[var(--accent)] transition-all w-36 md:w-72">
-          
-        </div>
-
-        <div
-          className="flex-1 justify-center items-center overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUpOrLeave}
-          onMouseLeave={handleMouseUpOrLeave}
-        >
-          <div
-            ref={canvasDivRef}
-            className="relative w-full h-full max-w-full max-h-full"
-            style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
-          >
-            <canvas
-              ref={canvasRef}
-              id="imageCanvas"
-              className="max-w-full max-h-full object-contain"
-            ></canvas>
-          </div>
+      <div className="flex flex-grow">
+        <div className="flex-grow">
+          <DockviewExample
+            canvasRef={canvasRef}
+            canvasDivRef={canvasDivRef}
+            handleMouseDown={handleMouseDown}
+            handleMouseMove={handleMouseMove}
+            handleMouseUpOrLeave={handleMouseUpOrLeave}
+          />
         </div>
       </div>
-      <DockviewExample />
     </main>
   );
 }

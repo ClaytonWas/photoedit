@@ -7,32 +7,38 @@ export function CanvasInteraction() {
   const [scale, setScale] = useState(1);
   const canvasDivRef = useRef<HTMLDivElement>(null); // Specify the type here
 
-  const updateTransform = () => {
-    if (canvasDivRef.current) {
-      canvasDivRef.current.style.transform = 
-        `translate(${currentTranslate.x}px, ${currentTranslate.y}px) scale(${scale})`;
-    }
-  };
-
   const handleMouseDown = (event: React.MouseEvent) => {
+    console.log("Mouse down - isPanning set to true");
     setIsPanning(true);
     setStartPoint({
       x: event.clientX - currentTranslate.x,
       y: event.clientY - currentTranslate.y,
     });
   };
-
+  
   const handleMouseMove = (event: React.MouseEvent) => {
-    if (!isPanning) return;
+    if (!isPanning) {
+      console.log("Mouse move ignored - isPanning is false");
+      return;
+    }
+    console.log("Mouse move - updating translation");
     setCurrentTranslate({
       x: event.clientX - startPoint.x,
       y: event.clientY - startPoint.y,
     });
     updateTransform();
   };
-
+  
   const handleMouseUpOrLeave = () => {
+    console.log("Mouse up or leave - isPanning set to false");
     setIsPanning(false);
+  };
+
+  const updateTransform = () => {
+    if (canvasDivRef.current) {
+      canvasDivRef.current.style.transform = 
+        `translate(${currentTranslate.x}px, ${currentTranslate.y}px) scale(${scale})`;
+    }
   };
 
   const handleWheel = (event: WheelEvent) => {
