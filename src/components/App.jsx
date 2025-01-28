@@ -3,6 +3,8 @@ import { useRef, useState } from "react";
 import ImageEditor from "@/scripts/core/imageEditor";
 import { CanvasInteraction } from "@/components/CanvasInteraction";
 import Navbar from "@/components/Navbar";
+import DockviewExample from "@/components/DockviewExample";
+import 'dockview/dist/styles/dockview.css';
 
 function PhotoEditor() {
   const canvasRef = useRef(null);
@@ -135,6 +137,7 @@ function PhotoEditor() {
           </div>
         </div>
       </div>
+      <DockviewExample />
     </main>
   );
 }
