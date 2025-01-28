@@ -62,6 +62,36 @@ function PhotoEditor() {
     exportAnchor.click();
   };
 
+  const setHSV = () => {
+    if (!imageEditor || !imageEditor.context) {
+      console.error("No image to modify HSV!");
+      return;
+    }
+    imageEditor.changeCanvasHSV(25, 100, 100);
+  };
+
+  const setSepia = (intensity) => {
+    if (!imageEditor || !imageEditor.context || !imageEditor.canvas) {
+      console.error("No image to apply the sepia filter!");
+      return;
+    }
+    imageEditor.changeCanvasSepia(intensity);
+  };
+  const setRotate = (degrees) => {
+    if (!imageEditor || !imageEditor.context) {
+      console.error("No image to rotate!");
+      return;
+    }
+    imageEditor.rotate(degrees);
+  };
+  const setGrayscale = (intensity) => {
+    if (!imageEditor || !imageEditor.context) {
+      console.error("No image to rotate!");
+      return;
+    }
+    imageEditor.changeCanvasGrayscale(intensity);
+  };
+
   const handleMouseDownResize = (e) => {
     setIsResizing(true);
   
@@ -104,6 +134,10 @@ function PhotoEditor() {
       <Navbar
         onUpload={uploadImage}
         onExport={quickExport}
+        onRotate={setRotate}
+        onHSV={setHSV}
+        onSepia={setSepia}
+        onGrayscale={setGrayscale}
       />
 
       <input
