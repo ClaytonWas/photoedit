@@ -17,7 +17,7 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
   handleMouseUpOrLeave,
 }) => {
   const onReady = (event: DockviewReadyEvent) => {
-    const canvasPanel = event.api.addPanel({
+    event.api.addPanel({
       id: 'canvasPanel',
       component: 'canvasComponent',
       title: 'Canvas',
@@ -52,7 +52,7 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
           );
         },
       }}
-      className="dockview-theme-light dark:dockview-theme-abyss h-full w-full"
+      className="dockview h-full w-full"
     />
   );
 };

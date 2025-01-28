@@ -13,6 +13,37 @@
   --text: #000000;
 }
 
+/* Customize the tab hover effect */
+.dockview .dockview-tab:hover {
+  background-color: theme('colors.gray.600');
+}
+
+/* Customize the panel headers */
+.dockview .dockview-tab {
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 4px;
+}
+
+/* Customize the panel content */
+.dockview .dockview-react-panel {
+  background-color: theme('colors.gray.800');
+  color: theme('colors.gray.200');
+}
+
+.dockview {
+  /* Override the background color of the dockview container */
+  --dv-group-view-background-color: var(--canvas-background);
+  --dv-tabs-and-actions-container-background-color: var(--background);
+  --dv-tab-divider-color: var(--accent);
+  --dv-tab-background-color: theme('colors.gray.900');
+  --dv-tab-background-color-active: theme('colors.gray.600');
+  --dv-tab-color: theme('colors.gray.200');
+  --dv-tab-color-active: theme('colors.white');
+  --dv-activegroup-visiblepanel-tab-background-color: var(--taskbar-dropdown-indent);
+  --dv-activegroup-visiblepanel-tab-color: var(--text);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #18181B;
