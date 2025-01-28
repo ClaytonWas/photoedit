@@ -7,7 +7,10 @@ import Navbar from "@/components/Navbar";
 function PhotoEditor() {
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const resizerRef = useRef(null);
   const [imageEditor, setImageEditor] = useState(null);
+  const [detailsWidth, setDetailsWidth] = useState(300); // Initial width of "Image Details"
+  const [isResizing, setIsResizing] = useState(false);
   const { canvasDivRef, handleMouseDown, handleMouseMove, handleMouseUpOrLeave } = CanvasInteraction();
 
   const uploadImage = async () => {
@@ -59,47 +62,48 @@ function PhotoEditor() {
     exportAnchor.click();
   };
 
-  const setHSV = () => {
-    if (!imageEditor || !imageEditor.context) {
-      console.error("No image to modify HSV!");
-      return;
-    }
-    imageEditor.changeCanvasHSV(25, 100, 100);
+  const handleMouseDownResize = (e) => {
+    setIsResizing(true);
+  
+    // Add a CSS class to visually indicate resizing if necessary
+    document.body.style.cursor = "col-resize";
   };
   
-  const setSepia = (intensity) => {
-    if (!imageEditor || !imageEditor.context || !imageEditor.canvas) {
-      console.error("No image to apply the sepia filter!");
-      return;
-    }
-    imageEditor.changeCanvasSepia(intensity);
+  const handleMouseMoveResize = (e) => {
+    if (!isResizing) return;
+  
+    // Calculate the new width based on the mouse movement
+    const newWidth = window.innerWidth - e.clientX;
+    setDetailsWidth(Math.max(0, Math.min(newWidth, 1000))); // Constrain width between 0 and 1000px
   };
-
-  const setRotate = (degrees) => {
-    if (!imageEditor || !imageEditor.context) {
-      console.error("No image to rotate!");
-      return;
-    }
-    imageEditor.rotate(degrees);
+  
+  const handleMouseUpResize = () => {
+    setIsResizing(false);
+  
+    // Reset the cursor style
+    document.body.style.cursor = "default";
+  
+    // Collapse the sidebar if it’s below a certain width
+    if (detailsWidth < 200) setDetailsWidth(0);
   };
-
-  const setGrayscale = (intensity) => {
-    if (!imageEditor || !imageEditor.context) {
-      console.error("No image to rotate!");
-      return;
-    }
-    imageEditor.changeCanvasGrayscale(intensity);
-  };
+  
+  useEffect(() => {
+    // Add global mousemove and mouseup listeners for resizing
+    window.addEventListener("mousemove", handleMouseMoveResize);
+    window.addEventListener("mouseup", handleMouseUpResize);
+  
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMoveResize);
+      window.removeEventListener("mouseup", handleMouseUpResize);
+    };
+  }, [isResizing, detailsWidth]);
+  
 
   return (
     <main className="flex flex-col h-screen">
       <Navbar
         onUpload={uploadImage}
         onExport={quickExport}
-        onRotate={setRotate}
-        onHSV={setHSV}
-        onSepia={setSepia}
-        onGrayscale={setGrayscale}
       />
 
       <input
@@ -110,23 +114,39 @@ function PhotoEditor() {
         onChange={uploadImage}
       />
 
-      <div
-        className="flex-1 flex justify-center items-center overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUpOrLeave}
-        onMouseLeave={handleMouseUpOrLeave}
-      >
+      <div className="flex-1 flex">
         <div
-          ref={canvasDivRef}
-          className="relative w-full h-full max-w-full max-h-full"
-          style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+          className="flex-1 justify-center items-center overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUpOrLeave}
+          onMouseLeave={handleMouseUpOrLeave}
         >
-          <canvas
-            ref={canvasRef}
-            id="imageCanvas"
-            className="max-w-full max-h-full object-contain"
-          ></canvas>
+          <div
+            ref={canvasDivRef}
+            className="relative w-full h-full max-w-full max-h-full"
+            style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+          >
+            <canvas
+              ref={canvasRef}
+              id="imageCanvas"
+              className="max-w-full max-h-full object-contain"
+            ></canvas>
+          </div>
+        </div>
+
+        <div
+          className="relative bg-[var(--background)] border-l-2 border-[var(--accent)] transition-all"
+          style={{ width: `${detailsWidth}px` }}
+        >
+          <div
+            ref={resizerRef}
+            className="absolute left-0 top-0 h-full w-1 cursor-col-resize bg-[var(--taskbar-indent)]"
+            onMouseDown={handleMouseDownResize}
+          ></div>
+          {detailsWidth > 0 && (
+            <p className="text-[var(--text)] pl-4">Layers/Data Here</p>
+          )}
         </div>
       </div>
     </main>

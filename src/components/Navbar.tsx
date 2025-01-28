@@ -12,9 +12,10 @@ interface NavbarProps {
   onHSV: () => void;
   onSepia: (intensity: number) => void;
   onGrayscale: (intensity: number) => void;
+  testName: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onUpload, onExport, onRotate, onHSV, onSepia, onGrayscale }) => {
+const Navbar: React.FC<NavbarProps> = ({ onUpload, onExport, onRotate, onHSV, onSepia, onGrayscale, testName }) => {
   return (
     <div className="flex justify-between bg-[var(--background)] w-full px-2 pt-1 text-lg border-b border-[var(--accent)]">
       <nav className="flex">
@@ -38,6 +39,12 @@ const Navbar: React.FC<NavbarProps> = ({ onUpload, onExport, onRotate, onHSV, on
             { label: "HSV", onClick: onHSV },
             { label: "Sepia", onClick: () => onSepia(100) },
             { label: "Grayscale", onClick: () => onGrayscale(100) },
+          ]}
+        />
+        <Dropdown
+          title="Test"
+          items={[
+            { label: "Log Image Name", onClick: testName },
           ]}
         />
       </nav>
