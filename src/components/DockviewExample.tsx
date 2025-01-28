@@ -31,7 +31,7 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
         canvasComponent: () => {
           return (
             <div
-              className="flex-1 flex justify-center items-center overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
+              className="flex-1 flex h-full overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUpOrLeave}
