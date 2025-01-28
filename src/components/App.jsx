@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import ImageEditor from "@/scripts/core/imageEditor";
 import { CanvasInteraction } from "@/components/CanvasInteraction";
 import Navbar from "@/components/Navbar";
@@ -9,8 +9,6 @@ function PhotoEditor() {
   const fileInputRef = useRef(null);
   const resizerRef = useRef(null);
   const [imageEditor, setImageEditor] = useState(null);
-  const [detailsWidth, setDetailsWidth] = useState(300); // Initial width of "Image Details"
-  const [isResizing, setIsResizing] = useState(false);
   const { canvasDivRef, handleMouseDown, handleMouseMove, handleMouseUpOrLeave } = CanvasInteraction();
 
   const uploadImage = async () => {
@@ -92,42 +90,6 @@ function PhotoEditor() {
     imageEditor.changeCanvasGrayscale(intensity);
   };
 
-  const handleMouseDownResize = (e) => {
-    setIsResizing(true);
-  
-    // Add a CSS class to visually indicate resizing if necessary
-    document.body.style.cursor = "col-resize";
-  };
-  
-  const handleMouseMoveResize = (e) => {
-    if (!isResizing) return;
-  
-    // Calculate the new width based on the mouse movement
-    const newWidth = window.innerWidth - e.clientX;
-    setDetailsWidth(Math.max(0, Math.min(newWidth, 1000))); // Constrain width between 0 and 1000px
-  };
-  
-  const handleMouseUpResize = () => {
-    setIsResizing(false);
-  
-    // Reset the cursor style
-    document.body.style.cursor = "default";
-  
-    // Collapse the sidebar if it’s below a certain width
-    if (detailsWidth < 200) setDetailsWidth(0);
-  };
-  
-  useEffect(() => {
-    // Add global mousemove and mouseup listeners for resizing
-    window.addEventListener("mousemove", handleMouseMoveResize);
-    window.addEventListener("mouseup", handleMouseUpResize);
-  
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMoveResize);
-      window.removeEventListener("mouseup", handleMouseUpResize);
-    };
-  }, [isResizing, detailsWidth]);
-  
 
   return (
     <main className="flex flex-col h-screen">
@@ -149,6 +111,10 @@ function PhotoEditor() {
       />
 
       <div className="flex-1 flex">
+        <div className="relative bg-[var(--background)] border-r border-[var(--accent)] transition-all w-36 md:w-72">
+          
+        </div>
+
         <div
           className="flex-1 justify-center items-center overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
           onMouseDown={handleMouseDown}
@@ -167,20 +133,6 @@ function PhotoEditor() {
               className="max-w-full max-h-full object-contain"
             ></canvas>
           </div>
-        </div>
-
-        <div
-          className="relative bg-[var(--background)] border-l-2 border-[var(--accent)] transition-all"
-          style={{ width: `${detailsWidth}px` }}
-        >
-          <div
-            ref={resizerRef}
-            className="absolute left-0 top-0 h-full w-1 cursor-col-resize bg-[var(--taskbar-indent)]"
-            onMouseDown={handleMouseDownResize}
-          ></div>
-          {detailsWidth > 0 && (
-            <p className="text-[var(--text)] pl-4">Layers/Data Here</p>
-          )}
         </div>
       </div>
     </main>
