@@ -17,10 +17,32 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
   handleMouseUpOrLeave,
 }) => {
   const onReady = (event: DockviewReadyEvent) => {
+    // Add the canvas panel
     event.api.addPanel({
       id: 'canvasPanel',
       component: 'canvasComponent',
       title: 'Canvas',
+    });
+
+    // Add a filler panel
+    event.api.addPanel({
+      id: 'fillerPanel1',
+      component: 'fillerComponent',
+      title: 'Filler 1',
+    });
+
+    // Add another filler panel
+    event.api.addPanel({
+      id: 'fillerPanel2',
+      component: 'fillerComponent',
+      title: 'Filler 2',
+    });
+
+    // Add yet another filler panel
+    event.api.addPanel({
+      id: 'fillerPanel3',
+      component: 'fillerComponent',
+      title: 'Filler 3',
     });
   };
 
@@ -31,7 +53,7 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
         canvasComponent: () => {
           return (
             <div
-              className="flex-1 flex h-full overflow-hidden bg-[var(--canvas-background)] cursor-grab active:cursor-grabbing"
+              className="flex-1 flex h-full overflow-hidden cursor-grab active:cursor-grabbing"
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUpOrLeave}
@@ -48,6 +70,13 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
                   className="max-w-full max-h-full object-contain"
                 ></canvas>
               </div>
+            </div>
+          );
+        },
+        fillerComponent: () => {
+          return (
+            <div className="flex-1 flex h-full overflow-hidden bg-[var(--filler-background)] p-4">
+              <p>This is a filler panel.</p>
             </div>
           );
         },

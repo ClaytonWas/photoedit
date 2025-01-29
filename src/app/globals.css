@@ -31,17 +31,26 @@
   color: theme('colors.gray.200');
 }
 
+.dockview .dv-drop-target {
+  /* Ensure these styles take precedence */
+  background-color: var(--dv-drop-target-background-color) !important;
+  border: 2px dashed var(--dv-drop-target-border-color) !important;
+}
+
 .dockview {
   /* Override the background color of the dockview container */
   --dv-group-view-background-color: var(--canvas-background);
   --dv-tabs-and-actions-container-background-color: var(--background);
   --dv-tab-divider-color: var(--accent);
-  --dv-tab-background-color: theme('colors.gray.900');
-  --dv-tab-background-color-active: theme('colors.gray.600');
-  --dv-tab-color: theme('colors.gray.200');
+  --dv-tab-background-color: theme('colors.red.900');
+  --dv-tab-background-color-active: theme('colors.red.600');
+  --dv-tab-color: theme('colors.red.200');
   --dv-tab-color-active: theme('colors.white');
   --dv-activegroup-visiblepanel-tab-background-color: var(--taskbar-dropdown-indent);
   --dv-activegroup-visiblepanel-tab-color: var(--text);
+  --dv-tab-hover-background-color: var(--taskbar-hover);
+  --dv-drop-target-background-color: rgb(255, 1, 1);
+  --dv-drop-target-border-color: var(--accent);
 }
 
 @media (prefers-color-scheme: dark) {
