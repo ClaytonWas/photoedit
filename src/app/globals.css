@@ -14,49 +14,25 @@
   --text-muted: #080864;
 }
 
-/* Customize the tab hover effect */
-.dockview .dockview-tab:hover {
-  background-color: theme('colors.gray.600');
+.dockview-theme-replit {
+  --dv-group-view-background-color: #0065ca !important;
+  --dv-tabs-and-actions-container-background-color: #fcfcfc;
+  --dv-activegroup-visiblepanel-tab-background-color: #f0f1f2;
+  --dv-activegroup-hiddenpanel-tab-background-color: #fcfcfc;
+  --dv-inactivegroup-visiblepanel-tab-background-color: #f0f1f2;
+  --dv-inactivegroup-hiddenpanel-tab-background-color: #fcfcfc;
+  --dv-tab-divider-color: transparent;
+  --dv-activegroup-visiblepanel-tab-color: rgb(51, 51, 51);
+  --dv-activegroup-hiddenpanel-tab-color: rgb(51, 51, 51);
+  --dv-inactivegroup-visiblepanel-tab-color: rgb(51, 51, 51);
+  --dv-inactivegroup-hiddenpanel-tab-color: rgb(51, 51, 51);
+  --dv-separator-border: transparent;
+  --dv-paneview-header-border-color: rgb(51, 51, 51);
+
+  --dv-separator-handle-background-color: #cfd1d3;
+  --dv-separator-handle-hover-background-color: #babbbb;
 }
 
-/* Customize the panel headers */
-.dockview .dockview-tab {
-  padding: 8px 12px;
-  font-size: 14px;
-  border-radius: 4px;
-}
- 
-/* Customize the panel content */
-.dockview .dockview-react-panel {
-  background-color: theme('colors.gray.800');
-  color: theme('colors.gray.200');
-}
-
-.dockview .dv-drop-target {
-  /* Ensure these styles take precedence */
-  background-color: var(--dv-drop-target-background-color) !important;
-  border: 2px solid var(--dv-drop-target-border-color) !important;
-}
-
-.dockview {
-  /* Override the background color of the dockview container */
-  --dv-group-view-background-color: var(--background);
-  --dv-tabs-and-actions-container-background-color: rgba(0, 85, 255, 0.091);
-  --dv-activegroup-hiddenpanel-tab-color: var(--text-muted);
-  --dv-inactivegroup-hiddenpanel-tab-color: var(--text-muted);
-  --dv-inactivegroup-visiblepanel-tab-color: var(--text-muted);
-  --dv-tab-divider-color: var(--accent);
-  --dv-tab-background-color: theme('colors.red.900');
-  --dv-tab-background-color-active: theme('colors.red.600');
-  --dv-tab-color: theme('colors.red.200');
-  --dv-tab-color-active: theme('colors.white');
-  --dv-activegroup-visiblepanel-tab-background-color: var(--taskbar-dropdown-indent);
-  --dv-activegroup-visiblepanel-tab-color: var(--text);
-  --dv-inactivegroup-visiblepanel-tab-color: var(--text);
-  --dv-tab-hover-background-color: rgb(255, 1, 1);
-  --dv-drop-target-background-color: rgba(0, 85, 255, 0.055);
-  --dv-drop-target-border-color: var(--accent);
-}
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -69,10 +45,5 @@
     --accent: #333344;
     --text: #fffdf5;
     --text-muted: #3d455e;
-  }
-  
-  .dockview {
-    --dv-tabs-and-actions-container-background-color: #865c5c;
-    --dv-tabs-and-actions-container-background-color: rgba(4, 4, 20, 0.315);
   }
 }
