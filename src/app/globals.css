@@ -24,7 +24,7 @@
   font-size: 14px;
   border-radius: 4px;
 }
-
+ 
 /* Customize the panel content */
 .dockview .dockview-react-panel {
   background-color: theme('colors.gray.800');
@@ -34,12 +34,12 @@
 .dockview .dv-drop-target {
   /* Ensure these styles take precedence */
   background-color: var(--dv-drop-target-background-color) !important;
-  border: 2px dashed var(--dv-drop-target-border-color) !important;
+  border: 2px solid var(--dv-drop-target-border-color) !important;
 }
 
 .dockview {
   /* Override the background color of the dockview container */
-  --dv-group-view-background-color: var(--canvas-background);
+  --dv-group-view-background-color: var(--background);
   --dv-tabs-and-actions-container-background-color: var(--background);
   --dv-tab-divider-color: var(--accent);
   --dv-tab-background-color: theme('colors.red.900');
@@ -48,8 +48,8 @@
   --dv-tab-color-active: theme('colors.white');
   --dv-activegroup-visiblepanel-tab-background-color: var(--taskbar-dropdown-indent);
   --dv-activegroup-visiblepanel-tab-color: var(--text);
-  --dv-tab-hover-background-color: var(--taskbar-hover);
-  --dv-drop-target-background-color: rgb(255, 1, 1);
+  --dv-tab-hover-background-color: rgb(255, 1, 1);
+  --dv-drop-target-background-color: rgba(0, 85, 255, 0.055);
   --dv-drop-target-border-color: var(--accent);
 }
 

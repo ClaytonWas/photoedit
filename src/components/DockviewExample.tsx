@@ -53,7 +53,7 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
         canvasComponent: () => {
           return (
             <div
-              className="flex-1 flex h-full overflow-hidden cursor-grab active:cursor-grabbing"
+              className="flex-1 flex bg-[var(--canvas-background)] h-full overflow-hidden cursor-grab active:cursor-grabbing"
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUpOrLeave}
@@ -76,7 +76,7 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
         fillerComponent: () => {
           return (
             <div className="flex-1 flex h-full overflow-hidden bg-[var(--filler-background)] p-4">
-              <p>This is a filler panel.</p>
+              <p className=''>This is a filler panel.</p>
             </div>
           );
         },
