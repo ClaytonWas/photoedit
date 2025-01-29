@@ -32,8 +32,18 @@
 
   --dv-separator-handle-background-color: #cfd1d3;
   --dv-separator-handle-hover-background-color: #babbbb;
+
+
 }
 
+.dockview-theme-replit .dv-default-tab.dv-react-tab {
+  font-family: "Georgia", serif !important; /* Example serif font */
+}
+
+.dockview-theme-replit .dv-default-tab-content {
+  font-family: "Georgia", serif !important;
+  font-weight: 400 !important;
+}
 
 @media (prefers-color-scheme: dark) {
   :root {
