@@ -17,9 +17,28 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
   handleMouseUpOrLeave,
 }) => {
   const onReady = (event: DockviewReadyEvent) => {
-    event.api.addPanel({ id: 'canvasPanel', component: 'canvasComponent', title: 'Canvas' });
-    event.api.addPanel({ id: 'detailsPanel', component: 'fillerComponent', title: 'Details', position: { referencePanel: 'canvasPanel', direction: 'right'}, initialWidth: 600 });
-    event.api.addPanel({ id: 'layersPanel', component: 'fillerComponent', title: 'Layers', initialWidth: 600});
+    const isMobile = window.innerWidth <= 768; // Adjust breakpoint as needed
+
+    event.api.addPanel({
+      id: 'canvasPanel',
+      component: 'canvasComponent',
+      title: 'Canvas',
+    });
+
+    event.api.addPanel({
+      id: 'detailsPanel',
+      component: 'fillerComponent',
+      title: 'Details',
+      position: { referencePanel: 'canvasPanel', direction: 'right' },
+      initialWidth: isMobile ? 150 : 600, // Smaller width on mobile
+    });
+
+    event.api.addPanel({
+      id: 'layersPanel',
+      component: 'fillerComponent',
+      title: 'Layers',
+      initialWidth: isMobile ? 150 : 600, // Smaller width on mobile
+    });
   };
 
   return (

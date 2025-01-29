@@ -37,11 +37,11 @@
 }
 
 .dockview-theme-replit .dv-default-tab.dv-react-tab {
-  font-family: "Georgia", serif !important; /* Example serif font */
+  font-family: "Arial", serif !important;
 }
 
 .dockview-theme-replit .dv-default-tab-content {
-  font-family: "Georgia", serif !important;
+  font-family: "Arial", serif !important;
   font-weight: 400 !important;
 }
 
