@@ -63,6 +63,7 @@
     --dv-inactivegroup-hiddenpanel-tab-color: var(--text-muted) !important;
     --dv-separator-border: transparent;
     --dv-paneview-header-border-color: rgb(51, 51, 51);
+
+    --dv-separator-handle-background-color: #86919b !important;
   }
-  
 }
