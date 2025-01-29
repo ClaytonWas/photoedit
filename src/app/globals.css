@@ -72,6 +72,7 @@
   }
   
   .dockview {
-    --dv-tabs-and-actions-container-background-color: #131212;
+    --dv-tabs-and-actions-container-background-color: #865c5c;
+    --dv-tabs-and-actions-container-background-color: rgba(4, 4, 20, 0.315);
   }
 }
