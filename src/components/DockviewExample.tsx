@@ -18,9 +18,8 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
 }) => {
   const onReady = (event: DockviewReadyEvent) => {
     event.api.addPanel({ id: 'canvasPanel', component: 'canvasComponent', title: 'Canvas' });
-    event.api.addPanel({ id: 'fillerPanel1', component: 'fillerComponent', title: 'Filler 1' });
-    event.api.addPanel({ id: 'fillerPanel2', component: 'fillerComponent', title: 'Filler 2' });
-    event.api.addPanel({ id: 'fillerPanel3', component: 'fillerComponent', title: 'Filler 3' });
+    event.api.addPanel({ id: 'detailsPanel', component: 'fillerComponent', title: 'Details', position: { referencePanel: 'canvasPanel', direction: 'right'}, initialWidth: 600 });
+    event.api.addPanel({ id: 'layersPanel', component: 'fillerComponent', title: 'Layers', initialWidth: 600});
   };
 
   return (
@@ -44,7 +43,7 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
           </div>
         ),
         fillerComponent: () => (
-          <div className="flex-1 flex h-full overflow-hidden p-4">
+          <div className="flex-1 flex h-full overflow-hidden p-4 bg-[var(--panel-background)] text-[var(--text)]">
             <p>This is a filler panel.</p>
           </div>
         ),
