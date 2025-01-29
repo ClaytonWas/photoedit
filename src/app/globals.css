@@ -10,7 +10,8 @@
   --taskbar-dropdown-indent-hover: #CBD5E1;
   --canvas-background: #E2E8F0;
   --accent: #554e43;
-  --text: #000000;
+  --text: #130b01;
+  --text-muted: #080864;
 }
 
 /* Customize the tab hover effect */
@@ -40,7 +41,10 @@
 .dockview {
   /* Override the background color of the dockview container */
   --dv-group-view-background-color: var(--background);
-  --dv-tabs-and-actions-container-background-color: var(--background);
+  --dv-tabs-and-actions-container-background-color: rgba(0, 85, 255, 0.091);
+  --dv-activegroup-hiddenpanel-tab-color: var(--text-muted);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--text-muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--text-muted);
   --dv-tab-divider-color: var(--accent);
   --dv-tab-background-color: theme('colors.red.900');
   --dv-tab-background-color-active: theme('colors.red.600');
@@ -48,6 +52,7 @@
   --dv-tab-color-active: theme('colors.white');
   --dv-activegroup-visiblepanel-tab-background-color: var(--taskbar-dropdown-indent);
   --dv-activegroup-visiblepanel-tab-color: var(--text);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--text);
   --dv-tab-hover-background-color: rgb(255, 1, 1);
   --dv-drop-target-background-color: rgba(0, 85, 255, 0.055);
   --dv-drop-target-border-color: var(--accent);
@@ -63,5 +68,10 @@
     --canvas-background: #22262f;
     --accent: #333344;
     --text: #fffdf5;
+    --text-muted: #3d455e;
+  }
+  
+  .dockview {
+    --dv-tabs-and-actions-container-background-color: #131212;
   }
 }
