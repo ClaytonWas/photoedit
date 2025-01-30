@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { DockviewReact, DockviewReadyEvent } from 'dockview';
+import { DockviewApi, DockviewReact, DockviewReadyEvent } from 'dockview';
 
 interface DockviewExampleProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -16,7 +16,7 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
   handleMouseMove,
   handleMouseUpOrLeave,
 }) => {
-  const dockviewApiRef = useRef<any>(null);
+  const dockviewApiRef = useRef<DockviewApi>(null);
 
   const calculatePanelWidth = () => {
     const width = window.innerWidth / 4;
