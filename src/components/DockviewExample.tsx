@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { DockviewReact, DockviewReadyEvent } from 'dockview';
 
 interface DockviewExampleProps {
@@ -16,8 +16,17 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
   handleMouseMove,
   handleMouseUpOrLeave,
 }) => {
+  const dockviewApiRef = useRef<any>(null);
+
+  const calculatePanelWidth = () => {
+    const oneThirdWidth = window.innerWidth / 3;
+    return Math.min(oneThirdWidth, 500); // Cap the width at 800px
+  };
+
   const onReady = (event: DockviewReadyEvent) => {
-    const isMobile = window.innerWidth <= 768; // Adjust breakpoint as needed
+    dockviewApiRef.current = event.api;
+
+    const panelWidth = calculatePanelWidth();
 
     event.api.addPanel({
       id: 'canvasPanel',
@@ -30,16 +39,36 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
       component: 'fillerComponent',
       title: 'Details',
       position: { referencePanel: 'canvasPanel', direction: 'right' },
-      initialWidth: isMobile ? 150 : 600, // Smaller width on mobile
+      initialWidth: panelWidth,
     });
 
     event.api.addPanel({
       id: 'layersPanel',
       component: 'fillerComponent',
       title: 'Layers',
-      initialWidth: isMobile ? 150 : 600, // Smaller width on mobile
+      initialWidth: panelWidth,
     });
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (dockviewApiRef.current) {
+        const panelWidth = calculatePanelWidth();
+        const detailsPanel = dockviewApiRef.current.getPanel('detailsPanel');
+        const layersPanel = dockviewApiRef.current.getPanel('layersPanel');
+
+        if (detailsPanel) {
+          detailsPanel.api.setSize({ width: panelWidth });
+        }
+        if (layersPanel) {
+          layersPanel.api.setSize({ width: panelWidth });
+        }
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <DockviewReact
