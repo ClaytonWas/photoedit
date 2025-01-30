@@ -19,8 +19,7 @@ const DockviewExample: React.FC<DockviewExampleProps> = ({
   const dockviewApiRef = useRef<any>(null);
 
   const calculatePanelWidth = () => {
-    const oneThirdWidth = window.innerWidth / 3;
-    return Math.min(oneThirdWidth, 500); // Cap the width at 800px
+    return Math.min(window.innerWidth / 4, 500); // Cap the width at 800px
   };
 
   const onReady = (event: DockviewReadyEvent) => {
