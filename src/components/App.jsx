@@ -1,129 +1,35 @@
-"use client";
-import { useRef, useState } from "react";
-import ImageEditor from "@/scripts/core/imageEditor";
-import { CanvasInteraction } from "@/components/CanvasInteraction";
-import Navbar from "@/components/Navbar";
-import DockviewExample from "@/components/DockviewExample";
-import 'dockview/dist/styles/dockview.css';
+import Link from "next/link";
 
-function PhotoEditor() {
-  const canvasRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const [imageEditor, setImageEditor] = useState(null);
-  const { canvasDivRef, handleMouseDown, handleMouseMove, handleMouseUpOrLeave } = CanvasInteraction();
-  const uploadImage = async () => {
-    fileInputRef.current?.click();
+const Editor = () => (
+  <div className="flex flex-col h-screen bg-[var(--taskbar-indent)] text-[var(--text)] justify-center items-center">
+    <div className="flex flex-col max-w-prose">
+      <Link href="/" className="text-[var(--text)] p-2 mb-14">
+        <p className="text-2xl font-semibold">photoedit</p>
+      </Link>
+      <ul className="flex flex-col">
+        <li>
+          <Link
+            href="/editor.html"
+            className="underline decoration-dotted text-xl font-bold hover:decoration-solid hover:text-[var(--accent)] dark:hover:text-rose-800"
+          >
+            <p className="text-lg font-semibold pt-4 px-4">WebappPhotoedits</p>
+            <p className="text-sm mx-6 pb-2">stable build</p>
+          </Link>
 
-    const file = fileInputRef.current?.files[0];
-    if (!file) return;
+          <p className="px-4 pt-6">
+            todo:
+          </p>
 
-    if (imageEditor) {
-      setImageEditor(null);
-    }
+          <span className="p-4">
+            <ul className="list-decimal ml-14 space-y-2">
+              <li>File Extension Support (.cr3, .raw, etc.)</li>
+              <li>LUT Import/Export</li>
+            </ul>
+          </span>
+        </li>
+      </ul>
+    </div>
+  </div>
+);
 
-    const reader = new FileReader();
-    const image = new Image();
-
-    const name = file.name.substring(0, file.name.lastIndexOf("."));
-    const type = file.type;
-    const extension = type.slice(6);
-    const canvas = canvasRef.current;
-
-    reader.onload = () => {
-      image.src = reader.result;
-    };
-
-    image.onload = () => {
-      const editor = new ImageEditor(image, name, type, extension, canvas);
-      setImageEditor(editor);
-      window.imageEditor = editor;
-
-      const imageEditorInstantiationEvent = new CustomEvent("imageEditorReady", {
-        detail: { instance: editor },
-      });
-      window.dispatchEvent(imageEditorInstantiationEvent);
-      editor.loadImage();
-    };
-
-    reader.readAsDataURL(file);
-  };
-
-  const quickExport = () => {
-    if (!imageEditor || !imageEditor.canvas) {
-      console.error("No image to export!");
-      return;
-    }
-  
-    const exportAnchor = document.createElement("a");
-    exportAnchor.href = imageEditor.canvas.toDataURL(imageEditor.type);
-    exportAnchor.download = `${imageEditor.name}_PhotoEditsExport.${imageEditor.extension}`;
-    exportAnchor.click();
-  };
-
-  const setHSV = () => {
-    if (!imageEditor || !imageEditor.context) {
-      console.error("No image to modify HSV!");
-      return;
-    }
-    imageEditor.changeCanvasHSV(25, 100, 100);
-  };
-
-  const setSepia = (intensity) => {
-    if (!imageEditor || !imageEditor.context || !imageEditor.canvas) {
-      console.error("No image to apply the sepia filter!");
-      return;
-    }
-    imageEditor.changeCanvasSepia(intensity);
-  };
-
-  const setRotate = (degrees) => {
-    if (!imageEditor || !imageEditor.context) {
-      console.error("No image to rotate!");
-      return;
-    }
-    imageEditor.rotate(degrees);
-  };
-
-  const setGrayscale = (intensity) => {
-    if (!imageEditor || !imageEditor.context) {
-      console.error("No image to rotate!");
-      return;
-    }
-    imageEditor.changeCanvasGrayscale(intensity);
-  };
-
-  return (
-    <main className="flex flex-col h-screen">
-      <Navbar
-        onUpload={uploadImage}
-        onExport={quickExport}
-        onRotate={setRotate}
-        onHSV={setHSV}
-        onSepia={setSepia}
-        onGrayscale={setGrayscale}
-      />
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        style={{ display: "none" }}
-        accept="image/*"
-        onChange={uploadImage}
-      />
-
-      <div className="flex flex-grow">
-        <div className="flex-grow">
-          <DockviewExample
-            canvasRef={canvasRef}
-            canvasDivRef={canvasDivRef}
-            handleMouseDown={handleMouseDown}
-            handleMouseMove={handleMouseMove}
-            handleMouseUpOrLeave={handleMouseUpOrLeave}
-          />
-        </div>
-      </div>
-    </main>
-  );
-}
-
-export default PhotoEditor;
+export default Editor;

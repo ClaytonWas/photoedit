@@ -15,36 +15,6 @@
   --panel-background: #b2becc;
 }
 
-.dockview-theme-replit {
-  --dv-group-view-background-color: #acc3dd8f !important;
-  --dv-tabs-and-actions-container-background-color: #cdd8e4 !important;
-  --dv-activegroup-visiblepanel-tab-background-color: #fcfcfc !important;
-  --dv-activegroup-hiddenpanel-tab-background-color: #e8eef5 !important;
-  --dv-inactivegroup-visiblepanel-tab-background-color: #dfeaf5 !important;
-  --dv-inactivegroup-hiddenpanel-tab-background-color: #c5cfda !important;
-  --dv-tab-divider-color: transparent !important;
-  --dv-activegroup-visiblepanel-tab-color: var(--text) !important;
-  --dv-activegroup-hiddenpanel-tab-color: var(--text-muted) !important;
-  --dv-inactivegroup-visiblepanel-tab-color: var(--text-muted) !important;
-  --dv-inactivegroup-hiddenpanel-tab-color: var(--text-muted) !important;
-  --dv-separator-border: transparent;
-  --dv-paneview-header-border-color: rgb(51, 51, 51);
-
-  --dv-separator-handle-background-color: #cfd1d3;
-  --dv-separator-handle-hover-background-color: #babbbb;
-
-
-}
-
-.dockview-theme-replit .dv-default-tab.dv-react-tab {
-  font-family: "Arial", serif !important;
-}
-
-.dockview-theme-replit .dv-default-tab-content {
-  font-family: "Arial", serif !important;
-  font-weight: 400 !important;
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #18181B;
@@ -57,23 +27,5 @@
     --text: #fffdf5;
     --text-muted: #b0b3bb;
     --panel-background: #2c303a;
-  }
-
-  .dockview-theme-replit {
-    --dv-group-view-background-color: #18181B !important;
-    --dv-tabs-and-actions-container-background-color: #26262c !important;
-    --dv-activegroup-visiblepanel-tab-background-color: #414355 !important;
-    --dv-activegroup-hiddenpanel-tab-background-color: #293136 !important;
-    --dv-inactivegroup-visiblepanel-tab-background-color: #283035 !important;
-    --dv-inactivegroup-hiddenpanel-tab-background-color: #1c2124 !important;
-    --dv-tab-divider-color: transparent !important;
-    --dv-activegroup-visiblepanel-tab-color: var(--text) !important;
-    --dv-activegroup-hiddenpanel-tab-color: var(--text-muted) !important;
-    --dv-inactivegroup-visiblepanel-tab-color: var(--text-muted) !important;
-    --dv-inactivegroup-hiddenpanel-tab-color: var(--text-muted) !important;
-    --dv-separator-border: transparent;
-    --dv-paneview-header-border-color: rgb(51, 51, 51);
-
-    --dv-separator-handle-background-color: #86919b !important;
   }
 }
