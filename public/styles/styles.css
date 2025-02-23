@@ -1,41 +1,43 @@
-@font-face {
-    font-family: 'Inter';
-    src: url('/photoedits/fonts/Inter-Regular.woff2') format('woff2'),
-        url('/photoedits/fonts/Inter-Regular.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Inter';
-    src: url('/photoedits/public/fonts/Inter-Italic.woff2') format('woff2'),
-        url('/photoedits/public/fonts/Inter-Italic.woff') format('woff');
-    font-weight: normal;
-    font-style: italic;
-    font-display: swap;
-}
+:root {
+    --background:  #b2becc;
+    --taskbar-indent: #e8eef5;
+    --taskbar-hover: #CBD5E1;
+    --canvas-background: #E2E8F0;
+    --accent: #151e80;
+    --text: #130b01;
+    --text-muted: #0f2742;
+    --panel-background: #b2becc;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: #18181B;
+      --taskbar-indent: #22262f;
+      --taskbar-hover: #575961;
+      --canvas-background: #22262f;
+      --accent: #333344;
+      --text: #fffdf5;
+      --text-muted: #b0b3bb;
+      --panel-background: #2c303a;
+    }
+  }
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Arial', sans-serif;
 }
 
 * {
     margin: 0;
     padding: 0;
-    
+    color: var(--text);
     box-sizing: border-box;
 }
 
 /* Taskbar */
 .taskbar {
     display: flex;
-
-    margin: 0;
-    padding: 0;
-
-    color: white;
-    background-color: #2d2d2d;
+    
+    background-color: var(--background);
 }
 
 #icon {
@@ -47,18 +49,17 @@ body {
 .taskbarItem {
     z-index: 5;
     position: relative;
-    padding: 10px 20px 10px 10px;
-    margin-left: 5px;
+    padding: 10px;
     cursor: pointer;
-    color: white;
+    background-color: var(--taskbar-indent);
 }
 
 .taskbarItem:hover {
-    background-color: #3d3d3d;
+    background-color: var(--taskbar-hover);
 }
 
 .taskbarItem span {
-    padding-right: 100px;
+    padding-right: 56px;
 }
 
 .taskbarItemDropdown {
@@ -68,7 +69,7 @@ body {
     top: 38px;
     left: 0;
     width: 100%;
-    background-color: #2d2d2d;
+    background-color: var(--taskbar-indent);
 }
 
 .taskbarItem:hover > .taskbarItemDropdown {
@@ -79,11 +80,10 @@ body {
     position: relative;
     padding: 10px;
     cursor: pointer;
-    color: white;
 }
 
 .taskbarItemDropdown li:hover {
-    background-color: #3d3d3d;
+    background-color: var(--taskbar-hover);
 }
 
 .taskbarItemDropdownIsSubmenu {
@@ -92,7 +92,7 @@ body {
     top: 0;
     left: 100%;
     width: 100%;
-    background-color: #2d2d2d;
+    background-color: var(--taskbar-indent);
     list-style-type: none;
 }
 
@@ -101,12 +101,11 @@ body {
 }
 
 .taskbarItemDropdownIsSubmenu li {
-    color: white;
     cursor: pointer;
 }
 
 .taskbarItemDropdownIsSubmenu li:hover {
-    background-color: #3d3d3d;
+    background-color: var(--taskbar-hover);
 }
 
 .taskbarModuleTitle {
@@ -114,7 +113,7 @@ body {
     
     justify-content: space-between;
 
-    background-color: #2d2d2d;
+    background-color: var(--taskbar-indent);
 }
 
 .taskbarModuleTitle p {
@@ -140,8 +139,7 @@ body {
 .taskbarModuleOneLine input {
     max-width: 30%;
 
-    color: white;
-    background-color:#2d2d2d;
+    background-color:var(--taskbar-hover);
 }
 
 .taskbarModuleSubmit {
@@ -160,8 +158,7 @@ body {
 
     width: 20vw;
 
-    color: white;
-    background-color: #3d3d3d;
+    background-color: var(--background);
 }
 
 .cropModule {
@@ -175,8 +172,7 @@ body {
 
     width: 20vw;
 
-    color: white;
-    background-color: #3d3d3d;
+    background-color: var(--background);
 }
 
 .hsvModule {
@@ -190,8 +186,7 @@ body {
 
     width: 20vw;
 
-    color: white;
-    background-color: #3d3d3d;
+    background-color: var(--background);
 }
 /* Taskbar End */
 
@@ -218,8 +213,8 @@ body {
     height: 100%;    
     width: 100%;
 
-    border: 2px solid #383838;
-    background-color: #4d4d4d;
+    border: 1px solid var(--accent);
+    background-color: var(--canvas-background);
 }
 
 .imageViewingModule:active {
@@ -245,7 +240,7 @@ body {
     max-width: 100%;
     max-height: 100%;
 
-    border: 2px solid #656565;
+    border: 1px solid var(--accent);
 }
 
 /* Image Viewing Module End */
@@ -259,19 +254,17 @@ body {
     height: 15vh;
 
 
-    border: 2px solid #464646;
-    background-color: #5d5d5d;
+    border: 1px solid var(--accent);
+    background-color: var(--background);
 }
 
 .contextModules > div {
-    border: 2px solid #595959;
+    border: 1px solid var(--accent);
 }
 
 
 /* Image Data Module */
 .imageDataModule {
-    color: white;
-
     width: 20vw;
 }
 
@@ -304,12 +297,12 @@ body {
     height: calc(100vh - 40px);
     width: 20vw;
 
-    border: 2px solid #464646;
-    background-color: #545454;
+    border: 1px solid var(--accent);
+    background-color: var(--background);
 }
 
 .layersModule > div{
-    border: 2px solid #595959;
+    border-bottom: 1px solid var(--accent);
 }
 
 #currentLayerSelector {
@@ -323,13 +316,11 @@ body {
 
     flex: 1;
     
-    background-color: #545454;
+    background-color: var(--background);
 }
 
 #layersList {
     max-height: 100%;
-
-    color: white;
 }
 
 #layersControls {
@@ -337,11 +328,11 @@ body {
 
     bottom: 0;
 
-    background-color: #545454;
 }
 
 #layersControls button {
     margin: 1%;
+    background-color: var(--taskbar-indent);
 }
 
 .layerDiv {
@@ -350,11 +341,11 @@ body {
 }
 
 .layerDiv:hover {
-    background-color: #4d4d4d;
+    background-color: var(--taskbar-hover);
 }
 
 .selectedLayerDiv {
-    background-color: #6d6d6d !important;
+    background-color: var(--taskbar-indent) !important;
 }
 
 .layerDivName {
@@ -368,7 +359,6 @@ body {
 
 /* Layer Properties Module */
 .layerPropertiesOpacity {
-    color: white;
 }
 
 .layerPropertiesOpacity p {
@@ -376,14 +366,12 @@ body {
 }
 
 .layerPropertiesOpacity input {
-    color: white;
-    background-color:#2d2d2d;
+    background-color: var(--taskbar-hover);
 
     width: 25%;
 }
 
 .effectParameter {
-    color: white;
 }
 
 .effectParameter p {
@@ -391,8 +379,7 @@ body {
 }
 
 .effectParameter input {
-    color: white;
-    background-color:#2d2d2d;
+    background-color:var(--taskbar-hover);
 
     width: 25%;
 }
