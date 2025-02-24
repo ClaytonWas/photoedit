@@ -3,7 +3,7 @@
     --taskbar-indent: #e8eef5;
     --taskbar-hover: #CBD5E1;
     --canvas-background: #E2E8F0;
-    --accent: #151e80;
+    --accent: #282a3d;
     --text: #130b01;
     --text-muted: #0f2742;
     --panel-background: #b2becc;
@@ -11,11 +11,11 @@
   
   @media (prefers-color-scheme: dark) {
     :root {
-      --background: #18181B;
+      --background: #20212c;
       --taskbar-indent: #22262f;
       --taskbar-hover: #575961;
       --canvas-background: #22262f;
-      --accent: #333344;
+      --accent: #39393f;
       --text: #fffdf5;
       --text-muted: #b0b3bb;
       --panel-background: #2c303a;
