@@ -1,9 +1,6 @@
-- [__live website__](https://photoedit.ca)
-  
-or build with 
-```bash
-npm run dev
-```
+[__link to website__](https://photoedit.ca) or open the .html from the repository
+
+
 # WebappPhotoedits
 A webapp that serves a photo manipulation user interface statically. 
 
@@ -16,6 +13,4 @@ Provding filter and image transformations. <br >
 [Version 0.2 Showcase](https://youtu.be/yxHyBOE9t0Q) This is not meant to be a comprehensive overview. <br >
 
 #### Resulting Examples
-![Samples](./public/photoedits/images/samples.gif)
-
-![TheMajesticIbis](./public/photoedits/images/IbisPaintedEdges.jpeg)
+![Samples](./images/samples.gif)
