@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#3b82f6">
+    <meta name="description" content="Professional photo editing webapp with advanced filters and layer support">
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/styles.css">
     <script type="module" src="/scripts/ui.js"></script>
@@ -11,113 +12,168 @@
     <script type="module" src="/scripts/canvasHandler.js"></script>
     <script type="module" src="/scripts/layersHandler.js"></script>
 
-    <title>PhotoEdits</title>
+    <title>PhotoEdits - Professional Photo Editor</title>
 </head>
 <body>
-    <!-- Mobile Taskbar -->
-    <div class="taskbar-mobile">
-        <div class="taskbar-mobile-header">
-            <h1 class="taskbar-mobile-title">PhotoEdits</h1>
-            <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle menu">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
-        </div>
+    <!-- Progress Bar -->
+    <div class="progress-bar" id="progressBar">
+        <div class="progress-bar-fill" id="progressBarFill"></div>
     </div>
 
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <h1 class="mobile-title">PhotoEdits</h1>
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle menu" aria-expanded="false">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+    </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
     <!-- Mobile Menu -->
-    <div class="mobile-menu" id="mobileMenu">
+    <nav class="mobile-menu" id="mobileMenu" role="navigation" aria-label="Main menu">
+        <div class="mobile-menu-header">
+            <h2>Menu</h2>
+        </div>
+        
         <div class="mobile-menu-section">
             <h3>File</h3>
-            <div class="mobile-menu-item" id="mobileOpenFile">📁 Open Image</div>
-            <div class="mobile-menu-item" id="mobileQuickExport">💾 Quick Export</div>
-            <div class="mobile-menu-item" id="mobileResize">📏 Resize</div>
-            <div class="mobile-menu-item" id="mobileCursorCrop">✂️ Cursor Crop</div>
-            <div class="mobile-menu-item" id="mobileCrop">🔲 Crop</div>
+            <div class="mobile-menu-item" id="mobileOpenFile" role="button" tabindex="0">
+                <span class="icon">📁</span>
+                <span>Open Image</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileQuickExport" role="button" tabindex="0">
+                <span class="icon">💾</span>
+                <span>Quick Export</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileResize" role="button" tabindex="0">
+                <span class="icon">📏</span>
+                <span>Resize</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileCursorCrop" role="button" tabindex="0">
+                <span class="icon">✂️</span>
+                <span>Cursor Crop</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileCrop" role="button" tabindex="0">
+                <span class="icon">🔲</span>
+                <span>Crop</span>
+            </div>
         </div>
         
         <div class="mobile-menu-section">
             <h3>Image</h3>
-            <div class="mobile-menu-item" id="mobileRotateCW90">↻ Rotate 90°</div>
-            <div class="mobile-menu-item" id="mobileRotateCCW90">↺ Rotate -90°</div>
-            <div class="mobile-menu-item" id="mobileHsv">🎨 HSV Adjustment</div>
+            <div class="mobile-menu-item" id="mobileRotateCW90" role="button" tabindex="0">
+                <span class="icon">↻</span>
+                <span>Rotate 90°</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileRotateCCW90" role="button" tabindex="0">
+                <span class="icon">↺</span>
+                <span>Rotate -90°</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileHsv" role="button" tabindex="0">
+                <span class="icon">🎨</span>
+                <span>HSV Adjustment</span>
+            </div>
         </div>
         
         <div class="mobile-menu-section">
             <h3>Filters</h3>
-            <div class="mobile-menu-item" id="mobileGreyscale">⚫ Greyscale</div>
-            <div class="mobile-menu-item" id="mobileSepia">🟤 Sepia</div>
-            <div class="mobile-menu-item" id="mobileFilmEffects">🎞️ Film Effects</div>
-            <div class="mobile-menu-item" id="mobilePaintedStylization">🎨 Painted</div>
+            <div class="mobile-menu-item" id="mobileGreyscale" role="button" tabindex="0">
+                <span class="icon">⚫</span>
+                <span>Greyscale</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileSepia" role="button" tabindex="0">
+                <span class="icon">🟤</span>
+                <span>Sepia</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileFilmEffects" role="button" tabindex="0">
+                <span class="icon">🎞️</span>
+                <span>Film Effects</span>
+            </div>
+            <div class="mobile-menu-item" id="mobilePaintedStylization" role="button" tabindex="0">
+                <span class="icon">🖌️</span>
+                <span>Painted</span>
+            </div>
         </div>
         
         <div class="mobile-menu-section">
             <h3>Tools</h3>
-            <div class="mobile-menu-item" id="mobileResetImage">🔄 Reset Image</div>
-            <div class="mobile-menu-item" id="mobileToggleLayers">📋 Toggle Layers</div>
-            <div class="mobile-menu-item" id="mobileToggleInfo">ℹ️ Toggle Info</div>
+            <div class="mobile-menu-item" id="mobileResetImage" role="button" tabindex="0">
+                <span class="icon">🔄</span>
+                <span>Reset Image</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileToggleLayers" role="button" tabindex="0">
+                <span class="icon">📋</span>
+                <span>Layers</span>
+            </div>
+            <div class="mobile-menu-item" id="mobileToggleInfo" role="button" tabindex="0">
+                <span class="icon">ℹ️</span>
+                <span>Image Info</span>
+            </div>
         </div>
-    </div>
+    </nav>
 
-    <!-- Taskbar -->
-    <div class="taskbar desktop-only">
-        <div class="taskbarItem">
+    <!-- Desktop Taskbar -->
+    <nav class="taskbar" role="menubar" aria-label="Main navigation">
+        <div class="taskbarItem" role="menuitem" tabindex="0">
             <span>File</span>
-            <ul class="taskbarItemDropdown">
-                <li id="openFile">Open</li>
-                <input id="uploadFile" type="file" accept="image/*" style="display: none;">
-                <li id="quickExport">Quick Export</li>
-                <li id="resize">Resize</li>
-                <li id="cursorCrop">Cursor Crop</li>
-                <li id="crop">Crop</li>
+            <ul class="taskbarItemDropdown" role="menu">
+                <li id="openFile" role="menuitem" tabindex="0">📁 Open</li>
+                <input id="uploadFile" type="file" accept="image/*" style="display: none;" aria-label="Upload image file">
+                <li id="quickExport" role="menuitem" tabindex="0">💾 Quick Export</li>
+                <li id="resize" role="menuitem" tabindex="0">📏 Resize</li>
+                <li id="cursorCrop" role="menuitem" tabindex="0">✂️ Cursor Crop</li>
+                <li id="crop" role="menuitem" tabindex="0">🔲 Crop</li>
             </ul>
         </div>
 
-        <div class="taskbarItem">
+        <div class="taskbarItem" role="menuitem" tabindex="0">
             <span>Image</span>
-            <ul class="taskbarItemDropdown">
-                <li class="taskbarItemDropdownContainsSubmenu" id="rotateImage">Rotate ▶
-                    <ul class="taskbarItemDropdownIsSubmenu">
-                        <li id="rotateCW90">Rotate 90°</li>
-                        <li id="rotateCCW90">Rotate -90°</li>
+            <ul class="taskbarItemDropdown" role="menu">
+                <li class="taskbarItemDropdownContainsSubmenu" id="rotateImage" role="menuitem" tabindex="0">🔄 Rotate ▶
+                    <ul class="taskbarItemDropdownIsSubmenu" role="menu">
+                        <li id="rotateCW90" role="menuitem" tabindex="0">↻ Rotate 90°</li>
+                        <li id="rotateCCW90" role="menuitem" tabindex="0">↺ Rotate -90°</li>
                     </ul>
                 </li>
-                <li id="hsv">HSV Adjustment</li>
+                <li id="hsv" role="menuitem" tabindex="0">🎨 HSV Adjustment</li>
             </ul>
         </div>
 
-        <div class="taskbarItem">
+        <div class="taskbarItem" role="menuitem" tabindex="0">
             <span>Filter</span>
-            <ul class="taskbarItemDropdown">
-                <li id="greyscale">Greyscale</li>
-                <li id="sepia">Sepia</li>
-                <li id="filmEffects">Film Effects</li>
-                <li id="paintedStylization">Painted</li>
+            <ul class="taskbarItemDropdown" role="menu">
+                <li id="greyscale" role="menuitem" tabindex="0">⚫ Greyscale</li>
+                <li id="sepia" role="menuitem" tabindex="0">🟤 Sepia</li>
+                <li id="filmEffects" role="menuitem" tabindex="0">🎞️ Film Effects</li>
+                <li id="paintedStylization" role="menuitem" tabindex="0">🖌️ Painted</li>
             </ul>
         </div>
 
-        <div class="taskbarItem">
+        <div class="taskbarItem" role="menuitem" tabindex="0">
             <span>Visualizations</span>
-            <ul class="taskbarItemDropdown">
-                <li class="taskbarItemDropdownContainsSubmenu">Spatial Geometry ▶
-                    <ul class="taskbarItemDropdownIsSubmenu">
-                        <li id="pointsInSpace">Points In Space</li>
-                        <li id="vectorsInSpace">Vectors In Space</li>
+            <ul class="taskbarItemDropdown" role="menu">
+                <li class="taskbarItemDropdownContainsSubmenu" role="menuitem" tabindex="0">📐 Spatial Geometry ▶
+                    <ul class="taskbarItemDropdownIsSubmenu" role="menu">
+                        <li id="pointsInSpace" role="menuitem" tabindex="0">• Points In Space</li>
+                        <li id="vectorsInSpace" role="menuitem" tabindex="0">→ Vectors In Space</li>
                     </ul>
                 </li>
-                <li class="taskbarItemDropdownContainsSubmenu">Edge Detection ▶
-                    <ul class="taskbarItemDropdownIsSubmenu">
-                        <li class="taskbarItemDropdownContainsSubmenu">Sobel ▶
-                            <ul class="taskbarItemDropdownIsSubmenu">
-                                <li id="sobelEdges">Regular</li>
-                                <li id="sobelEdgesColouredDirections">Coloured Directions</li>
+                <li class="taskbarItemDropdownContainsSubmenu" role="menuitem" tabindex="0">🔍 Edge Detection ▶
+                    <ul class="taskbarItemDropdownIsSubmenu" role="menu">
+                        <li class="taskbarItemDropdownContainsSubmenu" role="menuitem" tabindex="0">Sobel ▶
+                            <ul class="taskbarItemDropdownIsSubmenu" role="menu">
+                                <li id="sobelEdges" role="menuitem" tabindex="0">Regular</li>
+                                <li id="sobelEdgesColouredDirections" role="menuitem" tabindex="0">Coloured Directions</li>
                             </ul>
                         </li>
-                        <li class="taskbarItemDropdownContainsSubmenu">Prewire ▶
-                            <ul class="taskbarItemDropdownIsSubmenu">
-                                <li id="prewireEdges">Regular</li>
-                                <li id="prewireEdgesColouredDirections">Coloured Directions</li>
+                        <li class="taskbarItemDropdownContainsSubmenu" role="menuitem" tabindex="0">Prewitt ▶
+                            <ul class="taskbarItemDropdownIsSubmenu" role="menu">
+                                <li id="prewireEdges" role="menuitem" tabindex="0">Regular</li>
+                                <li id="prewireEdgesColouredDirections" role="menuitem" tabindex="0">Coloured Directions</li>
                             </ul>
                         </li>
                     </ul>
@@ -125,21 +181,25 @@
             </ul>
         </div>
 
-        <div class="taskbarItem" id="resetImage">
-            <span>Reset Image</span>
+        <div class="taskbarItem" id="resetImage" role="menuitem" tabindex="0">
+            <span>🔄 Reset Image</span>
         </div>
-    </div>
-    <!-- /Taskbar -->
+    </nav>
 
     <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Keyboard Shortcuts Hint -->
+    <div class="keyboard-hint" id="keyboardHint">
+        Press <kbd>Ctrl+O</kbd> to open, <kbd>Ctrl+S</kbd> to export
+    </div>
 
     <!-- Modal Overlays -->
-    <div class="modal-overlay" id="resizeModal">
+    <div class="modal-overlay" id="resizeModal" role="dialog" aria-labelledby="resizeModalTitle" aria-modal="true">
         <div class="modal-content">
             <div class="taskbarModuleTitle">
-                <p>Resize Image</p>
-                <button class="taskbarModuleClose" id="cancelResize" aria-label="Close">×</button>
+                <p id="resizeModalTitle">Resize Image</p>
+                <button class="taskbarModuleClose" id="cancelResize" aria-label="Close resize dialog">×</button>
             </div>
             <div class="taskbarModuleContent">
                 <div class="taskbarModuleOneLine">
@@ -171,11 +231,11 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="cropModal">
+    <div class="modal-overlay" id="cropModal" role="dialog" aria-labelledby="cropModalTitle" aria-modal="true">
         <div class="modal-content">
             <div class="taskbarModuleTitle">
-                <p>Crop Image</p>
-                <button class="taskbarModuleClose" id="cancelCrop" aria-label="Close">×</button>
+                <p id="cropModalTitle">Crop Image</p>
+                <button class="taskbarModuleClose" id="cancelCrop" aria-label="Close crop dialog">×</button>
             </div>
             <div class="taskbarModuleContent">
                 <div class="taskbarModuleOneLine">
@@ -199,11 +259,11 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="hsvModal">
+    <div class="modal-overlay" id="hsvModal" role="dialog" aria-labelledby="hsvModalTitle" aria-modal="true">
         <div class="modal-content">
             <div class="taskbarModuleTitle">
-                <p>HSV Adjustment</p>
-                <button class="taskbarModuleClose" id="hsvCancel" aria-label="Close">×</button>
+                <p id="hsvModalTitle">HSV Adjustment</p>
+                <button class="taskbarModuleClose" id="hsvCancel" aria-label="Close HSV dialog">×</button>
             </div>
             <div class="taskbarModuleContent">
                 <div class="taskbarModuleOneLine">
@@ -223,87 +283,116 @@
         </div>
     </div>
 
-    <!-- Wrapper For Image And Layer Modules-->
-    <div class="wrapImageAndLayerModules">
-        <!-- Image Module -->
-        <div class="imageModule">
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Image Section -->
+        <section class="image-section" aria-label="Image editing area">
             <!-- Image Viewing Module -->
-            <div class="imageViewingModule">
-                <div class="loading-overlay" id="loadingOverlay">
-                    <div class="loading-spinner"></div>
+            <div class="imageViewingModule" role="img" aria-label="Image canvas">
+                <div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
+                    <div class="loading-spinner" aria-label="Loading"></div>
                 </div>
                 <div id="imageCanvasDiv">
-                    <canvas id="imageCanvas"></canvas>
+                    <canvas id="imageCanvas" aria-label="Image being edited"></canvas>
                 </div>
             </div>
-            <!-- /Image Viewing Module -->
-            <!-- Modules That Provide Image Context And Data -->
-            <div class="contextModules">
-                <!-- Image Data Module -->
-                <div class="imageDataModule">
-                    <div class="imageDataModuleSection">
-                        <p>Original Image Data</p>
-                    </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleName"></p>
-                        <p class="sectionValue" id="imageName"></p>
-                    </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleDimensions"></p>
-                        <p class="sectionValue" id="imageDimensions"></p>
-                    </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleExtension"></p>
-                        <p class="sectionValue" id="imageExtension"></p>
-                    </div>
-                </div>
-                <!-- /Image Data Module -->
-                <!-- Modified Image Data Module -->
-                <div class="imageDataModule">
-                    <div class="imageDataModuleSection">
-                        <p>Current Image Data</p>
-                    </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleNameModified"></p>
-                        <p class="sectionValue" id="imageNameModified"></p>
-                    </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleDimensionsModified"></p>
-                        <p class="sectionValue" id="imageDimensionsModified"></p>
-                    </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleExtensionModified"></p>
-                        <p class="sectionValue" id="imageExtensionModified"></p>
-                    </div>
-                </div>
-                <!-- /Modified Image Data Module -->
-            </div>
-            <!-- /Modules That Provide Image Context And Data -->
-        </div>
 
-        <!-- Layers Module -->
-        <div class="layersModule">
-            <div id="currentLayerSelector">
-                <!-- This area should be dynamically populated with a filters parameters for quick edits. -->
+            <!-- Context Modules - Image Info -->
+            <section class="context-section" id="contextSection" aria-label="Image information">
+                <div class="contextModules">
+                    <!-- Original Image Data Module -->
+                    <div class="imageDataModule">
+                        <div class="imageDataModuleSection">
+                            <p>Original Image Data</p>
+                        </div>
+                        <div class="imageDataModuleSection">
+                            <p class="sectionLabel" id="titleName">Name:</p>
+                            <p class="sectionValue" id="imageName" tabindex="0">-</p>
+                        </div>
+                        <div class="imageDataModuleSection">
+                            <p class="sectionLabel" id="titleDimensions">Dimensions:</p>
+                            <p class="sectionValue" id="imageDimensions" tabindex="0">-</p>
+                        </div>
+                        <div class="imageDataModuleSection">
+                            <p class="sectionLabel" id="titleExtension">Extension:</p>
+                            <p class="sectionValue" id="imageExtension" tabindex="0">-</p>
+                        </div>
+                    </div>
+
+                    <!-- Modified Image Data Module -->
+                    <div class="imageDataModule">
+                        <div class="imageDataModuleSection">
+                            <p>Current Image Data</p>
+                        </div>
+                        <div class="imageDataModuleSection">
+                            <p class="sectionLabel" id="titleNameModified">Name:</p>
+                            <p class="sectionValue" id="imageNameModified" tabindex="0">-</p>
+                        </div>
+                        <div class="imageDataModuleSection">
+                            <p class="sectionLabel" id="titleDimensionsModified">Dimensions:</p>
+                            <p class="sectionValue" id="imageDimensionsModified" tabindex="0">-</p>
+                        </div>
+                        <div class="imageDataModuleSection">
+                            <p class="sectionLabel" id="titleExtensionModified">Extension:</p>
+                            <p class="sectionValue" id="imageExtensionModified" tabindex="0">-</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <!-- Layers Section -->
+        <aside class="layers-section" id="layersSection" aria-label="Layers panel">
+            <div class="layers-header">
+                <h3>Layers</h3>
+                <button class="layers-close-btn" id="layersCloseBtn" aria-label="Close layers panel">×</button>
             </div>
-            <div id="layersSelector">
-                <ul id="layersList">
-                    <!-- Layers added here. -->
+            
+            <div id="currentLayerSelector" aria-label="Layer properties">
+                <!-- Layer properties populated dynamically -->
+            </div>
+            
+            <div id="layersSelector" aria-label="Layers list">
+                <ul id="layersList" role="list">
+                    <!-- Layers added here dynamically -->
                 </ul>
             </div>
+            
             <div id="layersControls">
-                <button id="addLayer">Add Layer</button>
-                <button id="deleteLayer">Delete Layer</button>
+                <button id="addLayer" aria-label="Add new layer">➕ Add Layer</button>
+                <button id="deleteLayer" aria-label="Delete selected layer">🗑️ Delete</button>
+            </div>
+        </aside>
+    </main>
+    
+    <!-- Floating Action Buttons (Mobile) -->
+    <div class="fab-container">
+        <!-- Quick Actions Menu -->
+        <div class="quick-actions" id="quickActions">
+            <div class="quick-action" id="quickOpen">
+                <span class="icon">📁</span>
+                <span class="label">Open</span>
+            </div>
+            <div class="quick-action" id="quickExportFab">
+                <span class="icon">💾</span>
+                <span class="label">Export</span>
+            </div>
+            <div class="quick-action" id="quickLayers">
+                <span class="icon">📋</span>
+                <span class="label">Layers</span>
+            </div>
+            <div class="quick-action" id="quickInfo">
+                <span class="icon">ℹ️</span>
+                <span class="label">Info</span>
             </div>
         </div>
-        <!-- /Layers Module -->
-    
+        
+        <!-- Secondary FABs -->
+        <button class="fab secondary" id="layersFab" aria-label="Toggle layers panel">📋</button>
+        <button class="fab secondary" id="infoFab" aria-label="Toggle image info">ℹ️</button>
+        
+        <!-- Main FAB -->
+        <button class="fab" id="mainFab" aria-label="Quick actions menu">⚡</button>
     </div>
-    <!-- /Wrapper For Image And Layer Modules-->
-    
-    <!-- Floating Action Button (Mobile) -->
-    <button class="fab mobile-only" id="fabBtn" aria-label="Quick actions">
-        ⚡
-    </button>
 </body>
 </html>
