@@ -5,6 +5,7 @@ import { paintedStylization, pointsInSpace, vectorsInSpace, sobelEdges, sobelEdg
 import { filmEffects } from './plugins/filmEffects.js'
 import { greyscale } from './plugins/greyscale.js'
 import { sepia } from './plugins/sepia.js'
+import uiManager from './ui.js'
 
 
 let imageEditor = null
@@ -137,27 +138,27 @@ async function uploadImage() {
 }
 
 function openCropModule() {
-    document.getElementById('cropModule').style.display = 'block'
+    uiManager.openModal('cropModal')
 }
 
 function closeCropModule() {
-    document.getElementById('cropModule').style.display = 'none'
+    uiManager.closeModal('cropModal')
 }
 
 function openResizeModule() {
-    document.getElementById('resizeModule').style.display = 'block'
+    uiManager.openModal('resizeModal')
 }
 
 function closeResizeModule() {
-    document.getElementById('resizeModule').style.display = 'none'
+    uiManager.closeModal('resizeModal')
 }
 
 function openHSVModule() {
-    document.getElementById('hsvModule').style.display = 'block'
+    uiManager.openModal('hsvModal')
 }
 
 function closeHSVModule() {
-    document.getElementById('hsvModule').style.display = 'none'
+    uiManager.closeModal('hsvModal')
 }
 
 window.addEventListener('load', () => {
@@ -174,7 +175,12 @@ window.addEventListener('load', () => {
     })
     
     document.getElementById('quickExport').addEventListener('click', () => {
-        imageEditor.quickExport()
+        if (imageEditor) {
+            imageEditor.quickExport()
+            uiManager.showToast('Image exported successfully!', 'success')
+        } else {
+            uiManager.showToast('Please load an image first', 'warning')
+        }
     })
 
 
@@ -232,23 +238,32 @@ window.addEventListener('load', () => {
         let isConstrained = document.getElementById('constrainedCheckbox').checked
         let interpolationType = document.getElementById('interpolationType').value
 
-        imageEditor.resizeCanvas(newHeight, newWidth, isConstrained, interpolationType)
-        document.getElementById('hsvReset').click()
-
-        setTimeout(() => {
-            initializeModifiedImageDataModule(imageEditor)
-        }, 50)
+        uiManager.processImageWithFeedback(() => {
+            imageEditor.resizeCanvas(newHeight, newWidth, isConstrained, interpolationType)
+            document.getElementById('hsvReset').click()
+            setTimeout(() => {
+                initializeModifiedImageDataModule(imageEditor)
+            }, 50)
+        }, 'Image resized successfully!')
+        
+        closeResizeModule()
     })
 
     document.getElementById('cursorCrop').addEventListener('click', () => {
+        if (!imageEditor) {
+            uiManager.showToast('Please load an image first', 'warning')
+            return
+        }
+        
         window.isCropping = true    // Disable dragging in canvasHandler.js if cropping
+        uiManager.showToast('Click and drag to select crop area', 'success')
 
         const imageCanvasDiv = document.getElementById('imageCanvasDiv')
-        imageCanvasDiv.style.cursor = 'default'
+        imageCanvasDiv.classList.add('cropping')
         
         const disableSelection = enableSelection((selection) => {
             // Re-enable the draggable cursor once the selection is done
-            imageCanvasDiv.style.cursor = 'grab'
+            imageCanvasDiv.classList.remove('cropping')
             window.isCropping = false
 
             let startHeight = selection.startHeight
@@ -291,36 +306,46 @@ window.addEventListener('load', () => {
         let endHeight = parseInt(document.getElementById('cropEndHeight').value);
         let endWidth = parseInt(document.getElementById('cropEndWidth').value);
 
-        imageEditor.crop(startHeight, startWidth, endHeight, endWidth)
-        imageEditor.renderImage()
-
-        setTimeout(() => {
-            // Reset UI Windows
-            document.getElementById('cropStartHeight').value = 0
-            document.getElementById('cropStartWidth').value = 0
-            document.getElementById('cropEndHeight').value = imageEditor.image.height
-            document.getElementById('cropEndWidth').value = imageEditor.image.width
-            document.getElementById('resizeHeight').value = imageEditor.image.height
-            document.getElementById('resizeWidth').value = imageEditor.image.width
-            document.getElementById('hsvReset').click();
-            initializeModifiedImageDataModule(imageEditor)
-        }, 50)
+        uiManager.processImageWithFeedback(() => {
+            imageEditor.crop(startHeight, startWidth, endHeight, endWidth)
+            imageEditor.renderImage()
+            setTimeout(() => {
+                // Reset UI Windows
+                document.getElementById('cropStartHeight').value = 0
+                document.getElementById('cropStartWidth').value = 0
+                document.getElementById('cropEndHeight').value = imageEditor.image.height
+                document.getElementById('cropEndWidth').value = imageEditor.image.width
+                document.getElementById('resizeHeight').value = imageEditor.image.height
+                document.getElementById('resizeWidth').value = imageEditor.image.width
+                document.getElementById('hsvReset').click();
+                initializeModifiedImageDataModule(imageEditor)
+            }, 50)
+        }, 'Image cropped successfully!')
+        
+        closeCropModule()
     })
 
     document.getElementById('resetImage').addEventListener('click', () => {
-        imageEditor.resetImage()
-        setTimeout(() => {
-            // Reset UI Windows
-            document.getElementById('cropStartHeight').value = 0
-            document.getElementById('cropStartWidth').value = 0
-            document.getElementById('cropEndHeight').value = imageEditor.image.height
-            document.getElementById('cropEndWidth').value = imageEditor.image.width
-            document.getElementById('resizeHeight').value = imageEditor.image.height
-            document.getElementById('resizeWidth').value = imageEditor.image.width
-            document.getElementById('hsvReset').click();
-            initializeModifiedImageDataModule(imageEditor);
-        }, 50);
-        imageEditor.renderImage()
+        if (!imageEditor) {
+            uiManager.showToast('Please load an image first', 'warning')
+            return
+        }
+        
+        uiManager.processImageWithFeedback(() => {
+            imageEditor.resetImage()
+            setTimeout(() => {
+                // Reset UI Windows
+                document.getElementById('cropStartHeight').value = 0
+                document.getElementById('cropStartWidth').value = 0
+                document.getElementById('cropEndHeight').value = imageEditor.image.height
+                document.getElementById('cropEndWidth').value = imageEditor.image.width
+                document.getElementById('resizeHeight').value = imageEditor.image.height
+                document.getElementById('resizeWidth').value = imageEditor.image.width
+                document.getElementById('hsvReset').click();
+                initializeModifiedImageDataModule(imageEditor);
+            }, 50);
+            imageEditor.renderImage()
+        }, 'Image reset to original!')
     })
 
     document.getElementById('hsv').addEventListener('click', () => {
@@ -358,34 +383,57 @@ window.addEventListener('load', () => {
     })
 
     document.getElementById('rotateCW90').addEventListener('click', () => {
-        imageEditor.rotate(90)
-        document.getElementById('hsvReset').click();
-
-        setTimeout(() => {
-            initializeModifiedImageDataModule(imageEditor);
-        }, 50)
+        if (!imageEditor) {
+            uiManager.showToast('Please load an image first', 'warning')
+            return
+        }
+        
+        uiManager.processImageWithFeedback(() => {
+            imageEditor.rotate(90)
+            document.getElementById('hsvReset').click();
+            setTimeout(() => {
+                initializeModifiedImageDataModule(imageEditor);
+            }, 50)
+        }, 'Image rotated 90° clockwise!')
     })
 
     document.getElementById('rotateCCW90').addEventListener('click', () => {
-        imageEditor.rotate(-90)
-        document.getElementById('hsvReset').click();
-
-        setTimeout(() => {
-            initializeModifiedImageDataModule(imageEditor);
-        }, 50)
+        if (!imageEditor) {
+            uiManager.showToast('Please load an image first', 'warning')
+            return
+        }
+        
+        uiManager.processImageWithFeedback(() => {
+            imageEditor.rotate(-90)
+            document.getElementById('hsvReset').click();
+            setTimeout(() => {
+                initializeModifiedImageDataModule(imageEditor);
+            }, 50)
+        }, 'Image rotated 90° counter-clockwise!')
     })
 
 
     
     // Filter applications
     document.getElementById('greyscale').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         let index = imageEditor.getSelectedIndex()
         imageEditor.layerManager.addLayerEffect(index, greyscale)
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Greyscale filter applied!', 'success')
     })
 
     document.getElementById('sepia').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         imageEditor.layerManager.addLayerEffect(
             imageEditor.getSelectedIndex(), 
             sepia,
@@ -395,9 +443,15 @@ window.addEventListener('load', () => {
         )
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Sepia filter applied!', 'success')
     })
 
     document.getElementById('filmEffects').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         imageEditor.layerManager.addLayerEffect(
             imageEditor.getSelectedIndex(),
             filmEffects,
@@ -408,8 +462,14 @@ window.addEventListener('load', () => {
         )
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Film effects applied!', 'success')
     })
     document.getElementById('paintedStylization').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         imageEditor.layerManager.addLayerEffect(
             imageEditor.getSelectedIndex(),
             paintedStylization,
@@ -425,11 +485,17 @@ window.addEventListener('load', () => {
         )
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Painted stylization applied!', 'success')
     })
 
 
     // Visualization filters (for concepts from labs and other cool things that I couldn't fit neatly into a catagory.)
     document.getElementById('pointsInSpace').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         imageEditor.layerManager.addLayerEffect(
             imageEditor.getSelectedIndex(),
             pointsInSpace,
@@ -439,9 +505,15 @@ window.addEventListener('load', () => {
         )
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Points in space visualization applied!', 'success')
     })
 
     document.getElementById('vectorsInSpace').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         imageEditor.layerManager.addLayerEffect(
             imageEditor.getSelectedIndex(),
             vectorsInSpace,
@@ -458,9 +530,15 @@ window.addEventListener('load', () => {
         )
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Vectors in space visualization applied!', 'success')
     })
 
     document.getElementById('sobelEdges').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         imageEditor.layerManager.addLayerEffect(
             imageEditor.getSelectedIndex(),
             sobelEdges,
@@ -472,9 +550,15 @@ window.addEventListener('load', () => {
         )
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Sobel edge detection applied!', 'success')
     })
     
     document.getElementById('sobelEdgesColouredDirections').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         imageEditor.layerManager.addLayerEffect(
             imageEditor.getSelectedIndex(),
             sobelEdgesColouredDirections,
@@ -486,9 +570,15 @@ window.addEventListener('load', () => {
         )
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Sobel colored edge detection applied!', 'success')
     })
 
     document.getElementById('prewireEdges').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         imageEditor.layerManager.addLayerEffect(
             imageEditor.getSelectedIndex(),
             prewireEdges,
@@ -500,9 +590,15 @@ window.addEventListener('load', () => {
         )
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Prewitt edge detection applied!', 'success')
     })
 
     document.getElementById('prewireEdgesColouredDirections').addEventListener('click', () => {
+        if (!imageEditor || imageEditor.getSelectedIndex() === null) {
+            uiManager.showToast('Please select a layer first', 'warning')
+            return
+        }
+        
         imageEditor.layerManager.addLayerEffect(
             imageEditor.getSelectedIndex(),
             prewireEdgesColouredDirections,
@@ -514,5 +610,6 @@ window.addEventListener('load', () => {
         )
         renderLayerProperties(imageEditor)
         imageEditor.renderImage()
+        uiManager.showToast('Prewitt colored edge detection applied!', 'success')
     })
 })

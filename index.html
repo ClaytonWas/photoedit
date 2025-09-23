@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3b82f6">
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/scripts/ui.js"></script>
     <script type="module" src="/scripts/taskbarHandler.js"></script>
     <script type="module" src="/scripts/canvasHandler.js"></script>
     <script type="module" src="/scripts/layersHandler.js"></script>
@@ -12,8 +14,54 @@
     <title>PhotoEdits</title>
 </head>
 <body>
+    <!-- Mobile Taskbar -->
+    <div class="taskbar-mobile">
+        <div class="taskbar-mobile-header">
+            <h1 class="taskbar-mobile-title">PhotoEdits</h1>
+            <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle menu">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-section">
+            <h3>File</h3>
+            <div class="mobile-menu-item" id="mobileOpenFile">📁 Open Image</div>
+            <div class="mobile-menu-item" id="mobileQuickExport">💾 Quick Export</div>
+            <div class="mobile-menu-item" id="mobileResize">📏 Resize</div>
+            <div class="mobile-menu-item" id="mobileCursorCrop">✂️ Cursor Crop</div>
+            <div class="mobile-menu-item" id="mobileCrop">🔲 Crop</div>
+        </div>
+        
+        <div class="mobile-menu-section">
+            <h3>Image</h3>
+            <div class="mobile-menu-item" id="mobileRotateCW90">↻ Rotate 90°</div>
+            <div class="mobile-menu-item" id="mobileRotateCCW90">↺ Rotate -90°</div>
+            <div class="mobile-menu-item" id="mobileHsv">🎨 HSV Adjustment</div>
+        </div>
+        
+        <div class="mobile-menu-section">
+            <h3>Filters</h3>
+            <div class="mobile-menu-item" id="mobileGreyscale">⚫ Greyscale</div>
+            <div class="mobile-menu-item" id="mobileSepia">🟤 Sepia</div>
+            <div class="mobile-menu-item" id="mobileFilmEffects">🎞️ Film Effects</div>
+            <div class="mobile-menu-item" id="mobilePaintedStylization">🎨 Painted</div>
+        </div>
+        
+        <div class="mobile-menu-section">
+            <h3>Tools</h3>
+            <div class="mobile-menu-item" id="mobileResetImage">🔄 Reset Image</div>
+            <div class="mobile-menu-item" id="mobileToggleLayers">📋 Toggle Layers</div>
+            <div class="mobile-menu-item" id="mobileToggleInfo">ℹ️ Toggle Info</div>
+        </div>
+    </div>
+
     <!-- Taskbar -->
-    <div class="taskbar">
+    <div class="taskbar desktop-only">
         <div class="taskbarItem">
             <span>File</span>
             <ul class="taskbarItemDropdown">
@@ -83,89 +131,96 @@
     </div>
     <!-- /Taskbar -->
 
-    <!-- Taskbar Modules -->
-    <div class="resizeModule" id="resizeModule">
-        <div class="taskbarModuleTitle">
-                <p>Resize</p>
-                <button class="taskbarModuleClose" id="cancelResize">x</button>
-        </div>
-        <div class="taskbarModuleContent">
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Modal Overlays -->
+    <div class="modal-overlay" id="resizeModal">
+        <div class="modal-content">
+            <div class="taskbarModuleTitle">
+                <p>Resize Image</p>
+                <button class="taskbarModuleClose" id="cancelResize" aria-label="Close">×</button>
+            </div>
+            <div class="taskbarModuleContent">
                 <div class="taskbarModuleOneLine">
                     <p>Width</p>
-                    <input type="number" type="text" placeholder="pixels" id="resizeWidth">
+                    <input type="number" placeholder="pixels" id="resizeWidth" aria-label="Width in pixels">
                 </div>
                 <div class="taskbarModuleOneLine">
                     <p>Height</p>
-                    <input type="number" type="text" placeholder="pixels" id="resizeHeight">
+                    <input type="number" placeholder="pixels" id="resizeHeight" aria-label="Height in pixels">
                 </div>
                 <div class="taskbarModuleOneLine">
                     <p>Constrained</p>
-                    <input type="checkbox" id="constrainedCheckbox">
+                    <input type="checkbox" id="constrainedCheckbox" aria-label="Maintain aspect ratio">
                 </div>
                 <div class="taskbarModuleOneLine" id="resizeScaleDIV" style="display: none;">
                     <p>Scale</p>
-                    <input type="number" min="0" max="5" value="1" step=".1" id="resizeScale">
+                    <input type="number" min="0.1" max="5" value="1" step="0.1" id="resizeScale" aria-label="Scale factor">
                 </div>
                 <div class="taskbarModuleOneLine">
-                  <p>Interpolation</p>
-                  <select id="interpolationType">
-                    <option value="Default">Default</option>
-                    <option value="Nearest Neighbour">Nearest Neighbour</option>
-                    <option value="Bilinear">Bilinear</option>
-                  </select>
+                    <p>Interpolation</p>
+                    <select id="interpolationType" aria-label="Interpolation method">
+                        <option value="Default">Default</option>
+                        <option value="Nearest Neighbour">Nearest Neighbour</option>
+                        <option value="Bilinear">Bilinear</option>
+                    </select>
                 </div>
+            </div>
+            <button class="taskbarModuleSubmit" id="resizeSubmit">Resize</button>
         </div>
-        <button class="taskbarModuleSubmit" id="resizeSubmit">Resize</button>
     </div>
 
-    <div class="cropModule" id="cropModule">
-        <div class="taskbarModuleTitle">
-                <p>Crop</p>
-                <button class="taskbarModuleClose" id="cancelCrop">x</button>
-        </div>
-        <div class="taskbarModuleContent">
-            <div class="taskbarModuleOneLine">
-                <p>Start Width</p>
-                <input type="number" type="text" placeholder="pixels" id="cropStartWidth">
+    <div class="modal-overlay" id="cropModal">
+        <div class="modal-content">
+            <div class="taskbarModuleTitle">
+                <p>Crop Image</p>
+                <button class="taskbarModuleClose" id="cancelCrop" aria-label="Close">×</button>
             </div>
-            <div class="taskbarModuleOneLine">
-                <p>Start Height</p>
-                <input type="number" type="text" placeholder="pixels" id="cropStartHeight">
-            </div>
-        </div>
-        <div class="taskbarModuleContent">
+            <div class="taskbarModuleContent">
+                <div class="taskbarModuleOneLine">
+                    <p>Start Width</p>
+                    <input type="number" placeholder="pixels" id="cropStartWidth" aria-label="Start width in pixels">
+                </div>
+                <div class="taskbarModuleOneLine">
+                    <p>Start Height</p>
+                    <input type="number" placeholder="pixels" id="cropStartHeight" aria-label="Start height in pixels">
+                </div>
                 <div class="taskbarModuleOneLine">
                     <p>End Width</p>
-                    <input type="number" type="text" placeholder="pixels" id="cropEndWidth">
+                    <input type="number" placeholder="pixels" id="cropEndWidth" aria-label="End width in pixels">
                 </div>
                 <div class="taskbarModuleOneLine">
                     <p>End Height</p>
-                    <input type="number" type="text" placeholder="pixels" id="cropEndHeight">
+                    <input type="number" placeholder="pixels" id="cropEndHeight" aria-label="End height in pixels">
                 </div>
+            </div>
+            <button class="taskbarModuleSubmit" id="cropSubmit">Crop</button>
         </div>
-        <button class="taskbarModuleSubmit" id="cropSubmit">Crop</button>
     </div>
 
-    <div class="hsvModule" id="hsvModule">
-        <div class="taskbarModuleTitle">
-            <p>Hue-Saturation Value Adjustment</p>
-            <button class="taskbarModuleClose" id="hsvCancel">x</button>
+    <div class="modal-overlay" id="hsvModal">
+        <div class="modal-content">
+            <div class="taskbarModuleTitle">
+                <p>HSV Adjustment</p>
+                <button class="taskbarModuleClose" id="hsvCancel" aria-label="Close">×</button>
+            </div>
+            <div class="taskbarModuleContent">
+                <div class="taskbarModuleOneLine">
+                    <p>Hue</p>
+                    <input type="range" min="-180" max="180" step="1" value="0" id="hueSlider" aria-label="Hue adjustment">
+                </div>
+                <div class="taskbarModuleOneLine">
+                    <p>Saturation</p>
+                    <input type="range" min="0" max="200" step="1" value="100" id="saturationSlider" aria-label="Saturation adjustment">
+                </div>
+                <div class="taskbarModuleOneLine">
+                    <p>Brightness</p>
+                    <input type="range" min="0" max="200" step="1" value="100" id="brightnessSlider" aria-label="Brightness adjustment">
+                </div>
+            </div>
+            <button class="taskbarModuleSubmit" id="hsvReset">Reset</button>
         </div>
-        <div class="taskbarModuleContent">
-            <div class="taskbarModuleOneLine">
-                <p>Hue</p>
-                <input type="range" min="-180" max="180" step="1" value="0" id="hueSlider">
-            </div>
-            <div class="taskbarModuleOneLine">
-                <p>Saturation</p>
-                <input type="range" min="0" max="200" step="1" value="100" id="saturationSlider">
-            </div>
-            <div class="taskbarModuleOneLine">
-                <p>Brightness</p>
-                <input type="range" min="0" max="200" step="1" value="100" id="brightnessSlider">
-            </div>
-        </div>
-        <button class="taskbarModuleSubmit" id="hsvReset">Reset</button>
     </div>
 
     <!-- Wrapper For Image And Layer Modules-->
@@ -174,6 +229,9 @@
         <div class="imageModule">
             <!-- Image Viewing Module -->
             <div class="imageViewingModule">
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="loading-spinner"></div>
+                </div>
                 <div id="imageCanvasDiv">
                     <canvas id="imageCanvas"></canvas>
                 </div>
@@ -242,5 +300,10 @@
     
     </div>
     <!-- /Wrapper For Image And Layer Modules-->
+    
+    <!-- Floating Action Button (Mobile) -->
+    <button class="fab mobile-only" id="fabBtn" aria-label="Quick actions">
+        ⚡
+    </button>
 </body>
 </html>
