@@ -1,57 +1,71 @@
 :root {
-    --background:  #b2becc;
-    --taskbar-indent: #e8eef5;
-    --taskbar-hover: #CBD5E1;
-    --canvas-background: #E2E8F0;
-    --accent: #282a3d;
-    --text: #130b01;
-    --text-muted: #0f2742;
-    --panel-background: #b2becc;
-  }
-  
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: #20212c;
-      --taskbar-indent: #22262f;
-      --taskbar-hover: #575961;
-      --canvas-background: #22262f;
-      --accent: #39393f;
-      --text: #fffdf5;
-      --text-muted: #b0b3bb;
-      --panel-background: #2c303a;
-    }
-  }
+    --background: #ffffff;
+    --taskbar-background: #ffffff;
+    --taskbar-border: #e2e8f0;
+    --taskbar-hover: #f8fafc;
+    --taskbar-active: #e2e8f0;
+    --canvas-background: #fafafa;
+    --accent: #475569;
+    --accent-light: #64748b;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --panel-background: #ffffff;
+    --border-radius: 8px;
+    --border-radius-sm: 4px;
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --transition: all 0.15s ease-in-out;
+}
 
-body {
-    font-family: 'Arial', sans-serif;
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #1e293b;
+        --taskbar-background: #1e293b;
+        --taskbar-border: #334155;
+        --taskbar-hover: #334155;
+        --taskbar-active: #475569;
+        --canvas-background: #1e293b;
+        --accent: #64748b;
+        --accent-light: #94a3b8;
+        --text: #f1f5f9;
+        --text-muted: #94a3b8;
+        --panel-background: #1e293b;
+        --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    }
 }
 
 * {
     margin: 0;
     padding: 0;
-    color: var(--text);
     box-sizing: border-box;
 }
 
-/* Taskbar */
-.taskbar {
-    display: flex;
-    
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
     background-color: var(--background);
+    color: var(--text);
+    line-height: 1.5;
 }
 
-#icon {
+/* Taskbar Styles */
+.taskbar {
+    display: flex;
+    background-color: var(--taskbar-background);
+    border-bottom: 1px solid var(--taskbar-border);
+    box-shadow: var(--shadow);
     position: relative;
-
-    padding: 10px;
+    z-index: 1000;
 }
 
 .taskbarItem {
-    z-index: 5;
     position: relative;
-    padding: 10px;
+    padding: 12px 16px;
     cursor: pointer;
-    background-color: var(--taskbar-indent);
+    transition: var(--transition);
+    border-radius: var(--border-radius-sm);
+    margin: 2px;
+    user-select: none;
 }
 
 .taskbarItem:hover {
@@ -59,17 +73,24 @@ body {
 }
 
 .taskbarItem span {
-    padding-right: 56px;
+    font-weight: 500;
+    font-size: 14px;
 }
 
 .taskbarItemDropdown {
     display: none;
     position: absolute;
-    list-style-type: none;
-    top: 38px;
+    top: calc(100%);
     left: 0;
-    width: 100%;
-    background-color: var(--taskbar-indent);
+    min-width: 180px;
+    background-color: var(--panel-background);
+    border: 1px solid var(--taskbar-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    list-style: none;
+    padding: 4px 0;
+    padding-top: 0;
+    z-index: 1001;
 }
 
 .taskbarItem:hover > .taskbarItemDropdown {
@@ -78,266 +99,309 @@ body {
 
 .taskbarItemDropdown li {
     position: relative;
-    padding: 10px;
+    padding: 8px 16px;
     cursor: pointer;
+    transition: var(--transition);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .taskbarItemDropdown li:hover {
     background-color: var(--taskbar-hover);
 }
 
+.taskbarItemDropdown li:first-child {
+    border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+}
+
+.taskbarItemDropdown li:last-child {
+    border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm);
+}
+
+/* Submenu Styles */
 .taskbarItemDropdownIsSubmenu {
     display: none;
     position: absolute;
-    top: 0;
+    top: -4px;
     left: 100%;
-    width: 100%;
-    background-color: var(--taskbar-indent);
-    list-style-type: none;
+    min-width: 160px;
+    background-color: var(--panel-background);
+    border: 1px solid var(--taskbar-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    list-style: none;
+    padding: 4px 0;
+    z-index: 1002;
 }
 
 .taskbarItemDropdownContainsSubmenu:hover > .taskbarItemDropdownIsSubmenu {
     display: block;
 }
 
-.taskbarItemDropdownIsSubmenu li {
-    cursor: pointer;
+.taskbarItemDropdownContainsSubmenu::after {
+    content: "▶";
+    font-size: 10px;
+    color: var(--text-muted);
 }
 
-.taskbarItemDropdownIsSubmenu li:hover {
-    background-color: var(--taskbar-hover);
+/* Modal/Module Styles */
+.resizeModule,
+.cropModule,
+.hsvModule {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    background-color: var(--panel-background);
+    border: 1px solid var(--taskbar-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+}
+
+/* Keep compatibility with existing display: block inline styles */
+.resizeModule[style*="display: block"],
+.cropModule[style*="display: block"],
+.hsvModule[style*="display: block"] {
+    display: block !important;
 }
 
 .taskbarModuleTitle {
     display: flex;
-    
     justify-content: space-between;
-
-    background-color: var(--taskbar-indent);
+    align-items: center;
+    padding: 16px 20px;
+    background-color: var(--taskbar-hover);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border-bottom: 1px solid var(--taskbar-border);
 }
 
 .taskbarModuleTitle p {
-    padding-top: 1%;
-    padding-bottom: 1%;
-    padding-left: 3%;
-
-    font-weight: bold;
+    font-weight: 600;
+    font-size: 16px;
+    margin: 0;
 }
 
-.taskbarModuleTitle button {
-    width: 20%;
-    right: 0%;
+.taskbarModuleClose {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition);
+}
+
+.taskbarModuleClose:hover {
+    background-color: var(--taskbar-active);
+    color: var(--text);
+}
+
+.taskbarModuleContent {
+    padding: 20px;
 }
 
 .taskbarModuleOneLine {
-    padding-top: 1%;
-    justify-content: space-between;
     display: flex;
-    padding-inline: 5%;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
 }
 
-.taskbarModuleOneLine input {
-    max-width: 30%;
+.taskbarModuleOneLine:last-child {
+    margin-bottom: 0;
+}
 
-    background-color:var(--taskbar-hover);
+.taskbarModuleOneLine p {
+    font-weight: 500;
+    margin: 0;
+}
+
+.taskbarModuleOneLine input,
+.taskbarModuleOneLine select {
+    padding: 8px 12px;
+    border: 1px solid var(--taskbar-border);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--background);
+    color: var(--text);
+    font-size: 14px;
+    transition: var(--transition);
+    min-width: 120px;
+}
+
+.taskbarModuleOneLine input:focus,
+.taskbarModuleOneLine select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+.taskbarModuleOneLine input[type="checkbox"] {
+    min-width: auto;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.taskbarModuleOneLine input[type="range"] {
+    min-width: 150px;
+    cursor: pointer;
 }
 
 .taskbarModuleSubmit {
-    margin: 2%;
-    float: right;
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    margin: 16px 20px 20px;
+    align-self: flex-end;
 }
 
-.resizeModule {
-    z-index: 6;
-    display: none;
-
-    position: absolute;
-
-    top: 20%;
-    left: 0%;
-
-    width: 20vw;
-
-    background-color: var(--background);
+.taskbarModuleSubmit:hover {
+    background-color: var(--accent-light);
+    transform: translateY(-1px);
 }
 
-.cropModule {
-    z-index: 6;
-    display: none;
-
-    position: absolute;
-
-    top: 35%;
-    left: 0%;
-
-    width: 20vw;
-
-    background-color: var(--background);
-}
-
-.hsvModule {
-    z-index: 6;
-    display: none;
-
-    position: absolute;
-
-    top: 20%;
-    left: 20%;
-
-    width: 20vw;
-
-    background-color: var(--background);
-}
-/* Taskbar End */
-
+/* Main Layout */
 .wrapImageAndLayerModules {
     display: flex;
+    height: calc(100vh - 50px);
 }
 
 /* Image Module */
 .imageModule {
     display: flex;
     flex-direction: column;
-    
-    height: calc(100vh - 40px);
     width: 80vw;
+    background-color: var(--panel-background);
 }
 
-/* Image Viewing Module */
 .imageViewingModule {
-    z-index: 1;
-    cursor: grab;
-
+    flex: 1;
     overflow: hidden;
-
-    height: 100%;    
-    width: 100%;
-
-    border: 1px solid var(--accent);
     background-color: var(--canvas-background);
+    border: 1px solid var(--taskbar-border);
+    border-radius: var(--border-radius);
+    margin: 8px;
+    cursor: grab;
+    position: relative;
 }
 
 .imageViewingModule:active {
     cursor: grabbing;
 }
 
-/* This is calculated when the image is loaded in. */
 #imageCanvasDiv {
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
-
     width: 100%;
     height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-
     transform-origin: 0 0;
 }
 
 #imageCanvas {
     max-width: 100%;
     max-height: 100%;
-
-    border: 1px solid var(--accent);
+    border-radius: var(--border-radius-sm);
+    box-shadow: var(--shadow);
 }
 
-/* Image Viewing Module End */
-
-
-/* Image Context Modules */
+/* Context Modules */
 .contextModules {
     display: flex;
-
-    width: 80vw;
-    height: 15vh;
-
-
-    border: 1px solid var(--accent);
-    background-color: var(--background);
+    min-height: 120px;
+    margin: 0 8px 8px;
+    gap: 8px;
 }
 
-.contextModules > div {
-    border: 1px solid var(--accent);
-}
-
-
-/* Image Data Module */
 .imageDataModule {
-    width: 20vw;
+    flex: 1;
+    background-color: var(--panel-background);
+    border: 1px solid var(--taskbar-border);
+    border-radius: var(--border-radius);
+    padding: 16px;
 }
 
 .imageDataModuleSection {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.imageDataModuleSection:first-child {
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--taskbar-border);
+    padding-bottom: 8px;
+}
+
+.imageDataModuleSection:first-child p {
+    font-weight: 600;
+    color: var(--accent);
 }
 
 .sectionLabel {
-    float: left;
-    font-weight: bold;
+    font-weight: 500;
+    color: var(--text-muted);
 }
 
 .sectionValue {
-    float: right;
+    font-weight: 500;
+    color: var(--text);
 }
-/* Image Data Module End */
-
-
-/* Image Context Modules End */
-
-
-/* Image Module End */
 
 /* Layers Module */
 .layersModule {
     display: flex;
     flex-direction: column;
-
-    height: calc(100vh - 40px);
     width: 20vw;
-
-    border: 1px solid var(--accent);
-    background-color: var(--background);
-}
-
-.layersModule > div{
-    border-bottom: 1px solid var(--accent);
+    background-color: var(--panel-background);
+    border: 1px solid var(--taskbar-border);
+    border-radius: var(--border-radius);
+    margin: 8px 8px 8px 0;
+    overflow: hidden;
 }
 
 #currentLayerSelector {
-    min-height: 70vh;
+    flex: 1;
+    padding: 16px;
+    border-bottom: 1px solid var(--taskbar-border);
+    overflow-y: auto;
 }
 
 #layersSelector {
-    position: relative;
-    
+    min-height: 200px;
+    max-height: 300px;
     overflow-y: auto;
-
-    flex: 1;
-    
-    background-color: var(--background);
+    border-bottom: 1px solid var(--taskbar-border);
 }
 
 #layersList {
-    max-height: 100%;
-}
-
-#layersControls {
-    display: flex;
-
-    bottom: 0;
-
-}
-
-#layersControls button {
-    margin: 1%;
-    background-color: var(--taskbar-indent);
+    list-style: none;
 }
 
 .layerDiv {
     display: flex;
+    align-items: center;
+    padding: 12px 16px;
     cursor: pointer;
+    transition: var(--transition);
+    border-bottom: 1px solid var(--taskbar-border);
+}
+
+.layerDiv:last-child {
+    border-bottom: none;
 }
 
 .layerDiv:hover {
@@ -345,42 +409,124 @@ body {
 }
 
 .selectedLayerDiv {
-    background-color: var(--taskbar-indent) !important;
+    background-color: var(--taskbar-active) !important;
 }
 
 .layerDivName {
-    width: 80vw;
+    flex: 1;
+    font-weight: 500;
 }
 
 .layerDivToggleVisibility {
-    width: 20vw;
-}
-/* Layers Module End */
-
-/* Layer Properties Module */
-.layerPropertiesOpacity {
-}
-
-.layerPropertiesOpacity p {
-    font-weight: bold;
-}
-
-.layerPropertiesOpacity input {
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
     background-color: var(--taskbar-hover);
-
-    width: 25%;
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
 }
 
+.layerDivToggleVisibility:hover {
+    background-color: var(--taskbar-active);
+}
+
+#layersControls {
+    display: flex;
+    gap: 8px;
+    padding: 16px;
+}
+
+#layersControls button {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--taskbar-border);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--background);
+    color: var(--text);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#layersControls button:hover {
+    background-color: var(--taskbar-hover);
+    transform: translateY(-1px);
+}
+
+/* Layer Properties */
+.layerPropertiesOpacity,
 .effectParameter {
+    margin-bottom: 16px;
 }
 
+.layerPropertiesOpacity p,
 .effectParameter p {
-    font-weight: bold;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--accent);
 }
 
+.layerPropertiesOpacity input,
 .effectParameter input {
-    background-color:var(--taskbar-hover);
-
-    width: 25%;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--taskbar-border);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--background);
+    color: var(--text);
+    transition: var(--transition);
 }
-/* Layer Properties Module End */
+
+.layerPropertiesOpacity input:focus,
+.effectParameter input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+/* Utility Classes */
+.show {
+    display: block !important;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Reset Image Button */
+#resetImage {
+    background-color: var(--accent);
+    color: white !important;
+}
+
+#resetImage:hover {
+    background-color: var(--accent-light);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .wrapImageAndLayerModules {
+        flex-direction: column;
+    }
+    
+    .imageModule {
+        width: 100vw;
+        height: 60vh;
+    }
+    
+    .layersModule {
+        width: 100vw;
+        height: 40vh;
+    }
+    
+    .contextModules {
+        flex-direction: column;
+    }
+    
+    .resizeModule,
+    .cropModule,
+    .hsvModule {
+        width: 90vw;
+        max-width: 320px;
+    }
+}
