@@ -242,5 +242,102 @@
     
     </div>
     <!-- /Wrapper For Image And Layer Modules-->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+        // Select all elements needed
+        const taskbarItems = document.querySelectorAll('.taskbarItem');
+        const submenuItems = document.querySelectorAll('.taskbarItemDropdownContainsSubmenu');
+        const allDropdowns = document.querySelectorAll('.taskbarItemDropdown, .taskbarItemDropdownIsSubmenu');
+
+        const resizeButton = document.getElementById('resize');
+        const cropButton = document.getElementById('crop');
+        const hsvButton = document.getElementById('hsv');
+        const resizeModule = document.getElementById('resizeModule');
+        const cropModule = document.getElementById('cropModule');
+        const hsvModule = document.getElementById('hsvModule');
+
+        // Handle clicks on main taskbar items to open dropdowns
+        taskbarItems.forEach(item => {
+            item.addEventListener('click', (event) => {
+                event.stopPropagation();
+
+                taskbarItems.forEach(otherItem => {
+                    if (otherItem !== item) {
+                        otherItem.classList.remove('active');
+                        otherItem.querySelectorAll('.taskbarItemDropdownContainsSubmenu').forEach(subItem => {
+                            subItem.classList.remove('active');
+                        });
+                    }
+                });
+                item.classList.toggle('active');
+            });
+        });
+
+        // Handle clicks on submenu items
+        submenuItems.forEach(item => {
+            item.addEventListener('click', (event) => {
+                event.stopPropagation();
+                item.classList.toggle('active');
+            });
+        });
+
+        // Handle clicks within dropdowns to prevent them from closing
+        allDropdowns.forEach(dropdown => {
+            dropdown.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+        });
+
+        // Event listeners for pop-up modules
+        const hideAllModules = () => {
+            resizeModule.classList.remove('show');
+            cropModule.classList.remove('show');
+            hsvModule.classList.remove('show');
+        };
+
+        // Resize module
+        if (resizeButton) {
+            resizeButton.addEventListener('click', () => {
+                hideAllModules();
+                resizeModule.classList.add('show');
+            });
+        }
+
+        // Crop module
+        if (cropButton) {
+            cropButton.addEventListener('click', () => {
+                hideAllModules();
+                cropModule.classList.add('show');
+            });
+        }
+
+        // HSV module
+        if (hsvButton) {
+            hsvButton.addEventListener('click', () => {
+                hideAllModules();
+                hsvModule.classList.add('show');
+            });
+        }
+
+        // New: Prevent clicks within the modules from closing the menu
+        document.querySelectorAll('.resizeModule, .cropModule, .hsvModule').forEach(module => {
+            module.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+        });
+
+        // Add a listener to the document to close all dropdowns and pop-up modules
+        document.addEventListener('click', () => {
+            taskbarItems.forEach(item => {
+                item.classList.remove('active');
+            });
+            submenuItems.forEach(item => {
+                item.classList.remove('active');
+            });
+            hideAllModules();
+        });
+    });
+    </script>
 </body>
 </html>
