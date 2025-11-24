@@ -5,7 +5,17 @@ export default defineConfig({
     publicDir: 'public',
     build: {
         outDir: 'dist',
-        emptyOutDir: true
+        emptyOutDir: true,
+        rollupOptions: {
+            output: {
+                // Ensure workers are properly handled in production
+                workerFileNames: 'workers/[name]-[hash].js'
+            }
+        }
+    },
+    worker: {
+        format: 'es',
+        plugins: []
     }
 })
 

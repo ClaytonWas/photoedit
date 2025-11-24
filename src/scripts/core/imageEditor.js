@@ -21,27 +21,27 @@ export class ImageEditor {
         this.layerManager = new LayerManager()
         this.history = new HistoryManager()
         this.isRestoringState = false
-        this.renderWorker = null
-        this.workerJobId = 0
-        this.pendingJobId = null
         this.renderTimeout = null
+        this.isRendering = false
+        this.renderRequested = false
         this.isPreviewRendering = false
+        this.previewRequested = false
+        this.fullQualityRenderTimeout = null
         this.baseImageCache = null
         this.baseImageDirty = true
-        this.previewRequested = false
-        this.previewScale = 0.25
+        this.baseImageCanvas = null
+        this.baseImageContext = null
         this.previewCanvas = null
         this.previewContext = null
+        this.previewScale = 0.25
 
         this.canvas.width = this.IMAGE.width
         this.canvas.height = this.IMAGE.height
-
-        this.initializeRenderWorker()
     }
 
     loadImage() {
         this.context.drawImage(this.IMAGE, 0, 0)
-        this.baseImageDirty = true
+        this.invalidateBaseImageCache()
         this.requestRender(true)
         this.commitSnapshot('Initial load')
     }
@@ -50,7 +50,7 @@ export class ImageEditor {
         this.image = this.IMAGE
         this.canvas.width = this.IMAGE.width
         this.canvas.height = this.IMAGE.height
-        this.baseImageDirty = true
+        this.invalidateBaseImageCache()
         this.requestRender(true)
         this.commitSnapshot('Reset image')
     }
@@ -86,90 +86,6 @@ export class ImageEditor {
         this.setType(`image/${extension}`)
     }
 
-    initializeRenderWorker() {
-        if (typeof Worker === 'undefined') return
-
-        try {
-            this.renderWorker = new Worker(
-                new URL('../workers/renderWorker.js', import.meta.url),
-                { type: 'module' }
-            )
-            this.pendingJobId = null
-            this.pendingPayload = null
-            this.pendingTransferables = null
-            this.renderWorker.onmessage = (event) => {
-                const { jobId, imageData, error } = event.data
-                if (jobId !== this.pendingJobId) return
-                this.pendingJobId = null
-
-                if (error) {
-                    console.error('Render worker error:', error)
-                    this.renderWorker.terminate()
-                    this.renderWorker = null
-                    this.renderImageFallback()
-                    this.dispatchStateChange('Render failed')
-                    return
-                }
-
-                if (!imageData?.data) return
-
-                const outputArray = new Uint8ClampedArray(imageData.data)
-                const outputImageData = new ImageData(outputArray, imageData.width, imageData.height)
-                this.context.putImageData(outputImageData, 0, 0)
-                this.dispatchStateChange('Render complete')
-
-                if (this.pendingPayload) {
-                    const payload = this.pendingPayload
-                    const transferables = this.pendingTransferables
-                    this.pendingPayload = null
-                    this.pendingTransferables = null
-                    this.startRenderJob(payload, transferables)
-                }
-            }
-            this.renderWorker.onerror = (event) => {
-                console.error('Render worker crashed:', event.message)
-                this.renderWorker.terminate()
-                this.renderWorker = null
-                this.pendingJobId = null
-                this.pendingPayload = null
-                this.pendingTransferables = null
-                this.dispatchStateChange('Render failed')
-            }
-        } catch (error) {
-            console.error('Failed to initialize render worker', error)
-            this.renderWorker = null
-        }
-    }
-
-    cancelPendingRender() {
-        if (!this.pendingJobId || !this.renderWorker) return
-        this.renderWorker.terminate()
-        this.renderWorker = null
-        this.pendingJobId = null
-        this.initializeRenderWorker()
-    }
-
-    startRenderJob(payload, transferables) {
-        if (!this.renderWorker) {
-            this.renderImageFallback()
-            return
-        }
-
-        if (this.pendingJobId) {
-            this.pendingPayload = payload
-            this.pendingTransferables = transferables
-            return
-        }
-
-        const jobId = ++this.workerJobId
-        this.pendingJobId = jobId
-        this.dispatchStateChange('Render started')
-
-        this.renderWorker.postMessage(
-            { jobId, ...payload },
-            transferables
-        )
-    }
 
     requestRender(immediate = false) {
         if (this.renderTimeout) {
@@ -177,8 +93,15 @@ export class ImageEditor {
             this.renderTimeout = null
         }
 
+        // Cancel any pending full-quality render
+        if (this.fullQualityRenderTimeout) {
+            clearTimeout(this.fullQualityRenderTimeout)
+            this.fullQualityRenderTimeout = null
+        }
+
         if (immediate) {
-            this.renderImage()
+            // Skip preview and go straight to full quality for immediate renders
+            this.renderFullQuality()
             return
         }
 
@@ -194,46 +117,112 @@ export class ImageEditor {
         )
 
         if (!hasRenderableLayers) {
-            this.modifiedImage = this.image
+            // Cancel any pending renders
+            if (this.fullQualityRenderTimeout) {
+                clearTimeout(this.fullQualityRenderTimeout)
+                this.fullQualityRenderTimeout = null
+            }
             this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
-            this.context.drawImage(this.modifiedImage, 0, 0)
+            this.context.drawImage(this.image, 0, 0)
+            this.dispatchStateChange('Render complete')
             return
         }
 
-        if (this.renderWorker) {
-            this.modifiedImage = this.image
-            const imageData = this.cloneImageData(this.getBaseImageData())
-            const transferableBuffer = imageData.data.buffer
+        // Show quick preview first for live updates
+        this.renderPreview()
 
-            const payload = {
-                baseImageData: {
-                    width: imageData.width,
-                    height: imageData.height,
-                    data: transferableBuffer
-                },
-                layers: this.layerManager.layers.map(layer => ({
-                    id: layer.id,
-                    name: layer.name,
-                    visible: layer.visible,
-                    opacity: layer.opacity,
-                    effectId: layer.effectId,
-                    effectParameters: layer.effectParameters
-                }))
-            }
-
-            if (this.pendingJobId) {
-                this.cancelPendingRender()
-            }
-
-            if (!this.renderWorker) {
-                this.renderImageFallback()
-                return
-            }
-
-            this.startRenderJob(payload, [transferableBuffer])
-        } else {
-            this.renderImageFallback()
+        // Cancel any existing full-quality render timeout
+        if (this.fullQualityRenderTimeout) {
+            clearTimeout(this.fullQualityRenderTimeout)
         }
+
+        // Queue full-quality render after a short delay
+        this.fullQualityRenderTimeout = setTimeout(() => {
+            this.fullQualityRenderTimeout = null
+            this.renderFullQuality()
+        }, 150)
+    }
+
+    renderPreview() {
+        if (this.isPreviewRendering) {
+            this.previewRequested = true
+            return
+        }
+
+        this.isPreviewRendering = true
+        this.previewRequested = false
+        this.dispatchStateChange('Render started')
+
+        requestAnimationFrame(() => {
+            try {
+                const baseCanvas = this.ensureBaseImageCanvas()
+                const scale = this.previewScale
+                const width = Math.max(1, Math.round(baseCanvas.width * scale))
+                const height = Math.max(1, Math.round(baseCanvas.height * scale))
+                
+                // Create or resize preview canvas
+                if (!this.previewCanvas) {
+                    this.previewCanvas = document.createElement('canvas')
+                    this.previewContext = this.previewCanvas.getContext('2d')
+                }
+                this.previewCanvas.width = width
+                this.previewCanvas.height = height
+                
+                // Draw base image at preview scale
+                this.previewContext.clearRect(0, 0, width, height)
+                this.previewContext.drawImage(baseCanvas, 0, 0, width, height)
+                
+                // Get preview image data and apply effects
+                const previewData = this.previewContext.getImageData(0, 0, width, height)
+                this.layerManager.applyLayerEffects(previewData)
+                this.previewContext.putImageData(previewData, 0, 0)
+
+                // Scale up and draw to main canvas with smoothing
+                this.context.save()
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
+                this.context.imageSmoothingEnabled = true
+                this.context.imageSmoothingQuality = 'high'
+                this.context.drawImage(this.previewCanvas, 0, 0, this.canvas.width, this.canvas.height)
+                this.context.restore()
+            } catch (error) {
+                console.error('Preview render error:', error)
+            } finally {
+                this.isPreviewRendering = false
+
+                // If another preview was requested, do it now
+                if (this.previewRequested) {
+                    this.renderPreview()
+                }
+            }
+        })
+    }
+
+    renderFullQuality() {
+        if (this.isRendering) {
+            return
+        }
+
+        this.isRendering = true
+        this.dispatchStateChange('Render started')
+
+        requestAnimationFrame(() => {
+            try {
+                const baseImageData = this.getBaseImageData()
+                const imageData = this.cloneImageData(baseImageData)
+                
+                // Apply all layer effects directly at full quality
+                this.layerManager.applyLayerEffects(imageData)
+                
+                // Draw the result to the canvas
+                this.context.putImageData(imageData, 0, 0)
+                this.dispatchStateChange('Render complete')
+            } catch (error) {
+                console.error('Full quality render error:', error)
+                this.dispatchStateChange('Render failed')
+            } finally {
+                this.isRendering = false
+            }
+        })
     }
 
     ensureBaseImageCanvas() {
@@ -244,14 +233,10 @@ export class ImageEditor {
         return this.baseImageCanvas
     }
 
-    ensurePreviewCanvas(width, height) {
-        if (!this.previewCanvas) {
-            this.previewCanvas = document.createElement('canvas')
-            this.previewContext = this.previewCanvas.getContext('2d')
-        }
-        this.previewCanvas.width = width
-        this.previewCanvas.height = height
-        return this.previewCanvas
+
+    invalidateBaseImageCache() {
+        this.baseImageCache = null
+        this.baseImageDirty = true
     }
 
     getBaseImageData() {
@@ -282,42 +267,6 @@ export class ImageEditor {
         )
     }
 
-    renderImageFallback() {
-        if (this.isPreviewRendering) {
-            this.previewRequested = true
-            return
-        }
-
-        this.isPreviewRendering = true
-        this.previewRequested = false
-
-        const runPreview = () => {
-            const baseCanvas = this.ensureBaseImageCanvas()
-            const scale = this.previewScale
-            const width = Math.max(1, Math.round(baseCanvas.width * scale))
-            const height = Math.max(1, Math.round(baseCanvas.height * scale))
-            const previewCanvas = this.ensurePreviewCanvas(width, height)
-            this.previewContext.clearRect(0, 0, width, height)
-            this.previewContext.drawImage(baseCanvas, 0, 0, width, height)
-            const previewData = this.previewContext.getImageData(0, 0, width, height)
-            this.layerManager.applyLayerEffects(previewData)
-            this.previewContext.putImageData(previewData, 0, 0)
-
-            this.context.save()
-            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
-            this.context.imageSmoothingEnabled = true
-            this.context.drawImage(previewCanvas, 0, 0, this.canvas.width, this.canvas.height)
-            this.context.restore()
-
-            this.isPreviewRendering = false
-
-            if (this.previewRequested) {
-                this.renderImageFallback()
-            }
-        }
-
-        requestAnimationFrame(runPreview)
-    }
 
     bilinearInterpolation() {
         console.warn('Bilinear interpolation is not implemented yet.')
@@ -345,7 +294,7 @@ export class ImageEditor {
                 this.image = resizedImage
                 this.canvas.width = newWidth
                 this.canvas.height = newHeight
-                this.baseImageDirty = true
+                this.invalidateBaseImageCache()
                 this.requestRender(true)
                 tempCanvas.remove()
                 resolve()
@@ -393,7 +342,7 @@ export class ImageEditor {
 
     addLayerInternal(name, { skipSnapshot = false } = {}) {
         const layer = this.layerManager.addLayer(name)
-        this.baseImageDirty = true
+        // Note: Adding a layer doesn't change the base image, so we don't need to invalidate cache
         this.requestRender(true)
         if (!skipSnapshot) {
             const reason = name ? `Add layer: ${name}` : 'Add layer'
@@ -404,7 +353,7 @@ export class ImageEditor {
 
     deleteLayer(index) {
         this.layerManager.deleteLayer(index)
-        this.baseImageDirty = true
+        // Note: Deleting a layer doesn't change the base image, so we don't need to invalidate cache
         this.requestRender(true)
         this.commitSnapshot('Delete layer')
     }
@@ -422,7 +371,7 @@ export class ImageEditor {
         this.addLayerInternal(name, { skipSnapshot: true })
         const index = this.getSelectedIndex()
         this.applyEffectToLayer(index, effect, parameters, valueStep, null)
-        this.baseImageDirty = true
+        // Note: Adding an effect layer doesn't change the base image, so we don't need to invalidate cache
         this.commitSnapshot(`Add layer: ${name}`)
         return index
     }
@@ -430,12 +379,7 @@ export class ImageEditor {
     updateLayerEffectParameters(index, parameters = {}, options = {}) {
         const { snapshot = true, deferRender = false } = options
         this.layerManager.updateLayerParameters(index, parameters)
-        if (deferRender) {
-            this.renderImageFallback()
-            this.requestRender(false)
-        } else {
-            this.requestRender(true)
-        }
+        this.requestRender(!deferRender)
         if (snapshot) {
             this.commitSnapshot('Update effect parameters')
         }
@@ -447,12 +391,7 @@ export class ImageEditor {
             : options || {}
         const { snapshot = true, deferRender = false } = normalizedOptions
         this.layerManager.setOpacity(index, opacity)
-        if (deferRender) {
-            this.renderImageFallback()
-            this.requestRender(false)
-        } else {
-            this.requestRender(true)
-        }
+        this.requestRender(!deferRender)
         if (snapshot) {
             this.commitSnapshot('Change layer opacity')
         }
@@ -467,7 +406,7 @@ export class ImageEditor {
         const targetIndex = index ?? this.getSelectedIndex()
         const newIndex = this.layerManager.moveLayerUp(targetIndex)
         if (newIndex === null || newIndex === undefined) return null
-        this.baseImageDirty = true
+        // Note: Moving a layer doesn't change the base image, so we don't need to invalidate cache
         this.requestRender(true)
         this.commitSnapshot('Move layer up')
         return newIndex
@@ -477,7 +416,7 @@ export class ImageEditor {
         const targetIndex = index ?? this.getSelectedIndex()
         const newIndex = this.layerManager.moveLayerDown(targetIndex)
         if (newIndex === null || newIndex === undefined) return null
-        this.baseImageDirty = true
+        // Note: Moving a layer doesn't change the base image, so we don't need to invalidate cache
         this.requestRender(true)
         this.commitSnapshot('Move layer down')
         return newIndex
@@ -563,7 +502,7 @@ export class ImageEditor {
                 this.canvas.width = newWidth
                 this.canvas.height = newHeight
                 this.image = croppedImage
-                this.baseImageDirty = true
+                this.invalidateBaseImageCache()
                 this.requestRender(true)
                 tempCanvas.remove()
                 this.commitSnapshot('Crop image')
@@ -603,7 +542,7 @@ export class ImageEditor {
 
                 this.context.clearRect(0, 0, newWidth, newHeight)
                 this.context.drawImage(rotatedImage, 0, 0)
-                this.baseImageDirty = true
+                this.invalidateBaseImageCache()
                 this.requestRender(true)
                 tempCanvas.remove()
                 this.commitSnapshot('Rotate image')
@@ -658,6 +597,7 @@ export class ImageEditor {
             newImage.src = src
             newImage.onload = () => {
                 this.image = newImage
+                this.invalidateBaseImageCache()
                 resolve()
             }
         })
