@@ -4,25 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="/styles.css">
-    <script type="module" src="/scripts/taskbarHandler.js"></script>
-    <script type="module" src="/scripts/canvasHandler.js"></script>
-    <script type="module" src="/scripts/layersHandler.js"></script>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <title>PhotoEdits</title>
 </head>
 <body>
     <!-- Taskbar -->
     <div class="taskbar">
+        <img id="icon" src="/images/icon.png">
         <div class="taskbarItem">
             <span>File</span>
             <ul class="taskbarItemDropdown">
                 <li id="openFile">Open</li>
                 <input id="uploadFile" type="file" accept="image/*" style="display: none;">
-                <li id="quickExport">Quick Export</li>
-                <li id="resize">Resize</li>
-                <li id="cursorCrop">Cursor Crop</li>
-                <li id="crop">Crop</li>
+                <li id="saveAction">Save</li>
+                <li id="undoAction" class="isDisabled" aria-disabled="true">Undo</li>
+                <li id="redoAction" class="isDisabled" aria-disabled="true">Redo</li>
             </ul>
         </div>
 
@@ -35,7 +33,13 @@
                         <li id="rotateCCW90">Rotate -90°</li>
                     </ul>
                 </li>
-                <li id="hsv">HSV Adjustment</li>
+                <li class="taskbarItemDropdownContainsSubmenu" id="cropImageMenu">Crop ▶
+                    <ul class="taskbarItemDropdownIsSubmenu">
+                        <li id="menuCursorCrop">Cursor Crop</li>
+                        <li id="menuManualCrop">Manual Crop</li>
+                    </ul>
+                </li>
+                <li id="resetImage">Reset Image</li>
             </ul>
         </div>
 
@@ -46,6 +50,7 @@
                 <li id="sepia">Sepia</li>
                 <li id="filmEffects">Film Effects</li>
                 <li id="paintedStylization">Painted</li>
+                <li id="hsvAdjust">HSV Adjust</li>
             </ul>
         </div>
 
@@ -77,97 +82,10 @@
             </ul>
         </div>
 
-        <div class="taskbarItem" id="resetImage">
-            <span>Reset Image</span>
-        </div>
     </div>
     <!-- /Taskbar -->
 
     <!-- Taskbar Modules -->
-    <div class="resizeModule" id="resizeModule">
-        <div class="taskbarModuleTitle">
-                <p>Resize</p>
-                <button class="taskbarModuleClose" id="cancelResize">x</button>
-        </div>
-        <div class="taskbarModuleContent">
-                <div class="taskbarModuleOneLine">
-                    <p>Width</p>
-                    <input type="number" type="text" placeholder="pixels" id="resizeWidth">
-                </div>
-                <div class="taskbarModuleOneLine">
-                    <p>Height</p>
-                    <input type="number" type="text" placeholder="pixels" id="resizeHeight">
-                </div>
-                <div class="taskbarModuleOneLine">
-                    <p>Constrained</p>
-                    <input type="checkbox" id="constrainedCheckbox">
-                </div>
-                <div class="taskbarModuleOneLine" id="resizeScaleDIV" style="display: none;">
-                    <p>Scale</p>
-                    <input type="number" min="0" max="5" value="1" step=".1" id="resizeScale">
-                </div>
-                <div class="taskbarModuleOneLine">
-                  <p>Interpolation</p>
-                  <select id="interpolationType">
-                    <option value="Default">Default</option>
-                    <option value="Nearest Neighbour">Nearest Neighbour</option>
-                    <option value="Bilinear">Bilinear</option>
-                  </select>
-                </div>
-        </div>
-        <button class="taskbarModuleSubmit" id="resizeSubmit">Resize</button>
-    </div>
-
-    <div class="cropModule" id="cropModule">
-        <div class="taskbarModuleTitle">
-                <p>Crop</p>
-                <button class="taskbarModuleClose" id="cancelCrop">x</button>
-        </div>
-        <div class="taskbarModuleContent">
-            <div class="taskbarModuleOneLine">
-                <p>Start Width</p>
-                <input type="number" type="text" placeholder="pixels" id="cropStartWidth">
-            </div>
-            <div class="taskbarModuleOneLine">
-                <p>Start Height</p>
-                <input type="number" type="text" placeholder="pixels" id="cropStartHeight">
-            </div>
-        </div>
-        <div class="taskbarModuleContent">
-                <div class="taskbarModuleOneLine">
-                    <p>End Width</p>
-                    <input type="number" type="text" placeholder="pixels" id="cropEndWidth">
-                </div>
-                <div class="taskbarModuleOneLine">
-                    <p>End Height</p>
-                    <input type="number" type="text" placeholder="pixels" id="cropEndHeight">
-                </div>
-        </div>
-        <button class="taskbarModuleSubmit" id="cropSubmit">Crop</button>
-    </div>
-
-    <div class="hsvModule" id="hsvModule">
-        <div class="taskbarModuleTitle">
-            <p>Hue-Saturation Value Adjustment</p>
-            <button class="taskbarModuleClose" id="hsvCancel">x</button>
-        </div>
-        <div class="taskbarModuleContent">
-            <div class="taskbarModuleOneLine">
-                <p>Hue</p>
-                <input type="range" min="-180" max="180" step="1" value="0" id="hueSlider">
-            </div>
-            <div class="taskbarModuleOneLine">
-                <p>Saturation</p>
-                <input type="range" min="0" max="200" step="1" value="100" id="saturationSlider">
-            </div>
-            <div class="taskbarModuleOneLine">
-                <p>Brightness</p>
-                <input type="range" min="0" max="200" step="1" value="100" id="brightnessSlider">
-            </div>
-        </div>
-        <button class="taskbarModuleSubmit" id="hsvReset">Reset</button>
-    </div>
-
     <!-- Wrapper For Image And Layer Modules-->
     <div class="wrapImageAndLayerModules">
         <!-- Image Module -->
@@ -181,44 +99,35 @@
             <!-- /Image Viewing Module -->
             <!-- Modules That Provide Image Context And Data -->
             <div class="contextModules">
-                <!-- Image Data Module -->
                 <div class="imageDataModule">
-                    <div class="imageDataModuleSection">
-                        <p>Original Image Data</p>
-                    </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleName"></p>
-                        <p class="sectionValue" id="imageName"></p>
-                    </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleDimensions"></p>
-                        <p class="sectionValue" id="imageDimensions"></p>
-                    </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleExtension"></p>
-                        <p class="sectionValue" id="imageExtension"></p>
-                    </div>
-                </div>
-                <!-- /Image Data Module -->
-                <!-- Modified Image Data Module -->
-                <div class="imageDataModule">
-                    <div class="imageDataModuleSection">
+                    <div class="imageDataModuleHeader">
                         <p>Current Image Data</p>
                     </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleNameModified"></p>
-                        <p class="sectionValue" id="imageNameModified"></p>
+                    <div class="imageDataModuleRow">
+                        <span class="sectionLabel" id="titleNameModified"></span>
+                        <input class="sectionValue imageNameInput" type="text" id="imageNameInput" placeholder="Image name" autocomplete="off" spellcheck="false" />
                     </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleDimensionsModified"></p>
-                        <p class="sectionValue" id="imageDimensionsModified"></p>
+                    <div class="imageDataModuleRow dimensionRow">
+                        <span class="sectionLabel" id="titleDimensionsModified"></span>
+                        <div class="singleLineControls dimensionControls">
+                            <input type="number" id="imageWidthInput" min="1" placeholder="Width" />
+                            <span>x</span>
+                            <input type="number" id="imageHeightInput" min="1" placeholder="Height" />
+                            <button id="doubleDimensions" title="Double dimensions">2×</button>
+                            <button id="halveDimensions" title="Halve dimensions">½×</button>
+                            <button id="applyDimensions">Apply</button>
+                            <label class="checkboxLabel"><input type="checkbox" id="constrainedCheckbox"> Constrain</label>
+                        </div>
                     </div>
-                    <div class="imageDataModuleSection">
-                        <p class="sectionLabel" id="titleExtensionModified"></p>
-                        <p class="sectionValue" id="imageExtensionModified"></p>
+                    <div class="imageDataModuleRow">
+                        <span class="sectionLabel" id="titleExtensionModified"></span>
+                        <select id="imageExtensionSelector">
+                            <option value="png">PNG (.png)</option>
+                            <option value="jpeg">JPEG (.jpeg)</option>
+                            <option value="webp">WEBP (.webp)</option>
+                        </select>
                     </div>
                 </div>
-                <!-- /Modified Image Data Module -->
             </div>
             <!-- /Modules That Provide Image Context And Data -->
         </div>
@@ -234,13 +143,52 @@
                 </ul>
             </div>
             <div id="layersControls">
-                <button id="addLayer">Add Layer</button>
+                <div class="layerReorderGroup">
+                    <button id="moveLayerUp" type="button" title="Move layer up" aria-label="Move layer up">▲</button>
+                    <button id="moveLayerDown" type="button" title="Move layer down" aria-label="Move layer down">▼</button>
+                </div>
                 <button id="deleteLayer">Delete Layer</button>
+            </div>
+            <div id="renderStatus" class="renderStatus hidden">
+                <div class="spinner"></div>
+                <span>Rendering…</span>
             </div>
         </div>
         <!-- /Layers Module -->
-    
+
     </div>
     <!-- /Wrapper For Image And Layer Modules-->
+
+    <div id="cropPanel" class="floatingPanel hidden">
+        <div class="floatingPanelHeader">
+            <h3>Crop & Selection</h3>
+            <button id="closeCropPanel" aria-label="Close crop panel">✕</button>
+        </div>
+        <div class="floatingPanelBody">
+            <div class="floatingPanelRow">
+                <label>Start X
+                    <input type="number" id="cropStartWidth" placeholder="Start X" />
+                </label>
+                <label>Start Y
+                    <input type="number" id="cropStartHeight" placeholder="Start Y" />
+                </label>
+            </div>
+            <div class="floatingPanelRow">
+                <label>End X
+                    <input type="number" id="cropEndWidth" placeholder="End X" />
+                </label>
+                <label>End Y
+                    <input type="number" id="cropEndHeight" placeholder="End Y" />
+                </label>
+            </div>
+            <div class="panelActions">
+                <button id="cursorCrop">Use Cursor</button>
+                <button id="applyCrop">Apply Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>
+

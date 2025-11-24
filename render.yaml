@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: webapp-photoedits
+    runtime: node
+    branch: main
+    buildCommand: npm ci
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20.15.1

@@ -1,0 +1,524 @@
+:root {
+    --bg: #111111;
+    --panel: #1b1b1b;
+    --panel-alt: #242424;
+    --border: #333;
+    --text: #f4f4f4;
+    --muted: #cfcfcf;
+    --accent: #2f8bff;
+    --accent-strong: #0f6bff;
+    --shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+    --viewer-height: clamp(320px, 60vh, 760px);
+}
+
+html,
+body {
+    height: 100%;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'IBM Plex Mono', 'Inter', sans-serif;
+    background: #0c0c0c;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.taskbar {
+    display: flex;
+    align-items: center;
+    padding: 10px 24px;
+    background: #1c1c1c;
+    border-bottom: 1px solid #2d2d2d;
+    box-shadow: 0 8px 14px rgba(0, 0, 0, 0.45);
+}
+
+.taskbarItem {
+    position: relative;
+    padding: 8px 16px;
+    margin-right: 6px;
+    color: var(--muted);
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.taskbarItem:hover {
+    background: rgba(77, 183, 255, 0.15);
+    color: var(--text);
+}
+
+.taskbarItemDropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 180px;
+    padding: 6px 0;
+    list-style: none;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #0d1421;
+    box-shadow: var(--shadow);
+    z-index: 10;
+}
+
+.taskbarItem:hover > .taskbarItemDropdown {
+    display: block;
+}
+
+.taskbarItemDropdown li {
+    position: relative;
+    padding: 8px 16px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.taskbarItemDropdown li:hover {
+    background: rgba(77, 183, 255, 0.15);
+    color: var(--text);
+}
+
+.taskbarItemDropdown li.isDisabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.taskbarItemDropdownIsSubmenu {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    min-width: 170px;
+    padding: 4px 0;
+    list-style: none;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #0d1421;
+    box-shadow: var(--shadow);
+}
+
+.taskbarItemDropdownContainsSubmenu:hover > .taskbarItemDropdownIsSubmenu {
+    display: block;
+}
+
+.wrapImageAndLayerModules {
+    display: flex;
+    gap: 24px;
+    padding: 24px;
+    flex: 1 1 auto;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.imageModule {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.imageViewingModule {
+    flex: 0 0 auto;
+    height: min(var(--viewer-height), calc(100% - 220px));
+    cursor: grab;
+    overflow: hidden;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: linear-gradient(135deg, #151b2a, #121726);
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.55);
+    position: relative;
+}
+
+.imageViewingModule:active {
+    cursor: grabbing;
+}
+
+#imageCanvasDiv {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: 0 0;
+    position: relative;
+    overflow: hidden;
+}
+
+#imageCanvas {
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.55);
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    display: block;
+}
+
+.selectionOverlay {
+    pointer-events: none;
+    top: 0;
+    left: 0;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.floatingPanel {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 320px;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    z-index: 30;
+}
+
+.floatingPanelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.floatingPanelHeader h3 {
+    font-size: 1rem;
+    color: var(--text);
+}
+
+.floatingPanelHeader button {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.floatingPanelHeader button:hover {
+    color: var(--text);
+}
+
+.floatingPanelBody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.floatingPanelRow {
+    display: flex;
+    gap: 8px;
+}
+
+.floatingPanelRow label {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.floatingPanelRow input {
+    width: 100%;
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #111522;
+    color: var(--text);
+}
+
+.panelActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.panelActions button {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.panelActions button:hover {
+    background: var(--accent-strong);
+}
+
+.contextModules {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 18px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.contextModules > div {
+    flex: 1 1 320px;
+    min-height: 180px;
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel-alt);
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+}
+
+.imageDataModuleHeader {
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.imageDataModuleRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.imageDataModuleRow select {
+    flex: 1;
+    min-width: 0;
+}
+
+.dimensionRow {
+    align-items: center;
+}
+
+.dimensionControls span {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.sectionLabel {
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text);
+}
+
+.singleLineControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    flex-wrap: wrap;
+}
+
+.singleLineControls input[type="number"] {
+    width: 72px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #111522;
+    color: var(--text);
+}
+
+.singleLineControls button,
+#imageExtensionSelector {
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: var(--accent);
+    color: #051425;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.singleLineControls button:hover,
+#imageExtensionSelector:hover {
+    background: var(--accent-strong);
+}
+
+#imageExtensionSelector {
+    appearance: none;
+    min-width: 120px;
+    text-transform: uppercase;
+}
+
+#imageNameInput {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #111522;
+    color: var(--text);
+    font-family: inherit;
+}
+
+#imageNameInput:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.singleLineControls label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.layersModule {
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    max-height: 100%;
+}
+
+#currentLayerSelector {
+    min-height: 260px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel-alt);
+    padding: 12px;
+}
+
+#layersSelector {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    padding-right: 6px;
+}
+
+#layersList {
+    list-style: none;
+    overflow-wrap: anywhere;
+}
+
+.layerDiv {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.02);
+    transition: border 0.15s ease, background 0.15s ease;
+}
+
+.layerDiv:hover {
+    border-color: var(--accent);
+    background: rgba(77, 183, 255, 0.08);
+}
+
+.selectedLayerDiv {
+    border-color: var(--accent);
+    background: rgba(77, 183, 255, 0.15);
+}
+
+#layersControls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+#layersControls button {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    cursor: pointer;
+}
+
+#layersControls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+#layersControls button:hover {
+    background: rgba(77, 183, 255, 0.15);
+    border-color: var(--accent);
+}
+
+.layerReorderGroup {
+    display: flex;
+    gap: 8px;
+}
+
+.layerReorderGroup button {
+    width: 40px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+#renderStatus {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+#renderStatus.hidden {
+    display: none;
+}
+
+#renderStatus.renderStatusError {
+    color: #ffb3b3;
+}
+
+.spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
