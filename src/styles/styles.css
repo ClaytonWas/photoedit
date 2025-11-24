@@ -58,6 +58,39 @@ body {
     color: var(--text);
 }
 
+.taskbarStatus {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.taskbarStatus .spinner {
+    display: none;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.taskbarStatus.isRendering .spinner {
+    display: inline-flex;
+}
+
+.taskbarStatus.isError span {
+    color: #ffb3b3;
+}
+
+.taskbarStatus.isReady span {
+    color: var(--muted);
+}
+
 .taskbarItemDropdown {
     display: none;
     position: absolute;
@@ -489,32 +522,6 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 1rem;
-}
-
-#renderStatus {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    font-size: 0.85rem;
-    color: var(--muted);
-}
-
-#renderStatus.hidden {
-    display: none;
-}
-
-#renderStatus.renderStatusError {
-    color: #ffb3b3;
-}
-
-.spinner {
-    width: 12px;
-    height: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.25);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {

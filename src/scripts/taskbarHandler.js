@@ -233,26 +233,30 @@ function handleImageEditorStateChange(event) {
 
     const renderStatus = document.getElementById('renderStatus')
     if (!renderStatus) return
+    const statusLabel = renderStatus.querySelector('span')
+
+    const setStatus = (stateClass, label) => {
+        renderStatus.classList.remove('isRendering', 'isError', 'isReady')
+        if (stateClass) {
+            renderStatus.classList.add(stateClass)
+        }
+        if (statusLabel) {
+            statusLabel.textContent = label
+        }
+    }
 
     if (isRendering) {
-        renderStatus.classList.remove('hidden', 'renderStatusError')
-        renderStatus.querySelector('span').textContent = 'Rendering…'
+        setStatus('isRendering', 'Rendering…')
         return
     }
 
     if (renderFailed) {
-        renderStatus.classList.remove('hidden')
-        renderStatus.classList.add('renderStatusError')
-        renderStatus.querySelector('span').textContent = 'Render failed'
-        setTimeout(() => {
-            renderStatus.classList.add('hidden')
-            renderStatus.classList.remove('renderStatusError')
-            renderStatus.querySelector('span').textContent = 'Rendering…'
-        }, 2000)
+        setStatus('isError', 'Render failed')
+        setTimeout(() => setStatus('isReady', 'Ready'), 2000)
         return
     }
 
-    renderStatus.classList.add('hidden')
+    setStatus('isReady', 'Ready')
 }
 
 function enableSelection(callback) {

@@ -288,8 +288,13 @@ window.addEventListener('imageEditorReady', (event) => {
     document.getElementById('moveLayerDown')?.addEventListener('click', () => handleLayerMove('down'))
 })
 
+const RENDER_ONLY_REASONS = new Set(['Render started', 'Render complete'])
+
 window.addEventListener('imageEditorStateChanged', (event) => {
-    const imageEditor = event.detail.instance
-    renderLayersList(imageEditor)
-    renderLayerProperties(imageEditor)
+    const { instance, reason } = event.detail
+    if (RENDER_ONLY_REASONS.has(reason)) {
+        return
+    }
+    renderLayersList(instance)
+    renderLayerProperties(instance)
 })
