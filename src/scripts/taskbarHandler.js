@@ -195,10 +195,10 @@ function focusElementById(id) {
 function setMenuItemDisabled(element, disabled) {
     if (!element) return
     if (disabled) {
-        element.classList.add('isDisabled')
+        element.disabled = true
         element.setAttribute('aria-disabled', 'true')
     } else {
-        element.classList.remove('isDisabled')
+        element.disabled = false
         element.setAttribute('aria-disabled', 'false')
     }
 }
@@ -215,12 +215,12 @@ function handleKeyboardShortcuts(event) {
 
     if (key === 'z') {
         event.preventDefault()
-        if (imageEditor && !undoMenuItem?.classList.contains('isDisabled')) {
+        if (imageEditor && !undoMenuItem?.disabled) {
             imageEditor.undo()
         }
     } else if (key === 'y') {
         event.preventDefault()
-        if (imageEditor && !redoMenuItem?.classList.contains('isDisabled')) {
+        if (imageEditor && !redoMenuItem?.disabled) {
             imageEditor.redo()
         }
     }
@@ -436,6 +436,80 @@ async function uploadImage() {
 window.addEventListener('load', () => {
 
     /*
+    * Mobile Menu Navigation Setup
+    */
+    
+    const menuOverlay = document.getElementById('menuOverlay')
+    const menuPanels = {
+        navFile: document.getElementById('fileMenu'),
+        navImage: document.getElementById('imageMenu'),
+        navFilter: document.getElementById('filterMenu'),
+        navVisual: document.getElementById('visualMenu')
+    }
+    const navButtons = document.querySelectorAll('.navBtn')
+    
+    function closeAllMenus() {
+        Object.values(menuPanels).forEach(panel => {
+            if (panel) {
+                panel.classList.remove('active')
+                panel.setAttribute('aria-hidden', 'true')
+            }
+        })
+        navButtons.forEach(btn => {
+            btn.classList.remove('active')
+            btn.setAttribute('aria-expanded', 'false')
+        })
+        if (menuOverlay) {
+            menuOverlay.classList.remove('active')
+        }
+    }
+    
+    function openMenu(menuId) {
+        closeAllMenus()
+        const panel = menuPanels[menuId]
+        const btn = document.getElementById(menuId)
+        if (panel && btn) {
+            panel.classList.add('active')
+            panel.setAttribute('aria-hidden', 'false')
+            btn.classList.add('active')
+            btn.setAttribute('aria-expanded', 'true')
+            if (menuOverlay) {
+                menuOverlay.classList.add('active')
+            }
+        }
+    }
+    
+    // Nav button click handlers
+    navButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const menuId = btn.id
+            if (btn.classList.contains('active')) {
+                closeAllMenus()
+            } else {
+                openMenu(menuId)
+            }
+        })
+    })
+    
+    // Close menu when overlay is clicked
+    if (menuOverlay) {
+        menuOverlay.addEventListener('click', closeAllMenus)
+    }
+    
+    // Close menu when a menu item is clicked
+    document.querySelectorAll('.menuItem').forEach(item => {
+        item.addEventListener('click', () => {
+            // Delay close slightly so action registers
+            setTimeout(closeAllMenus, 100)
+        })
+    })
+    
+    // Close buttons in menu panels
+    document.querySelectorAll('.menuClose').forEach(btn => {
+        btn.addEventListener('click', closeAllMenus)
+    })
+
+    /*
     * Taskbar Event Listeners
     */
 
@@ -446,12 +520,12 @@ window.addEventListener('load', () => {
     window.addEventListener('imageEditorStateChanged', handleImageEditorStateChange)
 
     undoMenuItem?.addEventListener('click', async () => {
-        if (!imageEditor || undoMenuItem.classList.contains('isDisabled')) return
+        if (!imageEditor || undoMenuItem.disabled) return
         await imageEditor.undo()
     })
 
     redoMenuItem?.addEventListener('click', async () => {
-        if (!imageEditor || redoMenuItem.classList.contains('isDisabled')) return
+        if (!imageEditor || redoMenuItem.disabled) return
         await imageEditor.redo()
     })
 

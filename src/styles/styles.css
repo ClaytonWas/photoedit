@@ -1,183 +1,208 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE-FIRST PHOTO EDITOR UI
+   Clean, tap-friendly interface that works on all devices
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-    --bg: #111111;
-    --panel: #1b1b1b;
-    --panel-alt: #242424;
-    --border: #333;
-    --text: #f4f4f4;
-    --muted: #cfcfcf;
-    --accent: #2f8bff;
-    --accent-strong: #0f6bff;
-    --shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
-    --viewer-height: clamp(320px, 60vh, 760px);
+    /* Core colors */
+    --bg-primary: #f5f7fa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #eef1f5;
+    
+    /* Accent */
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --accent-soft: rgba(59, 130, 246, 0.1);
+    --accent-glow: rgba(59, 130, 246, 0.25);
+    
+    /* Text */
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-tertiary: #94a3b8;
+    
+    /* Borders */
+    --border: rgba(0, 0, 0, 0.08);
+    --border-focus: var(--accent);
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.15);
+    
+    /* Layout */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    
+    /* Touch targets */
+    --touch-target: 48px;
+    --bottom-nav-height: 64px;
+    
+    /* Transitions */
+    --transition: 0.2s ease;
 }
 
-html,
-body {
-    height: 100%;
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #0f172a;
+        --bg-secondary: #1e293b;
+        --bg-tertiary: #334155;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --text-tertiary: #64748b;
+        --border: rgba(255, 255, 255, 0.1);
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+    }
 }
 
-* {
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE RESET
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 
 body {
-    font-family: 'IBM Plex Mono', 'Inter', sans-serif;
-    background: #0c0c0c;
-    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
 }
 
-.taskbar {
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+input, select {
+    font-family: inherit;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOP HEADER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.topHeader {
     display: flex;
     align-items: center;
-    padding: 10px 24px;
-    background: #1c1c1c;
-    border-bottom: 1px solid #2d2d2d;
-    box-shadow: 0 8px 14px rgba(0, 0, 0, 0.45);
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 50;
 }
 
-.taskbarItem {
-    position: relative;
-    padding: 8px 16px;
-    margin-right: 6px;
-    color: var(--muted);
-    border-radius: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+.topHeader #icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
 }
 
-.taskbarItem:hover {
-    background: rgba(77, 183, 255, 0.15);
-    color: var(--text);
+.appTitle {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-.taskbarStatus {
+.renderStatus {
     margin-left: auto;
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 0.85rem;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
 }
 
-.taskbarStatus .spinner {
+.renderStatus .spinner {
     display: none;
-    width: 12px;
-    height: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.25);
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
     border-top-color: var(--accent);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.6s linear infinite;
 }
 
-.taskbarStatus.isRendering .spinner {
-    display: inline-flex;
+.renderStatus.isRendering {
+    background: var(--accent-soft);
+    color: var(--accent);
 }
 
-.taskbarStatus.isError span {
-    color: #ffb3b3;
-}
-
-.taskbarStatus.isReady span {
-    color: var(--muted);
-}
-
-.taskbarItemDropdown {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    min-width: 180px;
-    padding: 6px 0;
-    list-style: none;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: #0d1421;
-    box-shadow: var(--shadow);
-    z-index: 10;
-}
-
-.taskbarItem:hover > .taskbarItemDropdown {
+.renderStatus.isRendering .spinner {
     display: block;
 }
 
-.taskbarItemDropdown li {
-    position: relative;
-    padding: 8px 16px;
-    color: var(--muted);
-    font-size: 0.85rem;
-    cursor: pointer;
+.renderStatus.isError span {
+    color: #ef4444;
 }
 
-.taskbarItemDropdown li:hover {
-    background: rgba(77, 183, 255, 0.15);
-    color: var(--text);
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
-.taskbarItemDropdown li.isDisabled {
-    opacity: 0.35;
-    cursor: default;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN CONTENT AREA
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-.taskbarItemDropdownIsSubmenu {
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 100%;
-    min-width: 170px;
-    padding: 4px 0;
-    list-style: none;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: #0d1421;
-    box-shadow: var(--shadow);
-}
-
-.taskbarItemDropdownContainsSubmenu:hover > .taskbarItemDropdownIsSubmenu {
-    display: block;
-}
-
-.wrapImageAndLayerModules {
-    display: flex;
-    gap: 24px;
-    padding: 24px;
-    flex: 1 1 auto;
-    max-width: 100%;
-    overflow: hidden;
-}
-
-.imageModule {
-    flex: 1 1 auto;
+.mainContent {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 20px;
-    border-radius: 18px;
-    border: 1px solid var(--border);
-    background: var(--panel);
-    box-shadow: var(--shadow);
+    gap: 12px;
+    padding: 12px;
+    overflow: hidden;
+    padding-bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   IMAGE MODULE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.imageModule {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     min-height: 0;
     overflow: hidden;
 }
 
 .imageViewingModule {
-    flex: 0 0 auto;
-    height: min(var(--viewer-height), calc(100% - 220px));
-    cursor: grab;
-    overflow: hidden;
-    border-radius: 14px;
+    flex: 1;
+    min-height: 150px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border);
-    background: linear-gradient(135deg, #151b2a, #121726);
-    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+    cursor: grab;
     position: relative;
 }
 
@@ -191,312 +216,223 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transform-origin: 0 0;
-    position: relative;
+    transform-origin: center;
     overflow: hidden;
 }
 
 #imageCanvas {
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.55);
     max-width: 100%;
     max-height: 100%;
     width: auto;
     height: auto;
-    display: block;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
 }
 
 .selectionOverlay {
     pointer-events: none;
+    position: absolute;
     top: 0;
     left: 0;
 }
 
-.hidden {
-    display: none !important;
-}
-
-.floatingPanel {
-    position: fixed;
-    bottom: 32px;
-    right: 32px;
-    width: 320px;
-    padding: 16px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: var(--panel);
-    box-shadow: var(--shadow);
-    z-index: 30;
-}
-
-.floatingPanelHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.floatingPanelHeader h3 {
-    font-size: 1rem;
-    color: var(--text);
-}
-
-.floatingPanelHeader button {
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    font-size: 1.2rem;
-    cursor: pointer;
-}
-
-.floatingPanelHeader button:hover {
-    color: var(--text);
-}
-
-.floatingPanelBody {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.floatingPanelRow {
-    display: flex;
-    gap: 8px;
-}
-
-.floatingPanelRow label {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    font-size: 0.75rem;
-    color: var(--muted);
-}
-
-.floatingPanelRow input {
-    width: 100%;
-    padding: 4px 6px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: #111522;
-    color: var(--text);
-}
-
-.panelActions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
-.panelActions button {
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: none;
-    background: var(--accent);
-    color: #fff;
-    cursor: pointer;
-    transition: background 0.15s ease;
-}
-
-.panelActions button:hover {
-    background: var(--accent-strong);
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONTEXT MODULES (Image Data)
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .contextModules {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 18px;
-    margin-top: 18px;
-    overflow-y: auto;
-    padding-right: 4px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
-.contextModules > div {
-    flex: 1 1 320px;
-    min-height: 180px;
-    padding: 16px;
-    border-radius: 10px;
+.imageDataModule {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
-    background: var(--panel-alt);
-    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.35);
-    overflow: hidden;
+    padding: 12px;
 }
 
 .imageDataModuleHeader {
-    margin-bottom: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.85rem;
-    color: var(--muted);
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    margin-bottom: 10px;
 }
 
 .imageDataModuleRow {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
-    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
-.imageDataModuleRow select {
-    flex: 1;
-    min-width: 0;
-}
-
-.dimensionRow {
-    align-items: center;
-}
-
-.dimensionControls span {
-    color: var(--text);
-    font-weight: 600;
+.imageDataModuleRow:last-child {
+    margin-bottom: 0;
 }
 
 .sectionLabel {
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    color: var(--text);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    min-width: fit-content;
 }
 
 .singleLineControls {
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex: 1;
+    gap: 6px;
     flex-wrap: wrap;
+    flex: 1;
 }
 
-.singleLineControls input[type="number"] {
-    width: 72px;
-    padding: 4px 6px;
-    border-radius: 6px;
+.singleLineControls span {
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+
+.singleLineControls input[type="number"],
+#imageNameInput {
+    width: 60px;
+    padding: 8px 10px;
     border: 1px solid var(--border);
-    background: #111522;
-    color: var(--text);
-}
-
-.singleLineControls button,
-#imageExtensionSelector {
-    padding: 4px 10px;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    background: var(--accent);
-    color: #051425;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.singleLineControls button:hover,
-#imageExtensionSelector:hover {
-    background: var(--accent-strong);
-}
-
-#imageExtensionSelector {
-    appearance: none;
-    min-width: 120px;
-    text-transform: uppercase;
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    transition: border-color var(--transition);
 }
 
 #imageNameInput {
-    width: 100%;
-    padding: 6px 10px;
-    border-radius: 8px;
+    flex: 1;
+    min-width: 120px;
+    width: auto;
+}
+
+.singleLineControls input:focus,
+#imageNameInput:focus,
+#imageExtensionSelector:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.singleLineControls button {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+    padding: 8px 12px;
+    background: var(--accent);
+    color: white;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: background var(--transition);
+}
+
+.singleLineControls button:active {
+    background: var(--accent-hover);
+}
+
+#imageExtensionSelector {
+    padding: 8px 12px;
+    min-height: var(--touch-target);
     border: 1px solid var(--border);
-    background: #111522;
-    color: var(--text);
-    font-family: inherit;
-}
-
-#imageNameInput:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
-
-.singleLineControls label {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    appearance: none;
+    cursor: pointer;
 }
 
 .checkboxLabel {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
 }
 
+.checkboxLabel input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYERS MODULE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .layersModule {
-    width: 320px;
-    display: flex;
+    display: none; /* Hidden on mobile by default, shown on larger screens */
     flex-direction: column;
-    padding: 18px;
-    border-radius: 16px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border);
-    background: var(--panel);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    max-height: 100%;
+    padding: 12px;
+    max-height: 200px;
 }
 
 #currentLayerSelector {
-    min-height: 260px;
-    margin-bottom: 16px;
-    border-radius: 10px;
+    min-height: 100px;
+    margin-bottom: 12px;
+    padding: 10px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
-    background: var(--panel-alt);
-    padding: 12px;
 }
 
 #layersSelector {
     flex: 1;
     overflow-y: auto;
-    margin-bottom: 12px;
-    padding-right: 6px;
+    margin-bottom: 10px;
 }
 
 #layersList {
     list-style: none;
-    overflow-wrap: anywhere;
 }
 
 .layerDiv {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 10px;
-    margin-bottom: 8px;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    background: rgba(255, 255, 255, 0.02);
-    transition: border 0.15s ease, background 0.15s ease;
+    padding: 12px;
+    margin-bottom: 6px;
+    min-height: var(--touch-target);
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
 }
 
-.layerDiv:hover {
-    border-color: var(--accent);
-    background: rgba(77, 183, 255, 0.08);
-}
-
+.layerDiv:active,
 .selectedLayerDiv {
     border-color: var(--accent);
-    background: rgba(77, 183, 255, 0.15);
+    background: var(--accent-soft);
 }
 
 #layersControls {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 #layersControls button {
-    padding: 6px 12px;
-    border-radius: 8px;
+    flex: 1;
+    min-height: var(--touch-target);
+    padding: 10px;
+    background: var(--bg-primary);
     border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text);
-    cursor: pointer;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: all var(--transition);
 }
 
 #layersControls button:disabled {
@@ -504,28 +440,518 @@ body {
     cursor: not-allowed;
 }
 
-#layersControls button:hover {
-    background: rgba(77, 183, 255, 0.15);
+#layersControls button:active:not(:disabled) {
+    background: var(--accent-soft);
     border-color: var(--accent);
 }
 
 .layerReorderGroup {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
 .layerReorderGroup button {
-    width: 40px;
-    height: 36px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
+    flex: none;
+    width: var(--touch-target);
 }
 
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+/* ═══════════════════════════════════════════════════════════════════════════
+   BOTTOM NAVIGATION TASKBAR
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.bottomTaskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--bottom-nav-height);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch;
+    z-index: 100;
+}
+
+.navBtn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    transition: color var(--transition);
+    padding: 8px 4px;
+    background: transparent;
+    border: none;
+    min-height: var(--touch-target);
+}
+
+.navBtn svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.navBtn span {
+    font-size: 0.65rem;
+    font-weight: 500;
+}
+
+.navBtn:active,
+.navBtn.active {
+    color: var(--accent);
+}
+
+.navBtn.active {
+    background: var(--accent-soft);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MENU PANELS (Bottom Sheets)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.menuOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 150;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.menuOverlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.menuPanel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 70vh;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    z-index: 200;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.menuPanel.active {
+    transform: translateY(0);
+}
+
+.menuPanelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.menuPanelHeader h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.menuClose {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+    transition: all var(--transition);
+}
+
+.menuClose:active {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.menuPanelContent {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px 24px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 16px;
+    min-height: var(--touch-target);
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: left;
+    margin-bottom: 8px;
+    transition: all var(--transition);
+}
+
+.menuItem svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+}
+
+.menuItem:active:not(:disabled) {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+
+.menuItem:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.menuItem.compact {
+    flex: 1;
+    justify-content: center;
+    padding: 14px 12px;
+    font-size: 0.85rem;
+}
+
+.menuDivider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 12px 0;
+}
+
+.menuGroup {
+    margin-bottom: 16px;
+}
+
+.menuGroupLabel {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+    padding-left: 4px;
+}
+
+.menuRow {
+    display: flex;
+    gap: 8px;
+}
+
+.menuRow .menuItem {
+    margin-bottom: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FLOATING PANEL (Crop, etc.)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.floatingPanel {
+    position: fixed;
+    bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    right: 12px;
+    max-width: 400px;
+    margin: 0 auto;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    z-index: 120;
+    animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.floatingPanelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.floatingPanelHeader h3 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.floatingPanelHeader button {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+}
+
+.floatingPanelBody {
+    padding: 16px;
+}
+
+.floatingPanelRow {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.floatingPanelRow label {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.floatingPanelRow input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.floatingPanelRow input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.panelActions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.panelActions button {
+    flex: 1;
+    padding: 14px;
+    min-height: var(--touch-target);
+    background: var(--accent);
+    color: white;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background var(--transition);
+}
+
+.panelActions button:active {
+    background: var(--accent-hover);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABLET+ RESPONSIVE (768px+)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 768px) {
+    .mainContent {
+        flex-direction: row;
+        padding: 16px;
+        padding-bottom: calc(var(--bottom-nav-height) + 16px + env(safe-area-inset-bottom, 0px));
+    }
+    
+    .imageModule {
+        flex: 1;
+    }
+    
+    .layersModule {
+        display: flex;
+        width: 280px;
+        flex-shrink: 0;
+        max-height: none;
+    }
+    
+    .contextModules {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .imageDataModule {
+        flex: 1;
+        min-width: 200px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESKTOP RESPONSIVE (1024px+)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+    :root {
+        --bottom-nav-height: 56px;
+    }
+    
+    .bottomTaskbar {
+        justify-content: center;
+        gap: 8px;
+        padding: 8px 16px;
+        height: auto;
+        min-height: var(--bottom-nav-height);
+        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+    
+    .navBtn {
+        flex: none;
+        flex-direction: row;
+        gap: 8px;
+        padding: 10px 20px;
+        border-radius: var(--radius-md);
+    }
+    
+    .navBtn span {
+        font-size: 0.85rem;
+    }
+    
+    .navBtn:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+    
+    .menuPanel {
+        max-width: 420px;
+        left: 50%;
+        margin-left: -210px; /* half of max-width */
+        border-radius: var(--radius-xl);
+        /* Position from bottom when active, but hide off-screen when inactive */
+        bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom, 0px));
+        max-height: 60vh;
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s;
+    }
+    
+    .menuPanel.active {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .menuOverlay {
+        background: rgba(0, 0, 0, 0.3);
+    }
+    
+    .layersModule {
+        width: 320px;
+    }
+    
+    .mainContent {
+        padding: 20px;
+        gap: 20px;
+        padding-bottom: calc(var(--bottom-nav-height) + 20px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LANDSCAPE MOBILE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-height: 500px) and (orientation: landscape) {
+    .mainContent {
+        flex-direction: row;
+    }
+    
+    .imageModule {
+        flex: 1;
+    }
+    
+    .contextModules {
+        display: none;
+    }
+    
+    .imageViewingModule {
+        min-height: 100px;
+    }
+    
+    .menuPanel {
+        max-height: 90vh;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SAFE AREAS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@supports (padding: env(safe-area-inset-bottom)) {
+    .topHeader {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+    }
+    
+    .mainContent {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+    }
+    
+    .bottomTaskbar {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HIGH CONTRAST
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-contrast: high) {
+    :root {
+        --bg-secondary: #ffffff;
+        --text-primary: #000000;
+        --border: #000000;
+    }
+    
+    .menuItem,
+    .navBtn,
+    .layerDiv,
+    button {
+        border: 2px solid currentColor;
+    }
 }
 
