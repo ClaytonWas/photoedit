@@ -660,6 +660,101 @@ input, select {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE LAYERS PANEL
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.layersPanel .menuPanelContent {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mobileLayerEditor {
+    min-height: 120px;
+    padding: 12px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.mobileLayersList {
+    flex: 1;
+    max-height: 200px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mobileLayersList ul {
+    list-style: none;
+}
+
+.mobileLayersList .layerDiv {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    margin-bottom: 6px;
+    min-height: var(--touch-target);
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.mobileLayersList .layerDiv:active,
+.mobileLayersList .selectedLayerDiv {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.mobileLayersControls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mobileLayersControls button {
+    flex: 1;
+    min-height: var(--touch-target);
+    padding: 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: all var(--transition);
+}
+
+.mobileLayersControls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.mobileLayersControls button:active:not(:disabled) {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+
+.mobileLayersControls .layerReorderGroup {
+    display: flex;
+    gap: 6px;
+}
+
+.mobileLayersControls .layerReorderGroup button {
+    flex: none;
+    width: var(--touch-target);
+}
+
+/* Hide layers nav button on tablet+ where sidebar shows */
+@media (min-width: 768px) {
+    #navLayers {
+        display: none;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    FLOATING PANEL (Crop, etc.)
    ═══════════════════════════════════════════════════════════════════════════ */
 

@@ -444,7 +444,8 @@ window.addEventListener('load', () => {
         navFile: document.getElementById('fileMenu'),
         navImage: document.getElementById('imageMenu'),
         navFilter: document.getElementById('filterMenu'),
-        navVisual: document.getElementById('visualMenu')
+        navVisual: document.getElementById('visualMenu'),
+        navLayers: document.getElementById('layersMenu')
     }
     const navButtons = document.querySelectorAll('.navBtn')
     

@@ -122,11 +122,31 @@ window.addEventListener('imageEditorReady', (event) => {
     let startPoint = { x: 0, y: 0 }
     let currentTranslate = { x: 0, y: 0 }
     let scale = 1
+    
+    // Touch gesture state
+    let lastTouchDistance = 0
+    let lastTouchCenter = { x: 0, y: 0 }
 
     function updateTransform() {
         canvasDiv.style.transform = `translate(${currentTranslate.x}px, ${currentTranslate.y}px) scale(${scale})`;
     }
+    
+    // Get distance between two touch points
+    function getTouchDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX
+        const dy = touches[0].clientY - touches[1].clientY
+        return Math.sqrt(dx * dx + dy * dy)
+    }
+    
+    // Get center point between two touches
+    function getTouchCenter(touches) {
+        return {
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2
+        }
+    }
 
+    // Mouse events
     viewingModule.addEventListener('mousedown', (event) => {
         if (window.isCropping) return
         isPanning = true
@@ -162,7 +182,7 @@ window.addEventListener('imageEditorReady', (event) => {
         viewingModule.style.cursor = 'grab'
     })
   
-    // Zoom functionality
+    // Zoom functionality (mouse wheel)
     viewingModule.addEventListener('wheel', (event) => {
         if (window.isCropping) return
         event.preventDefault()
@@ -198,6 +218,97 @@ window.addEventListener('imageEditorReady', (event) => {
   
         updateTransform()
     })
+    
+    // Touch events for mobile pan and pinch-to-zoom
+    viewingModule.addEventListener('touchstart', (event) => {
+        if (window.isCropping) return
+        
+        if (event.touches.length === 1) {
+            // Single finger - pan
+            isPanning = true
+            startPoint = {
+                x: event.touches[0].clientX - currentTranslate.x,
+                y: event.touches[0].clientY - currentTranslate.y
+            }
+        } else if (event.touches.length === 2) {
+            // Two fingers - prepare for pinch zoom
+            isPanning = false
+            lastTouchDistance = getTouchDistance(event.touches)
+            lastTouchCenter = getTouchCenter(event.touches)
+        }
+    }, { passive: true })
+    
+    viewingModule.addEventListener('touchmove', (event) => {
+        if (window.isCropping) return
+        
+        if (event.touches.length === 1 && isPanning) {
+            // Single finger pan
+            event.preventDefault()
+            currentTranslate = {
+                x: event.touches[0].clientX - startPoint.x,
+                y: event.touches[0].clientY - startPoint.y
+            }
+            updateTransform()
+        } else if (event.touches.length === 2) {
+            // Pinch to zoom
+            event.preventDefault()
+            
+            const currentDistance = getTouchDistance(event.touches)
+            const currentCenter = getTouchCenter(event.touches)
+            const rect = viewingModule.getBoundingClientRect()
+            
+            // Calculate zoom
+            const zoomFactor = currentDistance / lastTouchDistance
+            const newScale = Math.min(Math.max(0.5, scale * zoomFactor), 20)
+            
+            // Calculate center point relative to viewing module
+            const centerX = currentCenter.x - rect.left
+            const centerY = currentCenter.y - rect.top
+            
+            // Zoom towards the center of the pinch
+            const beforeTransformX = (centerX - currentTranslate.x) / scale
+            const beforeTransformY = (centerY - currentTranslate.y) / scale
+            
+            scale = newScale
+            
+            const afterTransformX = (centerX - currentTranslate.x) / scale
+            const afterTransformY = (centerY - currentTranslate.y) / scale
+            
+            // Adjust translation
+            currentTranslate.x += (afterTransformX - beforeTransformX) * scale
+            currentTranslate.y += (afterTransformY - beforeTransformY) * scale
+            
+            // Also pan with the pinch gesture
+            const panDeltaX = currentCenter.x - lastTouchCenter.x
+            const panDeltaY = currentCenter.y - lastTouchCenter.y
+            currentTranslate.x += panDeltaX
+            currentTranslate.y += panDeltaY
+            
+            lastTouchDistance = currentDistance
+            lastTouchCenter = currentCenter
+            
+            updateTransform()
+        }
+    }, { passive: false })
+    
+    viewingModule.addEventListener('touchend', (event) => {
+        if (window.isCropping) return
+        
+        if (event.touches.length === 0) {
+            isPanning = false
+        } else if (event.touches.length === 1) {
+            // Went from 2 fingers to 1 - restart pan
+            isPanning = true
+            startPoint = {
+                x: event.touches[0].clientX - currentTranslate.x,
+                y: event.touches[0].clientY - currentTranslate.y
+            }
+        }
+    }, { passive: true })
+    
+    viewingModule.addEventListener('touchcancel', () => {
+        isPanning = false
+    }, { passive: true })
 
 })
 

@@ -127,6 +127,15 @@
             </svg>
             <span>Visual</span>
         </button>
+        
+        <button class="navBtn" id="navLayers" aria-label="Layers panel" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+            <span>Layers</span>
+        </button>
     </nav>
 
     <!-- Menu Panels (tap to open, appear as bottom sheets) -->
@@ -239,6 +248,31 @@
                     <button class="menuItem compact" id="prewireEdges">Regular</button>
                     <button class="menuItem compact" id="prewireEdgesColouredDirections">Colored</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layers Panel (mobile) -->
+    <div class="menuPanel layersPanel" id="layersMenu" aria-hidden="true">
+        <div class="menuPanelHeader">
+            <h2>Layers</h2>
+            <button class="menuClose" aria-label="Close menu">×</button>
+        </div>
+        <div class="menuPanelContent">
+            <div class="mobileLayerEditor" id="mobileCurrentLayerSelector">
+                <!-- Layer properties populated dynamically -->
+            </div>
+            <div class="mobileLayersList">
+                <ul id="mobileLayersList">
+                    <!-- Layers list populated dynamically -->
+                </ul>
+            </div>
+            <div class="mobileLayersControls">
+                <div class="layerReorderGroup">
+                    <button id="mobileLayerUp" type="button" title="Move layer up">▲</button>
+                    <button id="mobileLayerDown" type="button" title="Move layer down">▼</button>
+                </div>
+                <button id="mobileDeleteLayer">Delete Layer</button>
             </div>
         </div>
     </div>
