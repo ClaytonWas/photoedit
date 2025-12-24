@@ -10,6 +10,7 @@ import { sepia } from './plugins/sepia.js'
 let imageEditor = null
 let undoMenuItem = null
 let redoMenuItem = null
+let renderStatusPollInterval = null
 
 function safeSetTextContent(id, value = '') {
     const element = document.getElementById(id)
@@ -231,6 +232,16 @@ function handleImageEditorStateChange(event) {
     updateHistoryMenuState({ undoAvailable, redoAvailable })
     initializeModifiedImageDataModule(instance)
 
+    // Update render status based on actual state
+    updateRenderStatus(isRendering, renderFailed)
+    
+    // Start polling if rendering started
+    if (isRendering && !renderStatusPollInterval) {
+        startRenderStatusPolling()
+    }
+}
+
+function updateRenderStatus(isRendering, renderFailed = false) {
     const renderStatus = document.getElementById('renderStatus')
     if (!renderStatus) return
     const statusLabel = renderStatus.querySelector('span')
@@ -245,18 +256,43 @@ function handleImageEditorStateChange(event) {
         }
     }
 
-    if (isRendering) {
-        setStatus('isRendering', 'Rendering…')
-        return
-    }
-
     if (renderFailed) {
         setStatus('isError', 'Render failed')
         setTimeout(() => setStatus('isReady', 'Ready'), 2000)
         return
     }
 
-    setStatus('isReady', 'Ready')
+    if (isRendering) {
+        setStatus('isRendering', 'Rendering…')
+    } else {
+        setStatus('isReady', 'Ready')
+    }
+}
+
+function startRenderStatusPolling() {
+    if (renderStatusPollInterval) return
+    
+    renderStatusPollInterval = setInterval(() => {
+        if (!imageEditor) {
+            stopRenderStatusPolling()
+            return
+        }
+        
+        const isBusy = imageEditor.isBusy
+        updateRenderStatus(isBusy)
+        
+        // Stop polling when render is complete
+        if (!isBusy) {
+            stopRenderStatusPolling()
+        }
+    }, 50) // Poll every 50ms for responsive feedback
+}
+
+function stopRenderStatusPolling() {
+    if (renderStatusPollInterval) {
+        clearInterval(renderStatusPollInterval)
+        renderStatusPollInterval = null
+    }
 }
 
 function enableSelection(callback) {

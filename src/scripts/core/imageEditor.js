@@ -610,9 +610,32 @@ export class ImageEditor {
                 reason,
                 undoAvailable: this.history.canUndo(),
                 redoAvailable: this.history.canRedo(),
-                isRendering: reason === 'Render started',
+                isRendering: this.isRendering || this.isPreviewRendering || this.fullQualityRenderTimeout !== null,
                 renderFailed: reason === 'Render failed'
             }
         }))
+    }
+
+    /**
+     * Returns a promise that resolves when all pending renders are complete
+     */
+    waitForRenderComplete() {
+        return new Promise((resolve) => {
+            const checkRenderState = () => {
+                if (!this.isRendering && !this.isPreviewRendering && !this.fullQualityRenderTimeout && !this.renderTimeout) {
+                    resolve()
+                } else {
+                    requestAnimationFrame(checkRenderState)
+                }
+            }
+            checkRenderState()
+        })
+    }
+
+    /**
+     * Returns true if any render is in progress or queued
+     */
+    get isBusy() {
+        return this.isRendering || this.isPreviewRendering || this.fullQualityRenderTimeout !== null || this.renderTimeout !== null
     }
 }

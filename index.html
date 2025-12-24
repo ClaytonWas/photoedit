@@ -14,16 +14,6 @@
     <title>PhotoEdits</title>
 </head>
 <body>
-    <!-- Top Header Bar -->
-    <header class="topHeader">
-        <img id="icon" src="/images/icon.png" alt="PhotoEdits">
-        <h1 class="appTitle">PhotoEdits</h1>
-        <div id="renderStatus" class="renderStatus" role="status" aria-live="polite">
-            <div class="spinner" aria-hidden="true"></div>
-            <span>Ready</span>
-        </div>
-    </header>
-
     <!-- Main Content Area -->
     <main class="mainContent">
         <!-- Image Module -->
@@ -137,6 +127,12 @@
             <span>Layers</span>
         </button>
     </nav>
+
+    <!-- Render Status Bubble (fixed top-right) -->
+    <div id="renderStatus" class="renderStatus" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <span>Ready</span>
+    </div>
 
     <!-- Menu Panels (tap to open, appear as bottom sheets) -->
     <div class="menuPanel" id="fileMenu" aria-hidden="true">
