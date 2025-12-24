@@ -5,6 +5,7 @@ import { paintedStylization, pointsInSpace, vectorsInSpace, sobelEdges, sobelEdg
 import { filmEffects } from './plugins/filmEffects.js'
 import { greyscale } from './plugins/greyscale.js'
 import { sepia } from './plugins/sepia.js'
+import { createSliderAnimation, exportSliderAnimationAsGif, getAnimatableParameters, previewAnimation, availableEasings, createMultiParameterAnimation, downloadBlob, loadGifFrames, gifFrameStack, loadFrameToEditor, saveEditorToFrame, exportFrameStackAsGif, isGifPlaying, startGifPlayback, stopGifPlayback, toggleGifPlayback, estimateGifFileSize, formatFileSize } from './plugins/gifAnimator.js'
 
 
 let imageEditor = null
@@ -444,30 +445,1041 @@ async function uploadImage() {
 
     resetEditor()
 
-    const reader = new FileReader()
-    const image = new Image()
+    // Check if the file is a GIF
+    const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')
+    
+    if (isGif) {
+        // Load GIF with frame stack
+        try {
+            await loadGifFrames(file)
+            
+            // Show the Edit GIF Frames button
+            const editGifBtn = document.getElementById('editGifBtn')
+            if (editGifBtn) {
+                editGifBtn.style.display = ''
+            }
+            
+            // Show the play/stop button
+            const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
+            if (gifPlayStopBtn) {
+                gifPlayStopBtn.classList.remove('hidden')
+            }
+            
+            // Load first frame into editor
+            if (gifFrameStack.length > 0) {
+                const frame = gifFrameStack.getFrame(0)
+                const canvas = document.createElement('canvas')
+                canvas.width = frame.imageData.width
+                canvas.height = frame.imageData.height
+                const ctx = canvas.getContext('2d')
+                ctx.putImageData(frame.imageData, 0, 0)
+                
+                const image = new Image()
+                const name = file.name.substring(0, file.name.lastIndexOf('.'))
+                const type = file.type || 'image/gif'
+                const extension = 'gif'
+                const mainCanvas = document.getElementById('imageCanvas')
+                
+                image.onload = () => {
+                    imageEditor = new ImageEditor(image, name, type, extension, mainCanvas)
+                    window.imageEditor = imageEditor
+                    
+                    const imageEditorInstantiationEvent = new CustomEvent('imageEditorReady', { detail: { instance: imageEditor } })
+                    window.dispatchEvent(imageEditorInstantiationEvent)
+                }
+                image.src = canvas.toDataURL()
+            }
+        } catch (err) {
+            console.error('Failed to load GIF:', err)
+            alert('Failed to load GIF: ' + err.message)
+        }
+    } else {
+        // Hide GIF-specific UI for non-GIF files
+        const editGifBtn = document.getElementById('editGifBtn')
+        if (editGifBtn) {
+            editGifBtn.style.display = 'none'
+        }
+        
+        const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
+        if (gifPlayStopBtn) {
+            gifPlayStopBtn.classList.add('hidden')
+        }
+        
+        // Clear frame stack
+        gifFrameStack.clear()
+        
+        // Standard image loading
+        const reader = new FileReader()
+        const image = new Image()
 
-    // File Metadata
-    const name = file.name.substring(0, file.name.lastIndexOf('.'))
-    const type = file.type
-    const extension = type.slice(6)
-    const canvas = document.getElementById('imageCanvas')
+        // File Metadata
+        const name = file.name.substring(0, file.name.lastIndexOf('.'))
+        const type = file.type
+        const extension = type.slice(6)
+        const canvas = document.getElementById('imageCanvas')
 
-    // Writes image data (Base64) to image.src
-    reader.onload = () => {
-        image.src = reader.result
-    };
+        // Writes image data (Base64) to image.src
+        reader.onload = () => {
+            image.src = reader.result
+        };
 
-    image.onload = () => {
-        imageEditor = new ImageEditor(image, name, type, extension, canvas)
-        window.imageEditor = imageEditor
+        image.onload = () => {
+            imageEditor = new ImageEditor(image, name, type, extension, canvas)
+            window.imageEditor = imageEditor
 
-        const imageEditorInstantiationEvent = new CustomEvent('imageEditorReady', { detail: { instance: imageEditor } })
-        window.dispatchEvent(imageEditorInstantiationEvent)
-    };
+            const imageEditorInstantiationEvent = new CustomEvent('imageEditorReady', { detail: { instance: imageEditor } })
+            window.dispatchEvent(imageEditorInstantiationEvent)
+        };
 
-    reader.readAsDataURL(file)
+        reader.readAsDataURL(file)
+    }
 }
+
+// GIF Animator Dialog Functions
+let gifAnimatorDialog = null
+let currentPreviewStop = null
+
+function createGifAnimatorDialog() {
+    if (gifAnimatorDialog) return gifAnimatorDialog
+
+    const dialog = document.createElement('div')
+    dialog.id = 'gifAnimatorDialog'
+    dialog.className = 'gifAnimatorDialog hidden'
+    dialog.innerHTML = `
+        <div class="gifAnimatorContent">
+            <div class="gifAnimatorHeader">
+                <h3>Create GIF Animation</h3>
+                <button id="closeGifAnimator" class="closeBtn">&times;</button>
+            </div>
+            <div class="gifAnimatorBody">
+                <div class="gifAnimatorField">
+                    <label for="gifParameterSelect">Parameter to Animate:</label>
+                    <select id="gifParameterSelect"></select>
+                </div>
+                <div class="gifAnimatorField">
+                    <label for="gifStartValue">Start Value:</label>
+                    <input type="number" id="gifStartValue" step="any">
+                </div>
+                <div class="gifAnimatorField">
+                    <label for="gifEndValue">End Value:</label>
+                    <input type="number" id="gifEndValue" step="any">
+                </div>
+                <div class="gifAnimatorField">
+                    <label for="gifFrameCount">Frame Count:</label>
+                    <input type="number" id="gifFrameCount" value="15" min="2" max="10000">
+                </div>
+                <div class="gifAnimatorField">
+                    <label for="gifFrameDelay">Frame Delay (ms):</label>
+                    <input type="number" id="gifFrameDelay" value="100" min="10" max="2000">
+                </div>
+                <div class="gifAnimatorField">
+                    <label for="gifEasing">Easing:</label>
+                    <select id="gifEasing">
+                        <option value="linear">Linear</option>
+                        <option value="easeIn">Ease In</option>
+                        <option value="easeOut">Ease Out</option>
+                        <option value="easeInOut">Ease In-Out</option>
+                        <option value="easeInCubic">Ease In Cubic</option>
+                        <option value="easeOutCubic">Ease Out Cubic</option>
+                        <option value="easeInOutCubic">Ease In-Out Cubic</option>
+                        <option value="bounce">Bounce</option>
+                    </select>
+                </div>
+                <div class="gifAnimatorField">
+                    <label for="gifScale">Output Scale:</label>
+                    <select id="gifScale">
+                        <option value="1">100% (Full Size)</option>
+                        <option value="0.75">75%</option>
+                        <option value="0.5" selected>50%</option>
+                        <option value="0.25">25%</option>
+                        <option value="0.1">10%</option>
+                    </select>
+                </div>
+                <div class="gifAnimatorField checkbox">
+                    <input type="checkbox" id="gifPingPong">
+                    <label for="gifPingPong">Ping-Pong (reverse animation)</label>
+                </div>
+                <div class="gifSizeEstimate" id="gifSizeEstimate">
+                    <div class="sizeEstimateRow">
+                        <span class="sizeLabel">Estimated Size:</span>
+                        <span class="sizeValue" id="gifEstimatedSize">--</span>
+                    </div>
+                    <div class="sizeEstimateRow">
+                        <span class="sizeLabel">Output Dimensions:</span>
+                        <span class="sizeValue" id="gifOutputDimensions">--</span>
+                    </div>
+                    <div class="sizeEstimateRow">
+                        <span class="sizeLabel">Total Frames:</span>
+                        <span class="sizeValue" id="gifTotalFrames">--</span>
+                    </div>
+                    <div class="sizeEstimateRow">
+                        <span class="sizeLabel">Duration:</span>
+                        <span class="sizeValue" id="gifDuration">--</span>
+                    </div>
+                </div>
+                <div class="gifAnimatorProgress hidden">
+                    <div class="progressBar">
+                        <div class="progressFill" id="gifProgressFill"></div>
+                    </div>
+                    <span id="gifProgressText">0%</span>
+                </div>
+            </div>
+            <div class="gifAnimatorFooter">
+                <button id="previewGifAnimation" class="btn btnSecondary">Preview</button>
+                <button id="stopGifPreview" class="btn btnSecondary hidden">Stop Preview</button>
+                <button id="createGifAnimation" class="btn btnPrimary">Create GIF</button>
+            </div>
+        </div>
+    `
+
+    // Add styles
+    const style = document.createElement('style')
+    style.textContent = `
+        .gifAnimatorDialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        .gifAnimatorDialog.hidden {
+            display: none;
+        }
+        .gifAnimatorContent {
+            background: var(--bg-secondary, #1e293b);
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            color: var(--text-primary, #f1f5f9);
+        }
+        .gifAnimatorHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+        }
+        .gifAnimatorHeader h3 {
+            margin: 0;
+            color: var(--text-primary, #f1f5f9);
+        }
+        .gifAnimatorHeader .closeBtn {
+            background: none;
+            border: none;
+            color: var(--text-primary, #f1f5f9);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        .gifAnimatorBody {
+            padding: 16px;
+        }
+        .gifAnimatorField {
+            margin-bottom: 12px;
+        }
+        .gifAnimatorField label {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--text-secondary, #94a3b8);
+            font-size: 14px;
+        }
+        .gifAnimatorField.checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .gifAnimatorField.checkbox label {
+            margin-bottom: 0;
+        }
+        .gifAnimatorField input[type="number"],
+        .gifAnimatorField select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+            border-radius: 4px;
+            background: var(--bg-tertiary, #334155);
+            color: var(--text-primary, #f1f5f9);
+            font-size: 14px;
+        }
+        .gifAnimatorProgress {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .gifAnimatorProgress.hidden {
+            display: none;
+        }
+        .progressBar {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-tertiary, #334155);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progressFill {
+            height: 100%;
+            background: var(--accent, #6366f1);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+        .gifSizeEstimate {
+            background: var(--bg-tertiary, #334155);
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        .sizeEstimateRow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+        }
+        .sizeEstimateRow .sizeLabel {
+            color: var(--text-secondary, #94a3b8);
+            font-size: 13px;
+        }
+        .sizeEstimateRow .sizeValue {
+            color: var(--text-primary, #f1f5f9);
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .sizeEstimateRow .sizeValue.warning {
+            color: #f59e0b;
+        }
+        .sizeEstimateRow .sizeValue.danger {
+            color: #ef4444;
+        }
+        .gifAnimatorFooter {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 16px;
+            border-top: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+        }
+        .gifAnimatorFooter .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .gifAnimatorFooter .btnPrimary {
+            background: var(--accent, #6366f1);
+            color: white;
+        }
+        .gifAnimatorFooter .btnSecondary {
+            background: var(--bg-tertiary, #334155);
+            color: var(--text-primary, #f1f5f9);
+        }
+        .gifAnimatorFooter .btn:hover {
+            opacity: 0.9;
+        }
+        .gifAnimatorFooter .btn.hidden {
+            display: none;
+        }
+    `
+    document.head.appendChild(style)
+    document.body.appendChild(dialog)
+
+    gifAnimatorDialog = dialog
+    return dialog
+}
+
+function populateGifAnimatorParameters() {
+    if (!imageEditor) return
+
+    const select = document.getElementById('gifParameterSelect')
+    if (!select) return
+
+    select.innerHTML = ''
+
+    const selectedIndex = imageEditor.getSelectedIndex()
+    if (selectedIndex === null || selectedIndex === undefined) {
+        const option = document.createElement('option')
+        option.textContent = 'No layer selected'
+        option.disabled = true
+        select.appendChild(option)
+        return
+    }
+
+    const params = getAnimatableParameters(imageEditor, selectedIndex)
+    if (params.length === 0) {
+        const option = document.createElement('option')
+        option.textContent = 'No animatable parameters'
+        option.disabled = true
+        select.appendChild(option)
+        return
+    }
+
+    params.forEach(param => {
+        const option = document.createElement('option')
+        option.value = param.name
+        option.textContent = `${param.name} (${param.min} - ${param.max})`
+        option.dataset.min = param.min
+        option.dataset.max = param.max
+        option.dataset.current = param.currentValue
+        option.dataset.step = param.step
+        select.appendChild(option)
+    })
+
+    // Set default values
+    updateGifAnimatorDefaults()
+
+    select.addEventListener('change', updateGifAnimatorDefaults)
+}
+
+function updateGifAnimatorDefaults() {
+    const select = document.getElementById('gifParameterSelect')
+    const startInput = document.getElementById('gifStartValue')
+    const endInput = document.getElementById('gifEndValue')
+
+    if (!select || !startInput || !endInput) return
+
+    const selectedOption = select.selectedOptions[0]
+    if (!selectedOption || !selectedOption.dataset.min) return
+
+    startInput.value = selectedOption.dataset.min
+    endInput.value = selectedOption.dataset.max
+    startInput.step = selectedOption.dataset.step
+    endInput.step = selectedOption.dataset.step
+    
+    updateGifSizeEstimate()
+}
+
+function updateGifSizeEstimate() {
+    if (!imageEditor) return
+    
+    const frameCount = parseInt(document.getElementById('gifFrameCount')?.value, 10) || 15
+    const frameDelay = parseInt(document.getElementById('gifFrameDelay')?.value, 10) || 100
+    const scale = parseFloat(document.getElementById('gifScale')?.value) || 0.5
+    const pingPong = document.getElementById('gifPingPong')?.checked || false
+    
+    const outputWidth = Math.round(imageEditor.canvas.width * scale)
+    const outputHeight = Math.round(imageEditor.canvas.height * scale)
+    
+    const estimate = estimateGifFileSize(outputWidth, outputHeight, frameCount, pingPong)
+    const totalFrames = estimate.totalFrames
+    const durationMs = totalFrames * frameDelay
+    const durationSec = durationMs / 1000
+    
+    // Update UI
+    const sizeEl = document.getElementById('gifEstimatedSize')
+    const dimsEl = document.getElementById('gifOutputDimensions')
+    const framesEl = document.getElementById('gifTotalFrames')
+    const durationEl = document.getElementById('gifDuration')
+    
+    if (sizeEl) {
+        const sizeStr = formatFileSize(estimate.bytes)
+        sizeEl.textContent = sizeStr
+        
+        // Add warning classes based on size
+        sizeEl.classList.remove('warning', 'danger')
+        if (estimate.bytes > 500 * 1024 * 1024) { // > 500MB
+            sizeEl.classList.add('danger')
+        } else if (estimate.bytes > 50 * 1024 * 1024) { // > 50MB
+            sizeEl.classList.add('warning')
+        }
+    }
+    
+    if (dimsEl) {
+        dimsEl.textContent = `${outputWidth} × ${outputHeight}`
+    }
+    
+    if (framesEl) {
+        framesEl.textContent = totalFrames.toLocaleString()
+    }
+    
+    if (durationEl) {
+        if (durationSec >= 60) {
+            const mins = Math.floor(durationSec / 60)
+            const secs = (durationSec % 60).toFixed(1)
+            durationEl.textContent = `${mins}m ${secs}s`
+        } else {
+            durationEl.textContent = `${durationSec.toFixed(1)}s`
+        }
+    }
+}
+
+function openGifAnimatorDialog() {
+    if (!imageEditor) {
+        alert('Please load an image first')
+        return
+    }
+
+    const selectedIndex = imageEditor.getSelectedIndex()
+    if (selectedIndex === null || selectedIndex === undefined) {
+        alert('Please select a layer with effects first')
+        return
+    }
+
+    createGifAnimatorDialog()
+    populateGifAnimatorParameters()
+
+    gifAnimatorDialog.classList.remove('hidden')
+}
+
+function closeGifAnimatorDialog() {
+    if (currentPreviewStop) {
+        currentPreviewStop()
+        currentPreviewStop = null
+    }
+    if (gifAnimatorDialog) {
+        gifAnimatorDialog.classList.add('hidden')
+    }
+}
+
+async function handleCreateGifAnimation() {
+    if (!imageEditor) return
+
+    const selectedIndex = imageEditor.getSelectedIndex()
+    if (selectedIndex === null) return
+
+    const parameterName = document.getElementById('gifParameterSelect')?.value
+    const startValue = parseFloat(document.getElementById('gifStartValue')?.value)
+    const endValue = parseFloat(document.getElementById('gifEndValue')?.value)
+    const frameCount = parseInt(document.getElementById('gifFrameCount')?.value, 10)
+    const frameDelay = parseInt(document.getElementById('gifFrameDelay')?.value, 10)
+    const easing = document.getElementById('gifEasing')?.value || 'linear'
+    const scale = parseFloat(document.getElementById('gifScale')?.value) || 0.5
+    const pingPong = document.getElementById('gifPingPong')?.checked || false
+
+    if (!parameterName || isNaN(startValue) || isNaN(endValue)) {
+        alert('Please fill in all required fields')
+        return
+    }
+
+    const progressDiv = document.querySelector('.gifAnimatorProgress')
+    const progressFill = document.getElementById('gifProgressFill')
+    const progressText = document.getElementById('gifProgressText')
+    const createBtn = document.getElementById('createGifAnimation')
+
+    if (progressDiv) progressDiv.classList.remove('hidden')
+    if (createBtn) createBtn.disabled = true
+
+    try {
+        const config = {
+            parameterName,
+            startValue,
+            endValue,
+            frameCount,
+            frameDelay,
+            pingPong,
+            easing,
+            scale
+        }
+
+        const filename = `${imageEditor.name || 'animation'}_${parameterName}.gif`
+
+        await exportSliderAnimationAsGif(
+            imageEditor,
+            selectedIndex,
+            config,
+            filename,
+            (progress) => {
+                if (progressFill) progressFill.style.width = `${progress}%`
+                if (progressText) progressText.textContent = `${progress}%`
+            }
+        )
+
+        closeGifAnimatorDialog()
+    } catch (error) {
+        console.error('GIF creation failed:', error)
+        alert(`Failed to create GIF: ${error.message}`)
+    } finally {
+        if (progressDiv) progressDiv.classList.add('hidden')
+        if (progressFill) progressFill.style.width = '0%'
+        if (createBtn) createBtn.disabled = false
+    }
+}
+
+function handlePreviewAnimation() {
+    if (!imageEditor) return
+
+    const selectedIndex = imageEditor.getSelectedIndex()
+    if (selectedIndex === null) return
+
+    if (currentPreviewStop) {
+        currentPreviewStop()
+        currentPreviewStop = null
+    }
+
+    const parameterName = document.getElementById('gifParameterSelect')?.value
+    const startValue = parseFloat(document.getElementById('gifStartValue')?.value)
+    const endValue = parseFloat(document.getElementById('gifEndValue')?.value)
+    const frameCount = parseInt(document.getElementById('gifFrameCount')?.value, 10)
+    const frameDelay = parseInt(document.getElementById('gifFrameDelay')?.value, 10)
+    const easing = document.getElementById('gifEasing')?.value || 'linear'
+    const pingPong = document.getElementById('gifPingPong')?.checked || false
+
+    if (!parameterName || isNaN(startValue) || isNaN(endValue)) {
+        alert('Please fill in all required fields')
+        return
+    }
+
+    const previewBtn = document.getElementById('previewGifAnimation')
+    const stopBtn = document.getElementById('stopGifPreview')
+
+    if (previewBtn) previewBtn.classList.add('hidden')
+    if (stopBtn) stopBtn.classList.remove('hidden')
+
+    currentPreviewStop = previewAnimation(
+        imageEditor,
+        selectedIndex,
+        {
+            parameterName,
+            startValue,
+            endValue,
+            frameCount,
+            frameDelay,
+            pingPong,
+            easing
+        },
+        (value, frame, total) => {
+            // Could show current value in UI if desired
+        }
+    )
+}
+
+function handleStopPreview() {
+    if (currentPreviewStop) {
+        currentPreviewStop()
+        currentPreviewStop = null
+    }
+
+    const previewBtn = document.getElementById('previewGifAnimation')
+    const stopBtn = document.getElementById('stopGifPreview')
+
+    if (previewBtn) previewBtn.classList.remove('hidden')
+    if (stopBtn) stopBtn.classList.add('hidden')
+}
+
+// GIF Frame Editor Dialog
+let gifFrameEditorDialog = null
+
+function createGifFrameEditorDialog() {
+    if (gifFrameEditorDialog) return gifFrameEditorDialog
+
+    const dialog = document.createElement('div')
+    dialog.id = 'gifFrameEditorDialog'
+    dialog.className = 'gifFrameEditorDialog hidden'
+    dialog.innerHTML = `
+        <div class="gifFrameEditorContent">
+            <div class="gifFrameEditorHeader">
+                <h3>GIF Frame Editor</h3>
+                <button id="closeGifFrameEditor" class="closeBtn">&times;</button>
+            </div>
+            <div class="gifFrameEditorBody">
+                <div class="gifFrameList" id="gifFrameList">
+                    <p class="noFrames">No GIF loaded. Click "Load GIF" to import a GIF file.</p>
+                </div>
+                <div class="gifFrameControls">
+                    <div class="frameNavigation">
+                        <button id="gifPrevFrame" class="btn btnSecondary" disabled>← Prev</button>
+                        <span id="gifFrameCounter">0 / 0</span>
+                        <button id="gifNextFrame" class="btn btnSecondary" disabled>Next →</button>
+                    </div>
+                    <div class="frameActions">
+                        <button id="gifLoadFrame" class="btn btnSecondary" disabled>Edit Frame</button>
+                        <button id="gifSaveFrame" class="btn btnSecondary" disabled>Save Changes</button>
+                        <button id="gifDuplicateFrame" class="btn btnSecondary" disabled>Duplicate</button>
+                        <button id="gifDeleteFrame" class="btn btnSecondary" disabled>Delete</button>
+                    </div>
+                    <div class="frameDelayControl">
+                        <label for="gifFrameDelay">Frame Delay (ms):</label>
+                        <input type="number" id="gifFrameDelayInput" value="100" min="20" max="5000" disabled>
+                        <button id="gifApplyDelay" class="btn btnSecondary" disabled>Apply</button>
+                    </div>
+                </div>
+                <div class="gifFrameProgress hidden" id="gifFrameProgress">
+                    <div class="progressBar">
+                        <div class="progressFill" id="gifFrameProgressFill"></div>
+                    </div>
+                    <span id="gifFrameProgressText">0%</span>
+                </div>
+            </div>
+            <div class="gifFrameEditorFooter">
+                <button id="gifLoadFile" class="btn btnSecondary">Load GIF</button>
+                <input type="file" id="gifFileInput" accept=".gif,image/gif" style="display:none">
+                <button id="gifExportFrames" class="btn btnPrimary" disabled>Export GIF</button>
+            </div>
+        </div>
+    `
+
+    // Add styles
+    const style = document.createElement('style')
+    style.textContent = `
+        .gifFrameEditorDialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        .gifFrameEditorDialog.hidden {
+            display: none;
+        }
+        .gifFrameEditorContent {
+            background: var(--bg-secondary, #1e293b);
+            border-radius: 8px;
+            width: 600px;
+            max-width: 95vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            color: var(--text-primary, #f1f5f9);
+        }
+        .gifFrameEditorHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+        }
+        .gifFrameEditorHeader h3 {
+            margin: 0;
+            color: var(--text-primary, #f1f5f9);
+        }
+        .gifFrameEditorBody {
+            padding: 16px;
+        }
+        .gifFrameList {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 8px;
+            background: var(--bg-tertiary, #334155);
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+        .gifFrameList .noFrames {
+            color: var(--text-secondary, #94a3b8);
+            font-size: 14px;
+            text-align: center;
+            width: 100%;
+            padding: 20px;
+        }
+        .gifFrameThumb {
+            width: 60px;
+            height: 60px;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            object-fit: cover;
+            background: var(--bg-primary, #0f172a);
+        }
+        .gifFrameThumb.selected {
+            border-color: var(--accent, #6366f1);
+        }
+        .gifFrameControls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .frameNavigation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+        .frameNavigation span {
+            color: var(--text-primary, #f1f5f9);
+            min-width: 60px;
+            text-align: center;
+        }
+        .frameActions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+        .frameDelayControl {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        .frameDelayControl label {
+            color: var(--text-primary, #f1f5f9);
+            font-size: 14px;
+        }
+        .frameDelayControl input {
+            width: 80px;
+            padding: 6px;
+            border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+            border-radius: 4px;
+            background: var(--bg-tertiary, #334155);
+            color: var(--text-primary, #f1f5f9);
+        }
+        .gifFrameEditorFooter {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px;
+            border-top: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+        }
+        .gifFrameProgress {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .gifFrameProgress.hidden {
+            display: none;
+        }
+        .gifFrameEditorContent .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .gifFrameEditorContent .btnSecondary {
+            background: var(--bg-tertiary, #334155);
+            color: var(--text-primary, #f1f5f9);
+        }
+        .gifFrameEditorContent .btnPrimary {
+            background: var(--accent, #6366f1);
+            color: white;
+        }
+        .gifFrameEditorContent .btn:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+        .gifFrameEditorContent .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .gifFrameEditorHeader .closeBtn {
+            background: none;
+            border: none;
+            color: var(--text-primary, #f1f5f9);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+    `
+    document.head.appendChild(style)
+    document.body.appendChild(dialog)
+
+    gifFrameEditorDialog = dialog
+    setupGifFrameEditorEvents()
+    return dialog
+}
+
+function setupGifFrameEditorEvents() {
+    // Close button
+    document.getElementById('closeGifFrameEditor')?.addEventListener('click', closeGifFrameEditorDialog)
+
+    // Load GIF file
+    document.getElementById('gifLoadFile')?.addEventListener('click', () => {
+        document.getElementById('gifFileInput')?.click()
+    })
+
+    document.getElementById('gifFileInput')?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        
+        try {
+            await loadGifFrames(file)
+            renderGifFrameList()
+            updateGifFrameControls()
+            
+            // Show the Edit GIF Frames button
+            const editGifBtn = document.getElementById('editGifBtn')
+            if (editGifBtn) {
+                editGifBtn.style.display = ''
+            }
+            
+            // Show the play/stop button when GIF is loaded
+            const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
+            if (gifPlayStopBtn) {
+                gifPlayStopBtn.classList.remove('hidden')
+            }
+        } catch (err) {
+            alert('Failed to load GIF: ' + err.message)
+        }
+    })
+
+    // Frame navigation
+    document.getElementById('gifPrevFrame')?.addEventListener('click', () => {
+        if (gifFrameStack.currentFrameIndex > 0) {
+            gifFrameStack.currentFrameIndex--
+            renderGifFrameList()
+            updateGifFrameControls()
+        }
+    })
+
+    document.getElementById('gifNextFrame')?.addEventListener('click', () => {
+        if (gifFrameStack.currentFrameIndex < gifFrameStack.length - 1) {
+            gifFrameStack.currentFrameIndex++
+            renderGifFrameList()
+            updateGifFrameControls()
+        }
+    })
+
+    // Frame actions
+    document.getElementById('gifLoadFrame')?.addEventListener('click', () => {
+        if (imageEditor && gifFrameStack.length > 0) {
+            loadFrameToEditor(imageEditor, gifFrameStack.currentFrameIndex)
+        }
+    })
+
+    document.getElementById('gifSaveFrame')?.addEventListener('click', () => {
+        if (imageEditor && gifFrameStack.length > 0) {
+            saveEditorToFrame(imageEditor, gifFrameStack.currentFrameIndex)
+            renderGifFrameList()
+        }
+    })
+
+    document.getElementById('gifDuplicateFrame')?.addEventListener('click', () => {
+        if (gifFrameStack.length > 0) {
+            gifFrameStack.duplicateFrame(gifFrameStack.currentFrameIndex)
+            renderGifFrameList()
+            updateGifFrameControls()
+        }
+    })
+
+    document.getElementById('gifDeleteFrame')?.addEventListener('click', () => {
+        if (gifFrameStack.length > 1) {
+            gifFrameStack.deleteFrame(gifFrameStack.currentFrameIndex)
+            renderGifFrameList()
+            updateGifFrameControls()
+        }
+    })
+
+    // Frame delay
+    document.getElementById('gifApplyDelay')?.addEventListener('click', () => {
+        const delayInput = document.getElementById('gifFrameDelayInput')
+        const delay = parseInt(delayInput?.value, 10)
+        if (!isNaN(delay) && delay >= 20) {
+            gifFrameStack.setDelay(gifFrameStack.currentFrameIndex, delay)
+        }
+    })
+
+    // Export
+    document.getElementById('gifExportFrames')?.addEventListener('click', async () => {
+        if (gifFrameStack.length === 0) return
+
+        const progressDiv = document.getElementById('gifFrameProgress')
+        const progressFill = document.getElementById('gifFrameProgressFill')
+        const progressText = document.getElementById('gifFrameProgressText')
+        const exportBtn = document.getElementById('gifExportFrames')
+
+        if (progressDiv) progressDiv.classList.remove('hidden')
+        if (exportBtn) exportBtn.disabled = true
+
+        try {
+            const blob = await exportFrameStackAsGif(gifFrameStack, {
+                quality: 10,
+                onProgress: (p) => {
+                    if (progressFill) progressFill.style.width = `${p}%`
+                    if (progressText) progressText.textContent = `${p}%`
+                }
+            })
+            downloadBlob(blob, 'edited_animation.gif')
+        } catch (err) {
+            alert('Failed to export GIF: ' + err.message)
+        } finally {
+            if (progressDiv) progressDiv.classList.add('hidden')
+            if (progressFill) progressFill.style.width = '0%'
+            if (exportBtn) exportBtn.disabled = false
+        }
+    })
+}
+
+function renderGifFrameList() {
+    const frameList = document.getElementById('gifFrameList')
+    if (!frameList) return
+
+    if (gifFrameStack.length === 0) {
+        frameList.innerHTML = '<p class="noFrames">No GIF loaded. Click "Load GIF" to import a GIF file.</p>'
+        return
+    }
+
+    frameList.innerHTML = ''
+    
+    gifFrameStack.frames.forEach((frame, index) => {
+        const img = document.createElement('img')
+        img.className = 'gifFrameThumb' + (index === gifFrameStack.currentFrameIndex ? ' selected' : '')
+        img.src = frame.canvas.toDataURL()
+        img.title = `Frame ${index + 1} (${frame.delay}ms)`
+        img.addEventListener('click', () => {
+            gifFrameStack.currentFrameIndex = index
+            renderGifFrameList()
+            updateGifFrameControls()
+        })
+        frameList.appendChild(img)
+    })
+}
+
+function updateGifFrameControls() {
+    const hasFrames = gifFrameStack.length > 0
+    const currentIndex = gifFrameStack.currentFrameIndex
+    const currentFrame = gifFrameStack.currentFrame
+
+    document.getElementById('gifFrameCounter').textContent = 
+        hasFrames ? `${currentIndex + 1} / ${gifFrameStack.length}` : '0 / 0'
+
+    document.getElementById('gifPrevFrame').disabled = !hasFrames || currentIndex === 0
+    document.getElementById('gifNextFrame').disabled = !hasFrames || currentIndex >= gifFrameStack.length - 1
+    document.getElementById('gifLoadFrame').disabled = !hasFrames || !imageEditor
+    document.getElementById('gifSaveFrame').disabled = !hasFrames || !imageEditor
+    document.getElementById('gifDuplicateFrame').disabled = !hasFrames
+    document.getElementById('gifDeleteFrame').disabled = gifFrameStack.length <= 1
+    document.getElementById('gifFrameDelayInput').disabled = !hasFrames
+    document.getElementById('gifApplyDelay').disabled = !hasFrames
+    document.getElementById('gifExportFrames').disabled = !hasFrames
+
+    if (currentFrame) {
+        document.getElementById('gifFrameDelayInput').value = currentFrame.delay
+    }
+}
+
+function openGifFrameEditorDialog() {
+    createGifFrameEditorDialog()
+    renderGifFrameList()
+    updateGifFrameControls()
+    gifFrameEditorDialog.classList.remove('hidden')
+}
+
+function closeGifFrameEditorDialog() {
+    if (gifFrameEditorDialog) {
+        gifFrameEditorDialog.classList.add('hidden')
+    }
+}
+
+// Expose for global access
+window.openGifAnimatorDialog = openGifAnimatorDialog
+window.openGifFrameEditorDialog = openGifFrameEditorDialog
+window.createSliderAnimation = createSliderAnimation
+window.exportSliderAnimationAsGif = exportSliderAnimationAsGif
+window.getAnimatableParameters = getAnimatableParameters
+window.previewAnimation = previewAnimation
+window.gifFrameStack = gifFrameStack
+window.loadGifFrames = loadGifFrames
+window.loadFrameToEditor = loadFrameToEditor
+window.saveEditorToFrame = saveEditorToFrame
+window.exportFrameStackAsGif = exportFrameStackAsGif
+window.isGifPlaying = isGifPlaying
+window.startGifPlayback = startGifPlayback
+window.stopGifPlayback = stopGifPlayback
+window.toggleGifPlayback = toggleGifPlayback
 
 window.addEventListener('load', () => {
 
@@ -864,6 +1876,83 @@ window.addEventListener('load', () => {
             }
         )
         renderLayerProperties(imageEditor)
+    })
+
+    // GIF Animator button (add this to your HTML with id="createGifBtn")
+    const createGifBtn = document.getElementById('createGifBtn')
+    if (createGifBtn) {
+        createGifBtn.addEventListener('click', openGifAnimatorDialog)
+    }
+
+    // GIF Frame Editor button
+    const editGifBtn = document.getElementById('editGifBtn')
+    if (editGifBtn) {
+        editGifBtn.addEventListener('click', openGifFrameEditorDialog)
+    }
+
+    // GIF Play/Stop button on canvas
+    const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
+    if (gifPlayStopBtn) {
+        gifPlayStopBtn.addEventListener('click', () => {
+            const isPlaying = toggleGifPlayback(window.imageEditor, (frameIndex) => {
+                // Update frame counter in dialog if open
+                const frameCounter = document.getElementById('gifFrameCounter')
+                if (frameCounter) {
+                    frameCounter.textContent = `${frameIndex + 1} / ${gifFrameStack.length}`
+                }
+            })
+            
+            if (isPlaying) {
+                gifPlayStopBtn.classList.add('playing')
+            } else {
+                gifPlayStopBtn.classList.remove('playing')
+            }
+        })
+    }
+
+    // Setup GIF animator dialog event listeners
+    document.addEventListener('click', (event) => {
+        if (event.target.id === 'closeGifAnimator') {
+            closeGifAnimatorDialog()
+        }
+        if (event.target.id === 'createGifAnimation') {
+            handleCreateGifAnimation()
+        }
+        if (event.target.id === 'previewGifAnimation') {
+            handlePreviewAnimation()
+        }
+        if (event.target.id === 'stopGifPreview') {
+            handleStopPreview()
+        }
+    })
+    
+    // Update size estimate when GIF parameters change
+    document.addEventListener('input', (event) => {
+        const updateIds = ['gifFrameCount', 'gifFrameDelay', 'gifScale', 'gifPingPong']
+        if (updateIds.includes(event.target.id)) {
+            updateGifSizeEstimate()
+        }
+    })
+    
+    document.addEventListener('change', (event) => {
+        const updateIds = ['gifScale', 'gifPingPong']
+        if (updateIds.includes(event.target.id)) {
+            updateGifSizeEstimate()
+        }
+    })
+
+    // Close GIF dialog when clicking outside
+    document.addEventListener('click', (event) => {
+        if (event.target.id === 'gifAnimatorDialog') {
+            closeGifAnimatorDialog()
+        }
+    })
+
+    // Close GIF dialog with Escape key
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && gifAnimatorDialog && !gifAnimatorDialog.classList.contains('hidden')) {
+            closeGifAnimatorDialog()
+        }
     })
 })
 

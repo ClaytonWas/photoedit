@@ -8,10 +8,12 @@
   "dependencies": {
     "ejs": "^3.1.10",
     "express": "^4.21.0",
+    "gif-frames": "^0.2.4",
+    "gif.js": "^0.2.0",
     "paper": "^0.12.18",
     "path": "^0.12.7"
   },
   "devDependencies": {
-    "vite": "^5.4.10"
+    "vite": "^7.3.0"
   }
 }

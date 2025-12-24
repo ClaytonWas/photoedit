@@ -22,6 +22,10 @@
             <div class="imageViewingModule">
                 <div id="imageCanvasDiv">
                     <canvas id="imageCanvas"></canvas>
+                    <button id="gifPlayStopBtn" class="gifPlayStopBtn hidden" title="Play/Stop GIF">
+                        <svg id="gifPlayIcon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <svg id="gifStopIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                    </button>
                 </div>
             </div>
             <!-- /Image Viewing Module -->
@@ -148,6 +152,15 @@
             <button class="menuItem" id="saveAction">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 Save
+            </button>
+            <hr class="menuDivider">
+            <button class="menuItem" id="createGifBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"></rect><path d="M8 2v20"></path><path d="M16 2v20"></path><line x1="2" y1="8" x2="8" y2="8"></line><line x1="2" y1="16" x2="8" y2="16"></line><line x1="16" y1="8" x2="22" y2="8"></line><line x1="16" y1="16" x2="22" y2="16"></line></svg>
+                Create GIF
+            </button>
+            <button class="menuItem" id="editGifBtn" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"></rect><circle cx="8" cy="8" r="2"></circle><circle cx="16" cy="8" r="2"></circle><circle cx="8" cy="16" r="2"></circle><circle cx="16" cy="16" r="2"></circle></svg>
+                Edit GIF Frames
             </button>
             <hr class="menuDivider">
             <button class="menuItem" id="undoAction" disabled>
