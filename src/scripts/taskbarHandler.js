@@ -6,6 +6,27 @@ import { filmEffects } from './plugins/filmEffects.js'
 import { greyscale } from './plugins/greyscale.js'
 import { sepia } from './plugins/sepia.js'
 import { createSliderAnimation, exportSliderAnimationAsGif, getAnimatableParameters, previewAnimation, availableEasings, createMultiParameterAnimation, downloadBlob, loadGifFrames, gifFrameStack, loadFrameToEditor, saveEditorToFrame, exportFrameStackAsGif, isGifPlaying, startGifPlayback, stopGifPlayback, toggleGifPlayback, estimateGifFileSize, formatFileSize } from './plugins/gifAnimator.js'
+import * as exifr from 'exifr'
+
+// RAW file extensions supported via embedded preview extraction
+const RAW_EXTENSIONS = [
+    '.cr2', '.cr3',           // Canon
+    '.nef', '.nrw',           // Nikon
+    '.arw', '.srf', '.sr2',   // Sony
+    '.dng',                   // Adobe DNG
+    '.raf',                   // Fujifilm
+    '.orf',                   // Olympus
+    '.rw2',                   // Panasonic
+    '.pef',                   // Pentax
+    '.srw',                   // Samsung
+    '.x3f',                   // Sigma
+    '.3fr', '.fff', '.iiq',   // Hasselblad/Phase One
+    '.rwl',                   // Leica
+    '.erf',                   // Epson
+    '.mef', '.mos',           // Mamiya
+    '.mrw',                   // Minolta
+    '.kdc', '.dcr'            // Kodak
+]
 
 
 let imageEditor = null
@@ -49,7 +70,7 @@ function triggerOpenFileDialog() {
     const fileInput = document.getElementById('uploadFile')
     if (!fileInput) return
     fileInput.value = ''
-    fileInput.onchange = uploadImage
+    fileInput.onchange = uploadImages
     fileInput.click()
 }
 
@@ -439,11 +460,28 @@ function resetEditor() {
     updateHistoryMenuState()
 }
 
-async function uploadImage() {
-    const file = document.querySelector("input[type=file]").files[0]
-    if (!file) return
+async function uploadImages() {
+    const files = Array.from(document.querySelector("input[type=file]").files)
+    if (!files.length) return
 
+    // If multiple files selected, compose into GIF
+    if (files.length > 1) {
+        await uploadMultipleAsGif(files)
+        return
+    }
+
+    // Single file - use original logic
+    const file = files[0]
     resetEditor()
+
+    // Check if the file is a RAW image
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+    const isRaw = RAW_EXTENSIONS.includes(fileExtension)
+    
+    if (isRaw) {
+        await uploadRawImage(file)
+        return
+    }
 
     // Check if the file is a GIF
     const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')
@@ -532,6 +570,447 @@ async function uploadImage() {
         };
 
         reader.readAsDataURL(file)
+    }
+}
+
+/**
+ * Check if a file is a supported image (standard format or RAW)
+ */
+function isImageFile(file) {
+    if (file.type.startsWith('image/')) return true
+    const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+    return RAW_EXTENSIONS.includes(ext)
+}
+
+/**
+ * Upload multiple images and compose them into a GIF
+ * Images are sorted by filename and resized to match the first image's dimensions
+ * Supports both standard image formats and RAW files
+ */
+async function uploadMultipleAsGif(files) {
+    resetEditor()
+    
+    // Sort files by name for consistent ordering
+    const sortedFiles = files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    
+    // Filter to only image files (including RAW formats)
+    const imageFiles = sortedFiles.filter(f => isImageFile(f))
+    
+    if (imageFiles.length < 2) {
+        alert('Please select at least 2 images to create a GIF')
+        return
+    }
+    
+    // Show loading indicator
+    const renderStatus = document.getElementById('renderStatus')
+    const statusLabel = renderStatus?.querySelector('span')
+    if (renderStatus) {
+        renderStatus.classList.remove('isReady', 'isError')
+        renderStatus.classList.add('isRendering')
+    }
+    if (statusLabel) {
+        statusLabel.textContent = `Loading images (0/${imageFiles.length})...`
+    }
+    
+    try {
+        // Load all images
+        const loadedImages = []
+        for (let i = 0; i < imageFiles.length; i++) {
+            if (statusLabel) {
+                statusLabel.textContent = `Loading images (${i + 1}/${imageFiles.length})...`
+            }
+            const img = await loadImageFromFile(imageFiles[i])
+            loadedImages.push(img)
+        }
+        
+        // Use first image dimensions as the target size
+        const targetWidth = loadedImages[0].width
+        const targetHeight = loadedImages[0].height
+        
+        // Clear existing frame stack
+        gifFrameStack.clear()
+        
+        // Default frame delay (100ms = 10 fps)
+        const defaultDelay = 100
+        
+        if (statusLabel) {
+            statusLabel.textContent = 'Creating GIF frames...'
+        }
+        
+        // Create frames from each image
+        for (const img of loadedImages) {
+            // Create canvas to normalize image size
+            const canvas = document.createElement('canvas')
+            canvas.width = targetWidth
+            canvas.height = targetHeight
+            const ctx = canvas.getContext('2d')
+            
+            // Fill with transparent/black background
+            ctx.fillStyle = '#000000'
+            ctx.fillRect(0, 0, targetWidth, targetHeight)
+            
+            // Calculate scaling to fit image while maintaining aspect ratio
+            const scale = Math.min(targetWidth / img.width, targetHeight / img.height)
+            const scaledWidth = img.width * scale
+            const scaledHeight = img.height * scale
+            const offsetX = (targetWidth - scaledWidth) / 2
+            const offsetY = (targetHeight - scaledHeight) / 2
+            
+            // Draw image centered
+            ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight)
+            
+            // Get image data and add to frame stack
+            const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight)
+            gifFrameStack.addFrame(imageData, defaultDelay)
+        }
+        
+        // Show the Edit GIF Frames button
+        const editGifBtn = document.getElementById('editGifBtn')
+        if (editGifBtn) {
+            editGifBtn.style.display = ''
+        }
+        
+        // Show the play/stop button
+        const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
+        if (gifPlayStopBtn) {
+            gifPlayStopBtn.classList.remove('hidden')
+        }
+        
+        // Load first frame into editor
+        if (gifFrameStack.length > 0) {
+            const frame = gifFrameStack.getFrame(0)
+            const canvas = document.createElement('canvas')
+            canvas.width = frame.imageData.width
+            canvas.height = frame.imageData.height
+            const ctx = canvas.getContext('2d')
+            ctx.putImageData(frame.imageData, 0, 0)
+            
+            const image = new Image()
+            const name = 'composed-gif'
+            const type = 'image/gif'
+            const extension = 'gif'
+            const mainCanvas = document.getElementById('imageCanvas')
+            
+            image.onload = () => {
+                imageEditor = new ImageEditor(image, name, type, extension, mainCanvas)
+                window.imageEditor = imageEditor
+                
+                const imageEditorInstantiationEvent = new CustomEvent('imageEditorReady', { detail: { instance: imageEditor } })
+                window.dispatchEvent(imageEditorInstantiationEvent)
+                
+                // Update status
+                if (renderStatus) {
+                    renderStatus.classList.remove('isRendering', 'isError')
+                    renderStatus.classList.add('isReady')
+                }
+                if (statusLabel) {
+                    statusLabel.textContent = 'Ready'
+                }
+                
+                // Show success message
+                alert(`Created GIF with ${gifFrameStack.length} frames from ${imageFiles.length} images.\n\nUse "Edit GIF Frames" to adjust timing, or export directly.`)
+            }
+            image.src = canvas.toDataURL()
+        }
+    } catch (err) {
+        console.error('Failed to create GIF from images:', err)
+        alert('Failed to create GIF: ' + err.message)
+        
+        if (renderStatus) {
+            renderStatus.classList.remove('isRendering')
+            renderStatus.classList.add('isError')
+        }
+        if (statusLabel) {
+            statusLabel.textContent = 'Error'
+        }
+    }
+}
+
+/**
+ * Load an image from a file and return a promise that resolves to the Image element
+ * Supports both standard image formats and RAW files (via embedded preview extraction)
+ */
+async function loadImageFromFile(file) {
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+    const isRaw = RAW_EXTENSIONS.includes(fileExtension)
+    
+    if (isRaw) {
+        return await extractRawPreview(file)
+    }
+    
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        const image = new Image()
+        
+        reader.onload = () => {
+            image.src = reader.result
+        }
+        
+        reader.onerror = () => {
+            reject(new Error(`Failed to read file: ${file.name}`))
+        }
+        
+        image.onload = () => {
+            resolve(image)
+        }
+        
+        image.onerror = () => {
+            reject(new Error(`Failed to load image: ${file.name}`))
+        }
+        
+        reader.readAsDataURL(file)
+    })
+}
+
+/**
+ * Extract embedded JPEG preview from a RAW file
+ * Supports traditional RAW formats via exifr, and CR3 via manual parsing
+ */
+async function extractRawPreview(file) {
+    const fileName = file.name.toLowerCase()
+    
+    // CR3 files need special handling - they use ISO BMF container (like MP4)
+    if (fileName.endsWith('.cr3')) {
+        return await extractCR3Preview(file)
+    }
+    
+    // For other RAW formats, try exifr
+    try {
+        const thumbnailData = await exifr.thumbnail(file)
+        
+        if (thumbnailData) {
+            const blob = new Blob([thumbnailData], { type: 'image/jpeg' })
+            const dataUrl = await blobToDataURL(blob)
+            
+            return new Promise((resolve, reject) => {
+                const image = new Image()
+                image.onload = () => resolve(image)
+                image.onerror = () => reject(new Error(`Failed to load RAW preview: ${file.name}`))
+                image.src = dataUrl
+            })
+        }
+    } catch (err) {
+        console.warn('exifr thumbnail extraction failed, trying manual extraction:', err.message)
+    }
+    
+    // Fallback: try to find JPEG data manually in the file
+    return await extractJpegFromRaw(file)
+}
+
+/**
+ * Extract preview from Canon CR3 files
+ * CR3 uses ISO Base Media File Format (like MP4/HEIF)
+ * The preview JPEG is stored in a 'PRVW' box or as a track
+ */
+async function extractCR3Preview(file) {
+    const buffer = await file.arrayBuffer()
+    const data = new Uint8Array(buffer)
+    
+    // Search for JPEG markers in the file
+    // CR3 embeds full JPEG previews that start with FFD8 and end with FFD9
+    const jpegStart = findJpegStart(data)
+    
+    if (jpegStart === -1) {
+        throw new Error('No JPEG preview found in CR3 file')
+    }
+    
+    // Find the largest JPEG in the file (usually the full preview)
+    const jpegs = findAllJpegs(data)
+    
+    if (jpegs.length === 0) {
+        throw new Error('No JPEG preview found in CR3 file')
+    }
+    
+    // Sort by size and use the largest one (usually the high-res preview)
+    jpegs.sort((a, b) => b.size - a.size)
+    const bestJpeg = jpegs[0]
+    
+    const jpegData = data.slice(bestJpeg.start, bestJpeg.end)
+    const blob = new Blob([jpegData], { type: 'image/jpeg' })
+    const dataUrl = await blobToDataURL(blob)
+    
+    return new Promise((resolve, reject) => {
+        const image = new Image()
+        image.onload = () => resolve(image)
+        image.onerror = () => reject(new Error(`Failed to load CR3 preview: ${file.name}`))
+        image.src = dataUrl
+    })
+}
+
+/**
+ * Find all JPEG images embedded in a binary file
+ */
+function findAllJpegs(data) {
+    const jpegs = []
+    let i = 0
+    
+    while (i < data.length - 1) {
+        // Look for JPEG start marker (FFD8)
+        if (data[i] === 0xFF && data[i + 1] === 0xD8) {
+            const start = i
+            // Find corresponding end marker (FFD9)
+            let j = i + 2
+            while (j < data.length - 1) {
+                if (data[j] === 0xFF && data[j + 1] === 0xD9) {
+                    const end = j + 2
+                    const size = end - start
+                    // Only consider JPEGs larger than 10KB (skip tiny thumbnails)
+                    if (size > 10240) {
+                        jpegs.push({ start, end, size })
+                    }
+                    i = end
+                    break
+                }
+                j++
+            }
+            if (j >= data.length - 1) break
+        } else {
+            i++
+        }
+    }
+    
+    return jpegs
+}
+
+/**
+ * Find the start of a JPEG in binary data
+ */
+function findJpegStart(data) {
+    for (let i = 0; i < data.length - 1; i++) {
+        if (data[i] === 0xFF && data[i + 1] === 0xD8) {
+            return i
+        }
+    }
+    return -1
+}
+
+/**
+ * Fallback: Extract JPEG from any RAW file by searching for JPEG markers
+ */
+async function extractJpegFromRaw(file) {
+    const buffer = await file.arrayBuffer()
+    const data = new Uint8Array(buffer)
+    
+    const jpegs = findAllJpegs(data)
+    
+    if (jpegs.length === 0) {
+        throw new Error(`No embedded preview found in RAW file: ${file.name}`)
+    }
+    
+    // Use the largest JPEG found
+    jpegs.sort((a, b) => b.size - a.size)
+    const bestJpeg = jpegs[0]
+    
+    const jpegData = data.slice(bestJpeg.start, bestJpeg.end)
+    const blob = new Blob([jpegData], { type: 'image/jpeg' })
+    const dataUrl = await blobToDataURL(blob)
+    
+    return new Promise((resolve, reject) => {
+        const image = new Image()
+        image.onload = () => resolve(image)
+        image.onerror = () => reject(new Error(`Failed to load RAW preview: ${file.name}`))
+        image.src = dataUrl
+    })
+}
+
+/**
+ * Convert a Blob to a data URL
+ */
+function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = () => reject(new Error('Failed to convert blob to data URL'))
+        reader.readAsDataURL(blob)
+    })
+}
+
+/**
+ * Upload a RAW image file by extracting its embedded preview
+ */
+async function uploadRawImage(file) {
+    // Show loading indicator
+    const renderStatus = document.getElementById('renderStatus')
+    const statusLabel = renderStatus?.querySelector('span')
+    if (renderStatus) {
+        renderStatus.classList.remove('isReady', 'isError')
+        renderStatus.classList.add('isRendering')
+    }
+    if (statusLabel) {
+        statusLabel.textContent = 'Extracting RAW preview...'
+    }
+    
+    try {
+        // Hide GIF-specific UI
+        const editGifBtn = document.getElementById('editGifBtn')
+        if (editGifBtn) {
+            editGifBtn.style.display = 'none'
+        }
+        
+        const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
+        if (gifPlayStopBtn) {
+            gifPlayStopBtn.classList.add('hidden')
+        }
+        
+        // Clear frame stack
+        gifFrameStack.clear()
+        
+        // Extract preview from RAW file
+        const image = await extractRawPreview(file)
+        
+        // File Metadata
+        const name = file.name.substring(0, file.name.lastIndexOf('.'))
+        const type = 'image/jpeg' // Preview is always JPEG
+        const extension = 'jpg'
+        const canvas = document.getElementById('imageCanvas')
+        
+        imageEditor = new ImageEditor(image, name, type, extension, canvas)
+        window.imageEditor = imageEditor
+        
+        const imageEditorInstantiationEvent = new CustomEvent('imageEditorReady', { detail: { instance: imageEditor } })
+        window.dispatchEvent(imageEditorInstantiationEvent)
+        
+        // Update status
+        if (renderStatus) {
+            renderStatus.classList.remove('isRendering', 'isError')
+            renderStatus.classList.add('isReady')
+        }
+        if (statusLabel) {
+            statusLabel.textContent = 'Ready'
+        }
+        
+        // Get EXIF data for info display
+        try {
+            const exif = await exifr.parse(file, { pick: ['Make', 'Model', 'ISO', 'ExposureTime', 'FNumber', 'FocalLength'] })
+            if (exif) {
+                const info = []
+                if (exif.Make) info.push(exif.Make)
+                if (exif.Model) info.push(exif.Model)
+                if (exif.ISO) info.push(`ISO ${exif.ISO}`)
+                if (exif.FNumber) info.push(`f/${exif.FNumber}`)
+                if (exif.ExposureTime) info.push(`${exif.ExposureTime}s`)
+                if (exif.FocalLength) info.push(`${exif.FocalLength}mm`)
+                
+                if (info.length > 0) {
+                    console.log(`RAW file loaded: ${info.join(' | ')}`)
+                }
+            }
+        } catch (exifErr) {
+            // EXIF extraction is optional, don't fail if it doesn't work
+            console.log('Could not extract EXIF data')
+        }
+        
+    } catch (err) {
+        console.error('Failed to load RAW image:', err)
+        alert('Failed to load RAW image: ' + err.message + '\n\nTip: Some older or less common RAW formats may not have embedded previews.')
+        
+        if (renderStatus) {
+            renderStatus.classList.remove('isRendering')
+            renderStatus.classList.add('isError')
+        }
+        if (statusLabel) {
+            statusLabel.textContent = 'Error'
+        }
     }
 }
 
@@ -1829,6 +2308,7 @@ window.addEventListener('load', () => {
             sobelEdges,
             {
                 edgeThreshold: {value: 50, range: [0, 255], valueStep: 1},
+                edgeColor: { value: '#ffffff' },
                 blackoutBackground: { value: true },
                 transparentBackground: { value: false }
             }
@@ -1843,6 +2323,8 @@ window.addEventListener('load', () => {
             sobelEdgesColouredDirections,
             {
                 edgeThreshold: {value: 50, range: [0, 255], valueStep: 1},
+                colorX: { value: '#ff0000' },
+                colorY: { value: '#00ff00' },
                 blackoutBackground: { value: true },
                 transparentBackground: { value: false }
             }
@@ -1857,6 +2339,7 @@ window.addEventListener('load', () => {
             prewireEdges,
             {
                 edgeThreshold: {value: 50, range: [0, 255], valueStep: 1},
+                edgeColor: { value: '#ffffff' },
                 blackoutBackground: { value: true },
                 transparentBackground: { value: false }
             }
@@ -1871,6 +2354,8 @@ window.addEventListener('load', () => {
             prewireEdgesColouredDirections,
             {
                 edgeThreshold: {value: 50, range: [0, 255], valueStep: 1},
+                colorX: { value: '#ff0000' },
+                colorY: { value: '#00ff00' },
                 blackoutBackground: { value: true },
                 transparentBackground: { value: false }
             }

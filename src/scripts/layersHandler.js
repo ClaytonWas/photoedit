@@ -198,6 +198,25 @@ export function renderLayerProperties(imageEditor) {
 
                     parameterDiv.appendChild(parameterP)
                     parameterDiv.appendChild(parameterInput)
+                } else if (typeof parameterValue === 'string' && parameterValue.startsWith('#')) {
+                    // Color picker for hex color values
+                    parameterInput.type = 'color'
+                    parameterInput.value = parameterValue
+
+                    parameterInput.addEventListener('input', () => {
+                        imageEditor.updateLayerEffectParameters(selectedLayerIndex, {
+                            [parameterName]: { value: parameterInput.value }
+                        }, { snapshot: false, deferRender: false })
+                    })
+
+                    parameterInput.addEventListener('change', () => {
+                        imageEditor.updateLayerEffectParameters(selectedLayerIndex, {
+                            [parameterName]: { value: parameterInput.value }
+                        }, { snapshot: true })
+                    })
+
+                    parameterDiv.appendChild(parameterP)
+                    parameterDiv.appendChild(parameterInput)
                 } else {
                     parameterInput.type = 'text'
                     parameterInput.value = parameterValue

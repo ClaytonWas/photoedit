@@ -208,6 +208,12 @@ export function sobelEdges(image, parameters = {}) {
     const edgeThreshold = parameters.edgeThreshold ?? 100
     const blackoutBackground = parameters.blackoutBackground ?? true
     const transparentBackground = parameters.transparentBackground ?? false
+    const edgeColor = parameters.edgeColor ?? '#ffffff'
+    
+    // Parse edge color
+    const edgeR = parseInt(edgeColor.slice(1, 3), 16)
+    const edgeG = parseInt(edgeColor.slice(3, 5), 16)
+    const edgeB = parseInt(edgeColor.slice(5, 7), 16)
 
     // Clear to black if needed
     if (blackoutBackground && !transparentBackground) {
@@ -255,9 +261,9 @@ export function sobelEdges(image, parameters = {}) {
             
             const i = (yOffset + x) << 2
             if (magnitude > edgeThreshold) {
-                data[i] = 255
-                data[i + 1] = 255
-                data[i + 2] = 255
+                data[i] = edgeR
+                data[i + 1] = edgeG
+                data[i + 2] = edgeB
             } else if (transparentBackground) {
                 data[i + 3] = 0
             }
@@ -275,6 +281,16 @@ export function sobelEdgesColouredDirections(image, parameters = {}) {
     const edgeThreshold = parameters.edgeThreshold ?? 100
     const blackoutBackground = parameters.blackoutBackground ?? true
     const transparentBackground = parameters.transparentBackground ?? false
+    const colorX = parameters.colorX ?? '#ff0000'  // Horizontal edges color (default red)
+    const colorY = parameters.colorY ?? '#00ff00'  // Vertical edges color (default green)
+    
+    // Parse colors
+    const colorXR = parseInt(colorX.slice(1, 3), 16)
+    const colorXG = parseInt(colorX.slice(3, 5), 16)
+    const colorXB = parseInt(colorX.slice(5, 7), 16)
+    const colorYR = parseInt(colorY.slice(1, 3), 16)
+    const colorYG = parseInt(colorY.slice(3, 5), 16)
+    const colorYB = parseInt(colorY.slice(5, 7), 16)
 
     if (blackoutBackground && !transparentBackground) {
         for (let i = 0; i < data.length; i += 4) {
@@ -322,9 +338,10 @@ export function sobelEdgesColouredDirections(image, parameters = {}) {
                 const normalizedX = Math.abs(gx) * invMag
                 const normalizedY = Math.abs(gy) * invMag
                 
-                data[i] = (normalizedX * 255) | 0
-                data[i + 1] = (normalizedY * 255) | 0
-                data[i + 2] = (normalizedX * normalizedY * 255) | 0
+                // Blend the two colors based on edge direction
+                data[i] = Math.min(255, (normalizedX * colorXR + normalizedY * colorYR) | 0)
+                data[i + 1] = Math.min(255, (normalizedX * colorXG + normalizedY * colorYG) | 0)
+                data[i + 2] = Math.min(255, (normalizedX * colorXB + normalizedY * colorYB) | 0)
             } else if (transparentBackground) {
                 data[i + 3] = 0
             }
@@ -342,6 +359,12 @@ export function prewittEdges(image, parameters = {}) {
     const edgeThreshold = parameters.edgeThreshold ?? 100
     const blackoutBackground = parameters.blackoutBackground ?? true
     const transparentBackground = parameters.transparentBackground ?? false
+    const edgeColor = parameters.edgeColor ?? '#ffffff'
+    
+    // Parse edge color
+    const edgeR = parseInt(edgeColor.slice(1, 3), 16)
+    const edgeG = parseInt(edgeColor.slice(3, 5), 16)
+    const edgeB = parseInt(edgeColor.slice(5, 7), 16)
 
     if (blackoutBackground && !transparentBackground) {
         for (let i = 0; i < data.length; i += 4) {
@@ -386,9 +409,9 @@ export function prewittEdges(image, parameters = {}) {
             
             const i = (yOffset + x) << 2
             if (magnitude > edgeThreshold) {
-                data[i] = 255
-                data[i + 1] = 255
-                data[i + 2] = 255
+                data[i] = edgeR
+                data[i + 1] = edgeG
+                data[i + 2] = edgeB
             } else if (transparentBackground) {
                 data[i + 3] = 0
             }
@@ -409,6 +432,16 @@ export function prewittEdgesColouredDirections(image, parameters = {}) {
     const edgeThreshold = parameters.edgeThreshold ?? 100
     const blackoutBackground = parameters.blackoutBackground ?? true
     const transparentBackground = parameters.transparentBackground ?? false
+    const colorX = parameters.colorX ?? '#ff0000'  // Horizontal edges color (default red)
+    const colorY = parameters.colorY ?? '#00ff00'  // Vertical edges color (default green)
+    
+    // Parse colors
+    const colorXR = parseInt(colorX.slice(1, 3), 16)
+    const colorXG = parseInt(colorX.slice(3, 5), 16)
+    const colorXB = parseInt(colorX.slice(5, 7), 16)
+    const colorYR = parseInt(colorY.slice(1, 3), 16)
+    const colorYG = parseInt(colorY.slice(3, 5), 16)
+    const colorYB = parseInt(colorY.slice(5, 7), 16)
 
     if (blackoutBackground && !transparentBackground) {
         for (let i = 0; i < data.length; i += 4) {
@@ -456,9 +489,10 @@ export function prewittEdgesColouredDirections(image, parameters = {}) {
                 const normalizedX = Math.abs(gx) * invMag
                 const normalizedY = Math.abs(gy) * invMag
                 
-                data[i] = (normalizedX * 255) | 0
-                data[i + 1] = (normalizedY * 255) | 0
-                data[i + 2] = (normalizedX * normalizedY * 255) | 0
+                // Blend the two colors based on edge direction
+                data[i] = Math.min(255, (normalizedX * colorXR + normalizedY * colorYR) | 0)
+                data[i + 1] = Math.min(255, (normalizedX * colorXG + normalizedY * colorYG) | 0)
+                data[i + 2] = Math.min(255, (normalizedX * colorXB + normalizedY * colorYB) | 0)
             } else if (transparentBackground) {
                 data[i + 3] = 0
             }

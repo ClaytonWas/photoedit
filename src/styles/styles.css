@@ -431,6 +431,18 @@ input, select {
     border: 1px solid var(--border);
 }
 
+/* Color picker styling for effect parameters */
+#currentLayerSelector input[type="color"],
+#mobileCurrentLayerSelector input[type="color"] {
+    width: 50px;
+    height: 28px;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    cursor: pointer;
+}
+
 #layersSelector {
     flex: 1;
     overflow-y: auto;
