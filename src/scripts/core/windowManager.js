@@ -2838,10 +2838,19 @@ class WindowManager {
                 overflow-x: hidden;
                 padding: 16px;
                 -webkit-overflow-scrolling: touch;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
             }
             
             .wm-mobile-panel-content.no-padding {
                 padding: 0;
+            }
+            
+            /* Ensure child containers fill mobile panel content */
+            .wm-mobile-panel-content > * {
+                flex: 1;
+                min-height: 0;
             }
             
             /* Mobile panel content specific styles */

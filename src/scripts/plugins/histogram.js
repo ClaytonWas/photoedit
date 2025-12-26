@@ -126,7 +126,7 @@ function calculateHistogram(imageData) {
  * Get image data from canvas
  */
 function getImageData() {
-    const editor = imageEditor || window.imageEditor
+    const editor = window.getActiveEditor?.() || imageEditor || window.imageEditor
     if (!editor || !editor.canvas) return null
     
     const ctx = editor.canvas.getContext('2d')
@@ -292,7 +292,7 @@ function updateStats(stats) {
     const statsEl = document.getElementById('histogramStats')
     if (!statsEl) return
     
-    const editor = imageEditor || window.imageEditor
+    const editor = window.getActiveEditor?.() || imageEditor || window.imageEditor
     statsEl.innerHTML = `
         <div class="hist-stat-row">
             <span class="hist-stat-label">Dimensions:</span>

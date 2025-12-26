@@ -5,6 +5,13 @@ function generateLayerId() {
     return `layer-${layerIdCounter}`
 }
 
+/**
+ * Reset the layer ID counter (useful when starting fresh)
+ */
+export function resetLayerIdCounter() {
+    layerIdCounter = 0
+}
+
 function cloneEffectParameters(effectParameters = {}) {
     const clone = {}
     Object.entries(effectParameters).forEach(([key, config]) => {

@@ -13,8 +13,8 @@ import { toggleLayersWindow, toggleImagePropertiesWindow, getLayersWindow, getIm
 import { windowManager } from './core/windowManager.js'
 import * as exifr from 'exifr'
 
-// RAW file extensions supported via embedded preview extraction
-const RAW_EXTENSIONS = [
+// RAW file extensions supported via embedded preview extraction (Set for O(1) lookup)
+const RAW_EXTENSIONS = new Set([
     '.cr2', '.cr3',           // Canon
     '.nef', '.nrw',           // Nikon
     '.arw', '.srf', '.sr2',   // Sony
@@ -31,13 +31,21 @@ const RAW_EXTENSIONS = [
     '.mef', '.mos',           // Mamiya
     '.mrw',                   // Minolta
     '.kdc', '.dcr'            // Kodak
-]
+])
 
 
 let imageEditor = null
 let undoMenuItem = null
 let redoMenuItem = null
 let renderStatusPollInterval = null
+
+/**
+ * Get the active image editor instance
+ * Provides a consistent way to access the editor with fallback to window.imageEditor
+ */
+function getActiveEditor() {
+    return imageEditor ?? window.imageEditor ?? null
+}
 
 function safeSetTextContent(id, value = '') {
     const element = document.getElementById(id)
@@ -498,115 +506,10 @@ function resetEditor() {
 async function uploadImages() {
     const files = Array.from(document.querySelector("input[type=file]").files)
     if (!files.length) return
-
-    // If multiple files selected, compose into GIF
-    if (files.length > 1) {
-        await uploadMultipleAsGif(files)
-        return
-    }
-
-    // Single file - use original logic
-    const file = files[0]
-    resetEditor()
-
-    // Check if the file is a RAW image
-    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-    const isRaw = RAW_EXTENSIONS.includes(fileExtension)
     
-    if (isRaw) {
-        await uploadRawImage(file)
-        return
-    }
-
-    // Check if the file is a GIF
-    const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')
-    
-    if (isGif) {
-        // Load GIF with frame stack
-        try {
-            await loadGifFrames(file)
-            
-            // Show the Edit GIF Frames button
-            const editGifBtn = document.getElementById('editGifBtn')
-            if (editGifBtn) {
-                editGifBtn.style.display = ''
-            }
-            
-            // Show the play/stop button
-            const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
-            if (gifPlayStopBtn) {
-                gifPlayStopBtn.classList.remove('hidden')
-            }
-            
-            // Load first frame into editor
-            if (gifFrameStack.length > 0) {
-                const frame = gifFrameStack.getFrame(0)
-                const canvas = document.createElement('canvas')
-                canvas.width = frame.imageData.width
-                canvas.height = frame.imageData.height
-                const ctx = canvas.getContext('2d')
-                ctx.putImageData(frame.imageData, 0, 0)
-                
-                const image = new Image()
-                const name = file.name.substring(0, file.name.lastIndexOf('.'))
-                const type = file.type || 'image/gif'
-                const extension = 'gif'
-                const mainCanvas = document.getElementById('imageCanvas')
-                
-                image.onload = () => {
-                    imageEditor = new ImageEditor(image, name, type, extension, mainCanvas)
-                    window.imageEditor = imageEditor
-                    
-                    const imageEditorInstantiationEvent = new CustomEvent('imageEditorReady', { detail: { instance: imageEditor } })
-                    window.dispatchEvent(imageEditorInstantiationEvent)
-                }
-                image.src = canvas.toDataURL()
-            }
-        } catch (err) {
-            console.error('Failed to load GIF:', err)
-            alert('Failed to load GIF: ' + err.message)
-        }
-    } else {
-        // Hide GIF-specific UI for non-GIF files
-        const editGifBtn = document.getElementById('editGifBtn')
-        if (editGifBtn) {
-            editGifBtn.style.display = 'none'
-        }
-        
-        const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
-        if (gifPlayStopBtn) {
-            gifPlayStopBtn.classList.add('hidden')
-        }
-        
-        // Clear frame stack and thumbnail cache
-        gifFrameStack.clear()
-        clearThumbnailCache()
-        
-        // Standard image loading
-        const reader = new FileReader()
-        const image = new Image()
-
-        // File Metadata
-        const name = file.name.substring(0, file.name.lastIndexOf('.'))
-        const type = file.type
-        const extension = type.slice(6)
-        const canvas = document.getElementById('imageCanvas')
-
-        // Writes image data (Base64) to image.src
-        reader.onload = () => {
-            image.src = reader.result
-        };
-
-        image.onload = () => {
-            imageEditor = new ImageEditor(image, name, type, extension, canvas)
-            window.imageEditor = imageEditor
-
-            const imageEditorInstantiationEvent = new CustomEvent('imageEditorReady', { detail: { instance: imageEditor } })
-            window.dispatchEvent(imageEditorInstantiationEvent)
-        };
-
-        reader.readAsDataURL(file)
-    }
+    // Use the consolidated image processing function
+    const imageFiles = files.filter(f => isImageFile(f))
+    await processDroppedImages(imageFiles)
 }
 
 /**
@@ -615,7 +518,7 @@ async function uploadImages() {
 function isImageFile(file) {
     if (file.type.startsWith('image/')) return true
     const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-    return RAW_EXTENSIONS.includes(ext)
+    return RAW_EXTENSIONS.has(ext)
 }
 
 /**
@@ -707,8 +610,8 @@ function initializeDragAndDrop() {
 }
 
 /**
- * Process images dropped onto the page
- * Single image: load normally
+ * Process image files (from file input or drag-drop)
+ * Single image: load normally (supports RAW, GIF, standard formats)
  * Multiple images: compose into GIF
  */
 async function processDroppedImages(files) {
@@ -720,7 +623,7 @@ async function processDroppedImages(files) {
         resetEditor()
 
         const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-        const isRaw = RAW_EXTENSIONS.includes(fileExtension)
+        const isRaw = RAW_EXTENSIONS.has(fileExtension)
 
         if (isRaw) {
             await uploadRawImage(file)
@@ -966,7 +869,7 @@ async function uploadMultipleAsGif(files) {
  */
 async function loadImageFromFile(file) {
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-    const isRaw = RAW_EXTENSIONS.includes(fileExtension)
+    const isRaw = RAW_EXTENSIONS.has(fileExtension)
     
     if (isRaw) {
         return await extractRawPreview(file)
@@ -2416,6 +2319,7 @@ window.isGifPlaying = isGifPlaying
 window.startGifPlayback = startGifPlayback
 window.stopGifPlayback = stopGifPlayback
 window.toggleGifPlayback = toggleGifPlayback
+window.getActiveEditor = getActiveEditor
 
 window.addEventListener('load', () => {
 

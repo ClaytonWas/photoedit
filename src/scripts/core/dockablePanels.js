@@ -853,12 +853,22 @@ function injectLayersPanelStyles() {
             display: none;
         }
         
+        /* Mobile panel: ensure layers-panel-content fills container */
+        .wm-mobile-panel .layers-panel-content {
+            height: 100%;
+            max-height: 100%;
+            min-height: 0;
+            overflow: hidden;
+        }
+        
         /* On mobile, make each section share available space */
         .wm-mobile-panel .layers-props-section,
         .wm-mobile-panel .layers-list-section {
             flex: 1 1 0;
             height: auto !important;
-            min-height: 0;
+            min-height: 80px;
+            max-height: 50%;
+            overflow: hidden;
         }
         
         .wm-mobile-panel .layers-props {
@@ -878,6 +888,13 @@ function injectLayersPanelStyles() {
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            min-height: 0;
+        }
+        
+        /* Ensure controls stay at bottom on mobile */
+        .wm-mobile-panel .layers-controls {
+            flex-shrink: 0;
+            margin-top: auto;
         }
         
         .layers-resize-divider::before {

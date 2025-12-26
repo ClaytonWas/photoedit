@@ -73,9 +73,10 @@ function rgbToHex(r, g, b) {
  * Get color at canvas position
  */
 function getColorAtPosition(x, y) {
-    if (!imageEditor || !imageEditor.canvas) return null
+    const editor = window.getActiveEditor?.() || imageEditor
+    if (!editor || !editor.canvas) return null
     
-    const canvasEl = imageEditor.canvas
+    const canvasEl = editor.canvas
     const ctx = canvasEl.getContext('2d')
     
     // Ensure coordinates are within bounds
@@ -206,9 +207,10 @@ function showCopyFeedback() {
  * Handle mouse move on canvas
  */
 function handleCanvasMove(e) {
-    if (!imageEditor || !imageEditor.canvas) return
+    const editor = window.getActiveEditor?.() || imageEditor
+    if (!editor || !editor.canvas) return
     
-    const canvasEl = imageEditor.canvas
+    const canvasEl = editor.canvas
     const rect = canvasEl.getBoundingClientRect()
     
     // Calculate position relative to canvas
@@ -233,9 +235,10 @@ function handleCanvasMove(e) {
  * Handle click on canvas to add to history
  */
 function handleCanvasClick(e) {
-    if (!imageEditor || !imageEditor.canvas) return
+    const editor = window.getActiveEditor?.() || imageEditor
+    if (!editor || !editor.canvas) return
     
-    const canvasEl = imageEditor.canvas
+    const canvasEl = editor.canvas
     const rect = canvasEl.getBoundingClientRect()
     
     const scaleX = canvasEl.width / rect.width

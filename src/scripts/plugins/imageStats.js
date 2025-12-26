@@ -183,7 +183,7 @@ function calculateImageStats(imageData) {
  * Update statistics display
  */
 function updateStatsDisplay() {
-    const editor = imageEditor || window.imageEditor
+    const editor = window.getActiveEditor?.() || imageEditor || window.imageEditor
     if (!imageStatsWindow || !editor || !editor.canvas) return
     
     const ctx = editor.canvas.getContext('2d')
