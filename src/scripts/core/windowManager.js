@@ -2721,8 +2721,8 @@ class WindowManager {
                 bottom: 0;
                 left: 0;
                 right: 0;
-                max-height: 80vh;
-                min-height: 200px;
+                max-height: 85vh;
+                min-height: 50vh;
                 background: var(--bg-secondary, #1e293b);
                 border-radius: 16px 16px 0 0;
                 box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.3);

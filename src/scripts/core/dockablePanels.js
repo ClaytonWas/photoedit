@@ -416,9 +416,22 @@ function setupLayersSectionBehavior(container) {
         const content = section.querySelector('.layers-section-content')
         
         if (collapseBtn && content) {
-            collapseBtn.addEventListener('click', () => {
+            // Remove any existing listeners by cloning
+            const newBtn = collapseBtn.cloneNode(true)
+            collapseBtn.parentNode.replaceChild(newBtn, collapseBtn)
+            
+            newBtn.addEventListener('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                
                 const isCollapsed = section.classList.toggle('collapsed')
-                collapseBtn.textContent = isCollapsed ? '+' : '−'
+                newBtn.textContent = isCollapsed ? '+' : '−'
+                
+                // Reset inline height when collapsing/expanding
+                if (!isCollapsed) {
+                    section.style.height = ''
+                    section.style.flex = ''
+                }
                 
                 // When collapsed, hide divider if both sections are collapsed
                 if (divider) {
@@ -691,7 +704,9 @@ function updateLayoutStyles() {
  * Inject styles for layers panel
  */
 function injectLayersPanelStyles() {
-    if (document.getElementById('layers-panel-styles')) return
+    // Remove existing styles to ensure updates are applied
+    const existingStyle = document.getElementById('layers-panel-styles')
+    if (existingStyle) existingStyle.remove()
     
     const style = document.createElement('style')
     style.id = 'layers-panel-styles'
@@ -723,6 +738,8 @@ function injectLayersPanelStyles() {
             background: rgba(0, 0, 0, 0.2);
             cursor: default;
             user-select: none;
+            position: relative;
+            z-index: 1;
         }
         
         .layers-section-title {
@@ -735,51 +752,67 @@ function injectLayersPanelStyles() {
         }
         
         .layers-section-collapse {
-            width: 20px;
-            height: 20px;
-            background: transparent;
-            border: none;
-            color: var(--text-tertiary, #64748b);
+            width: 22px;
+            height: 22px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary, #94a3b8);
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            border-radius: 3px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.15s ease;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
         }
         
         .layers-section-collapse:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
             color: var(--text-primary, #f1f5f9);
         }
         
+        .layers-section-collapse:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
         .layers-section-content {
-            transition: all 0.2s ease;
+            overflow: hidden;
         }
         
         .layers-section.collapsed .layers-section-content {
             display: none;
+            height: 0;
+            padding: 0;
+            margin: 0;
         }
         
         .layers-section.collapsed {
             flex: 0 0 auto !important;
+            height: auto !important;
+        }
+        
+        .layers-section.collapsed .layers-section-header {
+            border-radius: 6px;
         }
         
         .layers-props-section {
             flex: 0 0 auto;
-            min-height: 40px;
+            min-height: 32px;
         }
         
         .layers-list-section {
             flex: 1 1 auto;
             display: flex;
             flex-direction: column;
-            min-height: 60px;
+            min-height: 40px;
         }
         
-        /* Resize divider between sections */
+        /* Resize divider between sections - desktop only */
         .layers-resize-divider {
             height: 8px;
             background: transparent;
@@ -787,6 +820,38 @@ function injectLayersPanelStyles() {
             position: relative;
             flex-shrink: 0;
             margin: 2px 0;
+        }
+        
+        /* Hide divider on mobile panels */
+        .wm-mobile-panel .layers-resize-divider {
+            display: none;
+        }
+        
+        /* On mobile, make each section 50% of available space */
+        .wm-mobile-panel .layers-props-section,
+        .wm-mobile-panel .layers-list-section {
+            flex: 1 1 50%;
+            height: auto !important;
+            min-height: 0;
+        }
+        
+        .wm-mobile-panel .layers-props {
+            max-height: none;
+            min-height: auto;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .wm-mobile-panel .layers-list-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .wm-mobile-panel .layers-section-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         
         .layers-resize-divider::before {
@@ -820,11 +885,11 @@ function injectLayersPanelStyles() {
         }
         
         .layers-props {
-            min-height: 60px;
-            max-height: 150px;
+            min-height: 30px;
+            max-height: 120px;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 10px;
+            padding: 8px;
             font-size: 12px;
         }
         
@@ -1133,7 +1198,11 @@ export function getImagePropertiesWindow() {
  * Toggle layers window visibility
  */
 export function toggleLayersWindow() {
-    if (!layersWindow) return
+    // If window was closed/nulled, recreate it (this will also open it)
+    if (!layersWindow) {
+        createLayersWindow()
+        return // createWindow already opens/focuses the window
+    }
     
     if (layersWindow.isVisible()) {
         layersWindow.minimize()
@@ -1147,7 +1216,11 @@ export function toggleLayersWindow() {
  * Toggle image properties window visibility
  */
 export function toggleImagePropertiesWindow() {
-    if (!imagePropertiesWindow) return
+    // If window was closed/nulled, recreate it (this will also open it)
+    if (!imagePropertiesWindow) {
+        createImagePropertiesWindow()
+        return // createWindow already opens/focuses the window
+    }
     
     if (imagePropertiesWindow.isVisible()) {
         imagePropertiesWindow.minimize()
