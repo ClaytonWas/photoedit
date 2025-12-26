@@ -376,6 +376,8 @@ function enableSelection(callback) {
         const { x, y } = getCanvasCoordinates(e.clientX, e.clientY)
         startX = x
         startY = y
+        endX = x  // Initialize end to start position
+        endY = y
         isSelecting = true
         const rect = updateDisplayScale()
         overlayCanvas = getSelectionOverlay(canvas, rect)
@@ -409,6 +411,11 @@ function enableSelection(callback) {
         isSelecting = false
         if (overlayContext) {
             overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
+        }
+
+        // Ensure we have valid coordinates
+        if (startX === undefined || startY === undefined || endX === undefined || endY === undefined) {
+            return
         }
 
         // Return selection coordinates via callback
@@ -481,8 +488,6 @@ function resetEditor() {
     if (layersList) {
         layersList.innerHTML = ''
     }
-
-    document.title = 'PhotoEdits'
 
     updateHistoryMenuState()
 }

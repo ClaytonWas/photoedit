@@ -2312,6 +2312,14 @@ class WindowManager {
                 flex: 1;
                 overflow: auto;
                 padding: 12px;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .wm-content > * {
+                flex: 1;
+                min-height: 0;
             }
             
             .wm-content.no-padding {
@@ -2469,7 +2477,12 @@ class WindowManager {
             /* Docked window state */
             .wm-window.wm-docked {
                 border-radius: 0;
-                transition: all 0.2s ease;
+            }
+            
+            /* No transitions during resize */
+            .wm-window.wm-resizing,
+            .wm-tab-group.wm-resizing {
+                transition: none !important;
             }
             
             /* Snap indicator lines (shown when near another window) */
@@ -2508,6 +2521,11 @@ class WindowManager {
             
             .wm-tab-group.wm-docked {
                 border-radius: 0;
+            }
+            
+            .wm-tab-group.wm-dragging,
+            .wm-tab-group.wm-resizing {
+                transition: none !important;
             }
             
             .wm-tab-bar-container {

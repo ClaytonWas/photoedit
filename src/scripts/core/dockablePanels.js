@@ -715,8 +715,10 @@ function injectLayersPanelStyles() {
             display: flex;
             flex-direction: column;
             height: 100%;
+            min-height: 0;
             padding: 10px;
             gap: 10px;
+            overflow: hidden;
         }
         
         /* Section styling for collapsible sections */
@@ -801,15 +803,35 @@ function injectLayersPanelStyles() {
         }
         
         .layers-props-section {
-            flex: 0 0 auto;
-            min-height: 32px;
+            flex: 1 1 0;
+            min-height: 40px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .layers-props-section .layers-section-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
         }
         
         .layers-list-section {
-            flex: 1 1 auto;
+            flex: 1 1 0;
             display: flex;
             flex-direction: column;
             min-height: 40px;
+            overflow: hidden;
+        }
+        
+        .layers-list-section .layers-section-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
         }
         
         /* Resize divider between sections - desktop only */
@@ -827,10 +849,10 @@ function injectLayersPanelStyles() {
             display: none;
         }
         
-        /* On mobile, make each section 50% of available space */
+        /* On mobile, make each section share available space */
         .wm-mobile-panel .layers-props-section,
         .wm-mobile-panel .layers-list-section {
-            flex: 1 1 50%;
+            flex: 1 1 0;
             height: auto !important;
             min-height: 0;
         }
@@ -885,8 +907,8 @@ function injectLayersPanelStyles() {
         }
         
         .layers-props {
-            min-height: 30px;
-            max-height: 120px;
+            flex: 1;
+            min-height: 0;
             overflow-y: auto;
             overflow-x: hidden;
             padding: 8px;
@@ -944,7 +966,9 @@ function injectLayersPanelStyles() {
         .layers-list-container {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
             padding: 6px;
+            min-height: 0;
         }
         
         .layers-list {
@@ -982,6 +1006,10 @@ function injectLayersPanelStyles() {
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-shrink: 0;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: auto;
         }
         
         .layer-reorder-group {
