@@ -1,18 +1,84 @@
 let metadataControlsInitialised = false
 
+// Default values for image properties when no image is loaded
+const DEFAULT_IMAGE_PROPERTIES = {
+    name: 'Untitled',
+    width: 800,
+    height: 600,
+    extension: 'png'
+}
+
 function updateDimensionInputs(imageEditor) {
     const widthInput = document.getElementById('imageWidthInput')
     const heightInput = document.getElementById('imageHeightInput')
-    if (widthInput && heightInput) {
-        widthInput.value = Math.round(imageEditor.image.width)
-        heightInput.value = Math.round(imageEditor.image.height)
+    const windowWidthInput = document.getElementById('windowImageWidthInput')
+    const windowHeightInput = document.getElementById('windowImageHeightInput')
+    
+    const width = Math.round(imageEditor.image.width)
+    const height = Math.round(imageEditor.image.height)
+    
+    if (widthInput) widthInput.value = width
+    if (heightInput) heightInput.value = height
+    if (windowWidthInput) windowWidthInput.value = width
+    if (windowHeightInput) windowHeightInput.value = height
+}
+
+/**
+ * Populate image properties with default values when no image is loaded
+ */
+export function populateDefaultImageProperties() {
+    const titleName = document.getElementById('titleNameModified')
+    if (titleName) titleName.textContent = 'Name:'
+    
+    // Populate both original and window inputs
+    const imageNameInput = document.getElementById('imageNameInput')
+    const windowImageNameInput = document.getElementById('windowImageNameInput')
+    if (imageNameInput) {
+        imageNameInput.value = DEFAULT_IMAGE_PROPERTIES.name
+    }
+    if (windowImageNameInput) {
+        windowImageNameInput.value = DEFAULT_IMAGE_PROPERTIES.name
+    }
+
+    const titleDimensions = document.getElementById('titleDimensionsModified')
+    if (titleDimensions) titleDimensions.textContent = 'Dimensions:'
+    
+    const widthInput = document.getElementById('imageWidthInput')
+    const heightInput = document.getElementById('imageHeightInput')
+    const windowWidthInput = document.getElementById('windowImageWidthInput')
+    const windowHeightInput = document.getElementById('windowImageHeightInput')
+    if (widthInput) {
+        widthInput.value = DEFAULT_IMAGE_PROPERTIES.width
+    }
+    if (heightInput) {
+        heightInput.value = DEFAULT_IMAGE_PROPERTIES.height
+    }
+    if (windowWidthInput) {
+        windowWidthInput.value = DEFAULT_IMAGE_PROPERTIES.width
+    }
+    if (windowHeightInput) {
+        windowHeightInput.value = DEFAULT_IMAGE_PROPERTIES.height
+    }
+
+    const titleExtension = document.getElementById('titleExtensionModified')
+    if (titleExtension) titleExtension.textContent = 'Extension:'
+    
+    const selector = document.getElementById('imageExtensionSelector')
+    const windowSelector = document.getElementById('windowImageExtensionSelector')
+    if (selector) {
+        selector.value = DEFAULT_IMAGE_PROPERTIES.extension
+    }
+    if (windowSelector) {
+        windowSelector.value = DEFAULT_IMAGE_PROPERTIES.extension
     }
 }
 
 function updateExtensionSelector(imageEditor) {
     const selector = document.getElementById('imageExtensionSelector')
+    const windowSelector = document.getElementById('windowImageExtensionSelector')
+    const currentValue = (imageEditor.extension || imageEditor.EXTENSION || 'png').toLowerCase()
+    
     if (selector) {
-        const currentValue = (imageEditor.extension || imageEditor.EXTENSION || 'png').toLowerCase()
         const optionExists = Array.from(selector.options).some(option => option.value === currentValue)
         if (!optionExists) {
             const option = document.createElement('option')
@@ -21,6 +87,17 @@ function updateExtensionSelector(imageEditor) {
             selector.appendChild(option)
         }
         selector.value = currentValue
+    }
+    
+    if (windowSelector) {
+        const optionExists = Array.from(windowSelector.options).some(option => option.value === currentValue)
+        if (!optionExists) {
+            const option = document.createElement('option')
+            option.value = currentValue
+            option.textContent = currentValue.toUpperCase()
+            windowSelector.appendChild(option)
+        }
+        windowSelector.value = currentValue
     }
 }
 
@@ -94,8 +171,12 @@ function setupMetadataControls(imageEditor) {
 export function initializeModifiedImageDataModule(imageEditor) {
     document.getElementById('titleNameModified').textContent = 'Name:'
     const imageNameInput = document.getElementById('imageNameInput')
+    const windowImageNameInput = document.getElementById('windowImageNameInput')
     if (imageNameInput) {
         imageNameInput.value = imageEditor.name
+    }
+    if (windowImageNameInput) {
+        windowImageNameInput.value = imageEditor.name
     }
 
     document.getElementById('titleDimensionsModified').textContent = 'Dimensions:'
