@@ -6,6 +6,11 @@ import { filmEffects } from './plugins/filmEffects.js'
 import { greyscale } from './plugins/greyscale.js'
 import { sepia } from './plugins/sepia.js'
 import { createSliderAnimation, exportSliderAnimationAsGif, getAnimatableParameters, previewAnimation, availableEasings, createMultiParameterAnimation, downloadBlob, loadGifFrames, gifFrameStack, loadFrameToEditor, saveEditorToFrame, exportFrameStackAsGif, isGifPlaying, startGifPlayback, stopGifPlayback, toggleGifPlayback, estimateGifFileSize, formatFileSize } from './plugins/gifAnimator.js'
+import { openHistogramWindow, initHistogram, queueHistogramUpdate, isHistogramOpen } from './plugins/histogram.js'
+import { openColorInfoWindow, initColorInfo, isColorInfoOpen } from './plugins/colorInfo.js'
+import { openImageStatsWindow, isImageStatsOpen, refreshImageStats } from './plugins/imageStats.js'
+import { toggleLayersWindow, toggleImagePropertiesWindow, getLayersWindow, getImagePropertiesWindow } from './core/dockablePanels.js'
+import { windowManager } from './core/windowManager.js'
 import * as exifr from 'exifr'
 
 // RAW file extensions supported via embedded preview extraction
@@ -261,6 +266,16 @@ function handleImageEditorStateChange(event) {
     if (isRendering && !renderStatusPollInterval) {
         startRenderStatusPolling()
     }
+    
+    // Update analysis panels when render completes
+    if (!isRendering && !renderFailed) {
+        if (isHistogramOpen()) {
+            queueHistogramUpdate()
+        }
+        if (isImageStatsOpen()) {
+            refreshImageStats()
+        }
+    }
 }
 
 function updateRenderStatus(isRendering, renderFailed = false) {
@@ -289,6 +304,18 @@ function updateRenderStatus(isRendering, renderFailed = false) {
     } else {
         setStatus('isReady', 'Ready')
     }
+}
+
+// Fade out render status when mouse is in top-right corner
+function initRenderStatusHover() {
+    const renderStatus = document.getElementById('renderStatus')
+    if (!renderStatus) return
+    
+    document.addEventListener('mousemove', (e) => {
+        // Check if mouse is in the top-right corner area (within 150px of right edge, 60px of top)
+        const isInCorner = e.clientX > window.innerWidth - 150 && e.clientY < 60
+        renderStatus.classList.toggle('faded', isInCorner)
+    })
 }
 
 function startRenderStatusPolling() {
@@ -2388,6 +2415,11 @@ window.addEventListener('load', () => {
     * Initialize Drag and Drop Image Loading
     */
     initializeDragAndDrop()
+    
+    /*
+    * Initialize render status hover behavior
+    */
+    initRenderStatusHover()
 
     /*
     * Mobile Menu Navigation Setup
@@ -2399,7 +2431,7 @@ window.addEventListener('load', () => {
         navImage: document.getElementById('imageMenu'),
         navFilter: document.getElementById('filterMenu'),
         navVisual: document.getElementById('visualMenu'),
-        navLayers: document.getElementById('layersMenu')
+        navWindows: document.getElementById('windowsMenu')
     }
     const navButtons = document.querySelectorAll('.navBtn')
     
@@ -2897,6 +2929,92 @@ window.addEventListener('load', () => {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && gifAnimatorDialog && !gifAnimatorDialog.classList.contains('hidden')) {
             closeGifAnimatorDialog()
+        }
+    })
+
+    // Histogram Panel
+    const openHistogramBtn = document.getElementById('openHistogram')
+    if (openHistogramBtn) {
+        openHistogramBtn.addEventListener('click', () => {
+            if (!imageEditor) {
+                alert('Please load an image first')
+                return
+            }
+            openHistogramWindow(imageEditor)
+        })
+    }
+
+    // Color Info Panel
+    const openColorInfoBtn = document.getElementById('openColorInfo')
+    if (openColorInfoBtn) {
+        openColorInfoBtn.addEventListener('click', () => {
+            if (!imageEditor) {
+                alert('Please load an image first')
+                return
+            }
+            openColorInfoWindow(imageEditor)
+        })
+    }
+
+    // Image Statistics Panel
+    const openImageStatsBtn = document.getElementById('openImageStats')
+    if (openImageStatsBtn) {
+        openImageStatsBtn.addEventListener('click', () => {
+            if (!imageEditor) {
+                alert('Please load an image first')
+                return
+            }
+            openImageStatsWindow(imageEditor)
+        })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WINDOWS MENU HANDLERS
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    // Toggle Layers Window
+    document.getElementById('toggleLayersWindow')?.addEventListener('click', () => {
+        toggleLayersWindow()
+    })
+    
+    // Toggle Properties Window
+    document.getElementById('togglePropsWindow')?.addEventListener('click', () => {
+        toggleImagePropertiesWindow()
+    })
+    
+    // Windows menu analysis panel buttons
+    document.getElementById('windowOpenHistogram')?.addEventListener('click', () => {
+        if (!imageEditor) {
+            alert('Please load an image first')
+            return
+        }
+        openHistogramWindow(imageEditor)
+    })
+    
+    document.getElementById('windowOpenColorInfo')?.addEventListener('click', () => {
+        if (!imageEditor) {
+            alert('Please load an image first')
+            return
+        }
+        openColorInfoWindow(imageEditor)
+    })
+    
+    document.getElementById('windowOpenStats')?.addEventListener('click', () => {
+        if (!imageEditor) {
+            alert('Please load an image first')
+            return
+        }
+        openImageStatsWindow(imageEditor)
+    })
+    
+    // Reset Window Layout
+    document.getElementById('resetWindowLayout')?.addEventListener('click', () => {
+        // Clear saved window states
+        localStorage.removeItem('wm-window-states')
+        
+        // Reload the page to reset everything
+        if (confirm('This will reset all window positions and reload the page. Continue?')) {
+            location.reload()
         }
     })
 })

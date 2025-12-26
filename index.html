@@ -122,13 +122,14 @@
             <span>Visual</span>
         </button>
         
-        <button class="navBtn" id="navLayers" aria-label="Layers panel" aria-expanded="false">
+        <button class="navBtn" id="navWindows" aria-label="Windows menu" aria-expanded="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                <polyline points="2 17 12 22 22 17"></polyline>
-                <polyline points="2 12 12 17 22 12"></polyline>
+                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="1"></rect>
             </svg>
-            <span>Layers</span>
+            <span>Windows</span>
         </button>
     </nav>
 
@@ -261,8 +262,79 @@
         </div>
     </div>
 
-    <!-- Layers Panel (mobile) -->
-    <div class="menuPanel layersPanel" id="layersMenu" aria-hidden="true">
+    <!-- Windows Panel -->
+    <div class="menuPanel" id="windowsMenu" aria-hidden="true">
+        <div class="menuPanelHeader">
+            <h2>Windows</h2>
+            <button class="menuClose" aria-label="Close menu">×</button>
+        </div>
+        <div class="menuPanelContent">
+            <div class="menuGroup">
+                <span class="menuGroupLabel">Core Panels</span>
+                <div class="menuRow">
+                    <button class="menuItem compact" id="toggleLayersWindow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:4px">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                        Layers
+                    </button>
+                    <button class="menuItem compact" id="togglePropsWindow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:4px">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        Properties
+                    </button>
+                </div>
+            </div>
+            <div class="menuGroup">
+                <span class="menuGroupLabel">Analysis Panels</span>
+                <div class="menuRow">
+                    <button class="menuItem compact" id="windowOpenHistogram">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:4px">
+                            <path d="M3 3v18h18"></path>
+                            <rect x="7" y="10" width="3" height="8" rx="1"></rect>
+                            <rect x="12" y="6" width="3" height="12" rx="1"></rect>
+                            <rect x="17" y="12" width="3" height="6" rx="1"></rect>
+                        </svg>
+                        Histogram
+                    </button>
+                    <button class="menuItem compact" id="windowOpenColorInfo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:4px">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <circle cx="12" cy="12" r="6"></circle>
+                            <circle cx="12" cy="12" r="2"></circle>
+                        </svg>
+                        Color Info
+                    </button>
+                </div>
+                <div class="menuRow" style="margin-top:8px">
+                    <button class="menuItem compact" id="windowOpenStats">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:4px">
+                            <path d="M21 21H4.6c-.6 0-.9-.4-.9-1V3"></path>
+                            <path d="M7 14l4-4 4 4 5-5"></path>
+                        </svg>
+                        Statistics
+                    </button>
+                </div>
+            </div>
+            <hr class="menuDivider">
+            <button class="menuItem" id="resetWindowLayout">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <polyline points="23 20 23 14 17 14"></polyline>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                </svg>
+                Reset Window Layout
+            </button>
+        </div>
+    </div>
+
+    <!-- Layers Panel (mobile - now deprecated, kept for compatibility) -->
+    <div class="menuPanel layersPanel hidden" id="layersMenu" aria-hidden="true">
         <div class="menuPanelHeader">
             <h2>Layers</h2>
             <button class="menuClose" aria-label="Close menu">×</button>
