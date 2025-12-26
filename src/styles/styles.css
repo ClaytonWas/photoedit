@@ -102,13 +102,13 @@ input, select {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   RENDER STATUS (fixed bubble top-right)
+   RENDER STATUS (fixed bubble top-left)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .renderStatus {
     position: fixed;
     top: 12px;
-    right: 12px;
+    left: 12px;
     z-index: 9999;
     display: flex;
     align-items: center;
@@ -442,11 +442,25 @@ input, select {
 #mobileCurrentLayerSelector input[type="color"] {
     width: 50px;
     height: 28px;
-    padding: 2px;
+    padding: 0;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    background: var(--bg-secondary);
+    background: transparent;
     cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+#currentLayerSelector input[type="color"]::-webkit-color-swatch-wrapper,
+#mobileCurrentLayerSelector input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+#currentLayerSelector input[type="color"]::-webkit-color-swatch,
+#mobileCurrentLayerSelector input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: calc(var(--radius-sm) - 2px);
 }
 
 #layersSelector {
@@ -463,6 +477,7 @@ input, select {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
     padding: 12px;
     margin-bottom: 6px;
     min-height: var(--touch-target);
@@ -473,10 +488,34 @@ input, select {
     transition: all var(--transition);
 }
 
+.layerDiv p {
+    margin: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .layerDiv:active,
 .selectedLayerDiv {
     border-color: var(--accent);
     background: var(--accent-soft);
+}
+
+/* Layer visibility checkbox - default browser style */
+.layerDivToggleVisability {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    margin: 0 !important;
+    margin-left: 8px !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
 }
 
 #layersControls {

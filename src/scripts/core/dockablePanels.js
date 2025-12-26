@@ -581,6 +581,9 @@ function reattachLayerClickHandlers() {
             const originalCheckbox = originalItems[index].querySelector('.layerDivToggleVisability')
             
             if (windowCheckbox && originalCheckbox) {
+                // Sync the checked state from original
+                windowCheckbox.checked = originalCheckbox.checked
+                
                 windowCheckbox.addEventListener('click', (e) => {
                     e.stopPropagation()
                     originalCheckbox.checked = windowCheckbox.checked
@@ -615,7 +618,8 @@ function reattachLayerPropertyHandlers() {
             // Sync initial value
             if (newWindowInput.type === 'checkbox') {
                 newWindowInput.checked = originalInput.checked
-            } else if (newWindowInput.type === 'range' || newWindowInput.type === 'number') {
+            } else {
+                // Handles range, number, color, text, select, etc.
                 newWindowInput.value = originalInput.value
             }
             
@@ -957,10 +961,23 @@ function injectLayersPanelStyles() {
         .layers-props input[type="color"] {
             width: 40px;
             height: 24px;
-            padding: 2px;
+            padding: 0;
             border: 1px solid var(--border);
             border-radius: 4px;
             cursor: pointer;
+            background: transparent;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        
+        .layers-props input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+        
+        .layers-props input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 2px;
         }
         
         .layers-list-container {
@@ -981,6 +998,7 @@ function injectLayersPanelStyles() {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 10px;
             padding: 10px 12px;
             margin-bottom: 4px;
             background: var(--bg-secondary, #1e293b);
@@ -992,6 +1010,14 @@ function injectLayersPanelStyles() {
             color: var(--text-primary, #f1f5f9);
         }
         
+        .layers-list .layerDiv p {
+            margin: 0;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
         .layers-list .layerDiv:hover {
             background: var(--bg-primary, #0f172a);
         }
@@ -1000,6 +1026,22 @@ function injectLayersPanelStyles() {
         .layers-list .selectedLayerDiv {
             border-color: var(--accent, #6366f1);
             background: rgba(99, 102, 241, 0.15);
+        }
+        
+        /* Layer visibility checkbox - default browser style */
+        .layers-list .layerDivToggleVisability {
+            width: 20px !important;
+            height: 20px !important;
+            min-width: 20px !important;
+            min-height: 20px !important;
+            margin: 0 !important;
+            margin-left: 8px !important;
+            cursor: pointer !important;
+            flex-shrink: 0 !important;
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
         }
         
         .layers-controls {

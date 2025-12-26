@@ -306,14 +306,14 @@ function updateRenderStatus(isRendering, renderFailed = false) {
     }
 }
 
-// Fade out render status when mouse is in top-right corner
+// Fade out render status when mouse is in top-left corner
 function initRenderStatusHover() {
     const renderStatus = document.getElementById('renderStatus')
     if (!renderStatus) return
     
     document.addEventListener('mousemove', (e) => {
-        // Check if mouse is in the top-right corner area (within 150px of right edge, 60px of top)
-        const isInCorner = e.clientX > window.innerWidth - 150 && e.clientY < 60
+        // Check if mouse is in the top-left corner area (within 150px of left edge, 60px of top)
+        const isInCorner = e.clientX < 150 && e.clientY < 60
         renderStatus.classList.toggle('faded', isInCorner)
     })
 }
