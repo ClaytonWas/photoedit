@@ -31,6 +31,7 @@ export class Layer {
         name = 'New Layer',
         visible = true,
         opacity = 1,
+        blendMode = 'normal',
         effect = null,
         effectId = null,
         effectParameters = {},
@@ -40,6 +41,7 @@ export class Layer {
         this.name = name
         this.visible = visible
         this.opacity = opacity
+        this.blendMode = blendMode
         this.effect = effect
         this.effectId = effectId
         this.effectParameters = effectParameters
@@ -77,6 +79,7 @@ export class Layer {
             name: this.name,
             visible: this.visible,
             opacity: this.opacity,
+            blendMode: this.blendMode,
             effect: this.effect,
             effectId: this.effectId,
             effectParameters: cloneEffectParameters(this.effectParameters),
@@ -144,6 +147,14 @@ export class LayerManager {
         const safeOpacity = Math.min(Math.max(parseFloat(opacity), 0), 1)
         layer.opacity = Number.isNaN(safeOpacity) ? layer.opacity : safeOpacity
         return layer.opacity
+    }
+
+    setBlendMode(index, blendMode) {
+        const targetIndex = LayerManager.toIndex(index)
+        const layer = this.layers[targetIndex]
+        if (!layer) return null
+        layer.blendMode = blendMode
+        return layer.blendMode
     }
 
     addLayerEffect(index, effect, parameters = {}, valueStep = 0.01) {
@@ -218,16 +229,35 @@ export class LayerManager {
             )
 
             layer.applyEffect(layerImage)
-            this.blendImageData(data, layerImage.data, layer.opacity)
+            
+            // Check if this layer has transparentBackground enabled
+            const hasTransparentBg = layer.effectParameters?.transparentBackground?.value === true
+            this.blendImageData(data, layerImage.data, layer.opacity, hasTransparentBg ? 'replace' : 'normal')
         })
     }
 
-    blendImageData(base, overlay, opacity) {
+    blendImageData(base, overlay, opacity, blendMode = 'normal') {
+        if (blendMode === 'replace') {
+            // Replace mode: layer completely replaces base image
+            for (let i = 0; i < base.length; i += 4) {
+                base[i] = overlay[i]
+                base[i + 1] = overlay[i + 1]
+                base[i + 2] = overlay[i + 2]
+                base[i + 3] = Math.round(overlay[i + 3] * opacity)
+            }
+            return
+        }
+        
+        // Normal blend mode
         for (let i = 0; i < base.length; i += 4) {
-            base[i] = base[i] * (1 - opacity) + overlay[i] * opacity
-            base[i + 1] = base[i + 1] * (1 - opacity) + overlay[i + 1] * opacity
-            base[i + 2] = base[i + 2] * (1 - opacity) + overlay[i + 2] * opacity
-            base[i + 3] = 255
+            const overlayAlpha = overlay[i + 3] / 255
+            const effectiveOpacity = opacity * overlayAlpha
+            const baseRetain = 1 - effectiveOpacity
+            
+            base[i] = base[i] * baseRetain + overlay[i] * effectiveOpacity
+            base[i + 1] = base[i + 1] * baseRetain + overlay[i + 1] * effectiveOpacity
+            base[i + 2] = base[i + 2] * baseRetain + overlay[i + 2] * effectiveOpacity
+            base[i + 3] = base[i + 3] * baseRetain + overlay[i + 3] * opacity
         }
     }
 

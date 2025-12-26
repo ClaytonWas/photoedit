@@ -399,6 +399,15 @@ export class ImageEditor {
         }
     }
 
+    setLayerBlendMode(index, blendMode, options = {}) {
+        const { snapshot = true, deferRender = false } = options
+        this.layerManager.setBlendMode(index, blendMode)
+        this.requestRender(!deferRender)
+        if (snapshot) {
+            this.commitSnapshot('Change layer blend mode')
+        }
+    }
+
     renameLayer(index, name) {
         this.layerManager.renameLayer(index, name)
         this.commitSnapshot('Rename layer')

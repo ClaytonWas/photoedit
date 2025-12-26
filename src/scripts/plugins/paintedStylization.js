@@ -215,8 +215,15 @@ export function sobelEdges(image, parameters = {}) {
     const edgeG = parseInt(edgeColor.slice(3, 5), 16)
     const edgeB = parseInt(edgeColor.slice(5, 7), 16)
 
-    // Clear to black if needed
-    if (blackoutBackground && !transparentBackground) {
+    // Clear to black or transparent if needed
+    if (transparentBackground) {
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = 0
+            data[i + 1] = 0
+            data[i + 2] = 0
+            data[i + 3] = 0
+        }
+    } else if (blackoutBackground) {
         for (let i = 0; i < data.length; i += 4) {
             data[i] = 0
             data[i + 1] = 0
@@ -264,8 +271,7 @@ export function sobelEdges(image, parameters = {}) {
                 data[i] = edgeR
                 data[i + 1] = edgeG
                 data[i + 2] = edgeB
-            } else if (transparentBackground) {
-                data[i + 3] = 0
+                data[i + 3] = 255
             }
         }
     }
@@ -292,7 +298,14 @@ export function sobelEdgesColouredDirections(image, parameters = {}) {
     const colorYG = parseInt(colorY.slice(3, 5), 16)
     const colorYB = parseInt(colorY.slice(5, 7), 16)
 
-    if (blackoutBackground && !transparentBackground) {
+    if (transparentBackground) {
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = 0
+            data[i + 1] = 0
+            data[i + 2] = 0
+            data[i + 3] = 0
+        }
+    } else if (blackoutBackground) {
         for (let i = 0; i < data.length; i += 4) {
             data[i] = 0
             data[i + 1] = 0
@@ -342,8 +355,7 @@ export function sobelEdgesColouredDirections(image, parameters = {}) {
                 data[i] = Math.min(255, (normalizedX * colorXR + normalizedY * colorYR) | 0)
                 data[i + 1] = Math.min(255, (normalizedX * colorXG + normalizedY * colorYG) | 0)
                 data[i + 2] = Math.min(255, (normalizedX * colorXB + normalizedY * colorYB) | 0)
-            } else if (transparentBackground) {
-                data[i + 3] = 0
+                data[i + 3] = 255
             }
         }
     }
@@ -366,7 +378,14 @@ export function prewittEdges(image, parameters = {}) {
     const edgeG = parseInt(edgeColor.slice(3, 5), 16)
     const edgeB = parseInt(edgeColor.slice(5, 7), 16)
 
-    if (blackoutBackground && !transparentBackground) {
+    if (transparentBackground) {
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = 0
+            data[i + 1] = 0
+            data[i + 2] = 0
+            data[i + 3] = 0
+        }
+    } else if (blackoutBackground) {
         for (let i = 0; i < data.length; i += 4) {
             data[i] = 0
             data[i + 1] = 0
@@ -412,8 +431,7 @@ export function prewittEdges(image, parameters = {}) {
                 data[i] = edgeR
                 data[i + 1] = edgeG
                 data[i + 2] = edgeB
-            } else if (transparentBackground) {
-                data[i + 3] = 0
+                data[i + 3] = 255
             }
         }
     }
@@ -443,7 +461,14 @@ export function prewittEdgesColouredDirections(image, parameters = {}) {
     const colorYG = parseInt(colorY.slice(3, 5), 16)
     const colorYB = parseInt(colorY.slice(5, 7), 16)
 
-    if (blackoutBackground && !transparentBackground) {
+    if (transparentBackground) {
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = 0
+            data[i + 1] = 0
+            data[i + 2] = 0
+            data[i + 3] = 0
+        }
+    } else if (blackoutBackground) {
         for (let i = 0; i < data.length; i += 4) {
             data[i] = 0
             data[i + 1] = 0
@@ -493,8 +518,7 @@ export function prewittEdgesColouredDirections(image, parameters = {}) {
                 data[i] = Math.min(255, (normalizedX * colorXR + normalizedY * colorYR) | 0)
                 data[i + 1] = Math.min(255, (normalizedX * colorXG + normalizedY * colorYG) | 0)
                 data[i + 2] = Math.min(255, (normalizedX * colorXB + normalizedY * colorYB) | 0)
-            } else if (transparentBackground) {
-                data[i + 3] = 0
+                data[i + 3] = 255
             }
         }
     }
