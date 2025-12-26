@@ -13,6 +13,28 @@ import { windowManager } from '../core/windowManager.js'
 let imageStatsWindow = null
 let imageEditor = null
 
+// Set up live update listener
+function setupLiveUpdateListener() {
+    window.addEventListener('imageEditorStateChanged', (event) => {
+        const { instance, isRendering, renderFailed } = event.detail
+        // Update imageEditor reference if provided
+        if (instance) {
+            imageEditor = instance
+        }
+        // Update when render completes successfully
+        if (!isRendering && !renderFailed && imageStatsWindow) {
+            // Use window.imageEditor as fallback
+            if (!imageEditor && window.imageEditor) {
+                imageEditor = window.imageEditor
+            }
+            updateStatsDisplay()
+        }
+    })
+}
+
+// Initialize listener once
+setupLiveUpdateListener()
+
 /**
  * Initialize with editor reference
  */
@@ -161,10 +183,11 @@ function calculateImageStats(imageData) {
  * Update statistics display
  */
 function updateStatsDisplay() {
-    if (!imageStatsWindow || !imageEditor || !imageEditor.canvas) return
+    const editor = imageEditor || window.imageEditor
+    if (!imageStatsWindow || !editor || !editor.canvas) return
     
-    const ctx = imageEditor.canvas.getContext('2d')
-    const imageData = ctx.getImageData(0, 0, imageEditor.canvas.width, imageEditor.canvas.height)
+    const ctx = editor.canvas.getContext('2d')
+    const imageData = ctx.getImageData(0, 0, editor.canvas.width, editor.canvas.height)
     const stats = calculateImageStats(imageData)
     
     const content = imageStatsWindow.getContentElement()
@@ -264,14 +287,7 @@ function updateStatsDisplay() {
                 </div>
             </div>
         </div>
-        
-        <div class="stats-actions">
-            <button class="stats-refresh-btn" id="refreshStats">↻ Refresh Statistics</button>
-        </div>
     `
-    
-    // Add refresh handler
-    content.querySelector('#refreshStats')?.addEventListener('click', updateStatsDisplay)
 }
 
 /**
@@ -374,27 +390,6 @@ function createStatsContent() {
             .channel-green td:first-child { color: #22c55e; }
             .channel-blue td:first-child { color: #3b82f6; }
             .channel-lum td:first-child { color: #94a3b8; }
-            
-            .stats-actions {
-                display: flex;
-                justify-content: center;
-            }
-            
-            .stats-refresh-btn {
-                padding: 8px 16px;
-                background: var(--bg-tertiary, #334155);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 6px;
-                color: var(--text-primary, #f1f5f9);
-                font-size: 12px;
-                cursor: pointer;
-                transition: all 0.15s ease;
-            }
-            
-            .stats-refresh-btn:hover {
-                background: var(--accent, #6366f1);
-                border-color: var(--accent, #6366f1);
-            }
         `
         document.head.appendChild(style)
     }
@@ -453,10 +448,10 @@ export function closeImageStatsWindow() {
 }
 
 /**
- * Check if stats window is open
+ * Check if stats window is open (exists and not closed)
  */
 export function isImageStatsOpen() {
-    return imageStatsWindow !== null && imageStatsWindow.isVisible()
+    return imageStatsWindow !== null
 }
 
 /**

@@ -203,6 +203,7 @@ export class ImageEditor {
         }
 
         this.isRendering = true
+        this.fullQualityRenderTimeout = null // Clear the timeout since we're starting the render
         this.dispatchStateChange('Render started')
 
         requestAnimationFrame(() => {
@@ -215,13 +216,14 @@ export class ImageEditor {
                 
                 // Draw the result to the canvas
                 this.context.putImageData(imageData, 0, 0)
-                this.dispatchStateChange('Render complete')
             } catch (error) {
                 console.error('Full quality render error:', error)
-                this.dispatchStateChange('Render failed')
-            } finally {
                 this.isRendering = false
+                this.dispatchStateChange('Render failed')
+                return
             }
+            this.isRendering = false
+            this.dispatchStateChange('Render complete')
         })
     }
 

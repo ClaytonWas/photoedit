@@ -35,6 +35,28 @@ function debounce(fn, delay) {
     }
 }
 
+// Set up live update listener
+function setupLiveUpdateListener() {
+    window.addEventListener('imageEditorStateChanged', (event) => {
+        const { instance, isRendering, renderFailed } = event.detail
+        // Update imageEditor reference if provided
+        if (instance) {
+            imageEditor = instance
+        }
+        // Update when render completes successfully
+        if (!isRendering && !renderFailed && histogramWindow) {
+            // Use window.imageEditor as fallback
+            if (!imageEditor && window.imageEditor) {
+                imageEditor = window.imageEditor
+            }
+            refreshHistogram()
+        }
+    })
+}
+
+// Initialize listener once
+setupLiveUpdateListener()
+
 /**
  * Initialize histogram panel with editor reference
  */
@@ -104,10 +126,11 @@ function calculateHistogram(imageData) {
  * Get image data from canvas
  */
 function getImageData() {
-    if (!imageEditor || !imageEditor.canvas) return null
+    const editor = imageEditor || window.imageEditor
+    if (!editor || !editor.canvas) return null
     
-    const ctx = imageEditor.canvas.getContext('2d')
-    return ctx.getImageData(0, 0, imageEditor.canvas.width, imageEditor.canvas.height)
+    const ctx = editor.canvas.getContext('2d')
+    return ctx.getImageData(0, 0, editor.canvas.width, editor.canvas.height)
 }
 
 /**
@@ -269,10 +292,11 @@ function updateStats(stats) {
     const statsEl = document.getElementById('histogramStats')
     if (!statsEl) return
     
+    const editor = imageEditor || window.imageEditor
     statsEl.innerHTML = `
         <div class="hist-stat-row">
             <span class="hist-stat-label">Dimensions:</span>
-            <span class="hist-stat-value">${imageEditor?.canvas?.width || 0} × ${imageEditor?.canvas?.height || 0}</span>
+            <span class="hist-stat-value">${editor?.canvas?.width || 0} × ${editor?.canvas?.height || 0}</span>
         </div>
         <div class="hist-stat-row">
             <span class="hist-stat-label">Pixels:</span>
@@ -314,7 +338,8 @@ function toggleChannel(channel) {
  * Refresh histogram with current image
  */
 export const refreshHistogram = debounce(() => {
-    if (!histogramWindow || !imageEditor) return
+    const editor = imageEditor || window.imageEditor
+    if (!histogramWindow || !editor) return
     
     const imageData = getImageData()
     if (!imageData) return
@@ -351,7 +376,6 @@ function createHistogramContent() {
             <button class="hist-channel-btn active" data-channel="luminance" title="Luminance">
                 <span class="color-dot lum"></span> L
             </button>
-            <button class="hist-refresh-btn" id="refreshHistogram" title="Refresh">↻</button>
         </div>
         <div class="hist-chart-container">
             <canvas id="histogramCanvas"></canvas>
@@ -414,23 +438,6 @@ function createHistogramContent() {
         .color-dot.green { background: #22c55e; }
         .color-dot.blue { background: #3b82f6; }
         .color-dot.lum { background: #94a3b8; }
-        
-        .hist-refresh-btn {
-            margin-left: auto;
-            padding: 6px 10px;
-            background: var(--bg-tertiary, #334155);
-            border: none;
-            border-radius: 6px;
-            color: var(--text-secondary, #94a3b8);
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-        
-        .hist-refresh-btn:hover {
-            background: var(--accent, #6366f1);
-            color: white;
-        }
         
         .hist-chart-container {
             flex: 1;
@@ -538,10 +545,6 @@ export function openHistogramWindow(editor) {
                 })
             })
             
-            contentEl.querySelector('#refreshHistogram')?.addEventListener('click', () => {
-                refreshHistogram()
-            })
-            
             // Initial update
             setTimeout(refreshHistogram, 100)
         }
@@ -560,8 +563,8 @@ export function closeHistogramWindow() {
 }
 
 /**
- * Check if histogram is open
+ * Check if histogram is open (exists and not closed)
  */
 export function isHistogramOpen() {
-    return histogramWindow !== null && histogramWindow.isVisible()
+    return histogramWindow !== null
 }

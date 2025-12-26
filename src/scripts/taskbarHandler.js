@@ -134,10 +134,11 @@ function triggerCursorCropSelection() {
 
 function positionSelectionOverlay(canvas, overlay) {
     if (!canvas || !overlay || !canvas.parentElement) return
-    const canvasRect = canvas.getBoundingClientRect()
-    const parentRect = canvas.parentElement.getBoundingClientRect()
-    overlay.style.left = `${canvasRect.left - parentRect.left}px`
-    overlay.style.top = `${canvasRect.top - parentRect.top}px`
+    // Since the overlay is a child of imageCanvasDiv (which has transforms),
+    // and the canvas is also a child, we just need to position relative to the canvas within that container
+    // The overlay should cover the canvas exactly, positioned at 0,0 within the parent
+    overlay.style.left = '0px'
+    overlay.style.top = '0px'
 }
 
 function getSelectionOverlay(canvas, rect) {
@@ -149,11 +150,13 @@ function getSelectionOverlay(canvas, rect) {
         canvas.parentElement.appendChild(overlay)
     }
 
-    const bounds = rect || canvas.getBoundingClientRect()
-    overlay.width = bounds.width
-    overlay.height = bounds.height
-    overlay.style.width = `${bounds.width}px`
-    overlay.style.height = `${bounds.height}px`
+    // Use the actual canvas dimensions, not the visual (transformed) dimensions
+    // The overlay is inside imageCanvasDiv which gets transformed, so it will
+    // scale along with the canvas. We need it to match the canvas pixel dimensions.
+    overlay.width = canvas.width
+    overlay.height = canvas.height
+    overlay.style.width = `${canvas.width}px`
+    overlay.style.height = `${canvas.height}px`
     overlay.style.position = 'absolute'
     positionSelectionOverlay(canvas, overlay)
     return overlay
@@ -363,15 +366,6 @@ function enableSelection(callback) {
     let startX, startY, endX, endY
     let overlayCanvas = null
     let overlayContext = null
-    let displayScaleX = 1
-    let displayScaleY = 1
-
-    function updateDisplayScale() {
-        const rect = canvas.getBoundingClientRect()
-        displayScaleX = rect.width / canvas.width
-        displayScaleY = rect.height / canvas.height
-        return rect
-    }
 
     function getCanvasCoordinates(clientX, clientY) {
         const rect = canvas.getBoundingClientRect()
@@ -392,8 +386,7 @@ function enableSelection(callback) {
         endX = x  // Initialize end to start position
         endY = y
         isSelecting = true
-        const rect = updateDisplayScale()
-        overlayCanvas = getSelectionOverlay(canvas, rect)
+        overlayCanvas = getSelectionOverlay(canvas)
         overlayContext = overlayCanvas ? overlayCanvas.getContext('2d') : null
         if (overlayContext) {
             positionSelectionOverlay(canvas, overlayCanvas)
@@ -413,11 +406,8 @@ function enableSelection(callback) {
         overlayContext.strokeStyle = 'rgba(255, 255, 255, 0.95)'
         overlayContext.lineWidth = 2
         overlayContext.setLineDash([12, 8])
-        const drawStartX = startX * displayScaleX
-        const drawStartY = startY * displayScaleY
-        const drawWidth = (endX - startX) * displayScaleX
-        const drawHeight = (endY - startY) * displayScaleY
-        overlayContext.strokeRect(drawStartX, drawStartY, drawWidth, drawHeight)
+        // Draw directly in canvas coordinates since overlay matches canvas dimensions
+        overlayContext.strokeRect(startX, startY, endX - startX, endY - startY)
     }
 
     const handleMouseUp = () => {

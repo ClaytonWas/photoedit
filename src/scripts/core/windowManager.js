@@ -240,7 +240,19 @@ class WindowManager {
                     contentEl.appendChild(content)
                 }
             },
-            getContentElement: () => contentEl,
+            getContentElement: () => {
+                // If window is in a tab group, content was moved to tab panel
+                if (windowInstance.state.tabGroupId) {
+                    const tabGroup = this.tabGroups.get(windowInstance.state.tabGroupId)
+                    if (tabGroup) {
+                        const tabPanel = tabGroup.contentArea.querySelector(`.wm-tab-panel[data-window-id="${id}"]`)
+                        if (tabPanel) {
+                            return tabPanel
+                        }
+                    }
+                }
+                return contentEl
+            },
             close: () => this.closeWindow(id),
             minimize: () => this.minimizeWindow(id),
             maximize: () => this.maximizeWindow(id),

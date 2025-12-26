@@ -16,6 +16,9 @@ let canvas = null
 let ctx = null
 let colorHistory = []
 const MAX_HISTORY = 12
+let eyedropperActive = false
+let boundHandleCanvasMove = null
+let boundHandleCanvasClick = null
 
 /**
  * Initialize with editor reference
@@ -282,6 +285,15 @@ function createColorInfoContent() {
                 </div>
             </div>
         </div>
+        <div class="eyedropper-section">
+            <button class="eyedropper-btn" title="Pick color from image">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.17 2.83a2.83 2.83 0 0 0-4 0l-3.5 3.5-1.41-1.41-1.42 1.41 1.42 1.42-6.59 6.58a2 2 0 0 0-.58 1.42V18h2.24c.53 0 1.04-.21 1.41-.59l6.59-6.58 1.41 1.41 1.42-1.41-1.42-1.42 3.5-3.5a2.83 2.83 0 0 0 0-4z"></path>
+                    <path d="M2 22l4-4"></path>
+                </svg>
+                <span class="eyedropper-text">Pick Color</span>
+            </button>
+        </div>
         <div class="color-history-section">
             <div class="color-history-header">
                 <span>Color History</span>
@@ -290,7 +302,7 @@ function createColorInfoContent() {
             <div class="color-history-swatches"></div>
         </div>
         <div class="color-info-hint">
-            Hover over image to see color info. Click to save to history.
+            Click "Pick Color" to enable eyedropper. Hover over image for color info, click to save.
         </div>
     `
     
@@ -383,6 +395,49 @@ function createColorInfoContent() {
                 font-family: 'IBM Plex Mono', monospace;
             }
             
+            .eyedropper-section {
+                display: flex;
+                justify-content: center;
+            }
+            
+            .eyedropper-btn {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                background: var(--bg-tertiary, #334155);
+                border: 2px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: var(--text-primary, #f1f5f9);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .eyedropper-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            
+            .eyedropper-btn:hover {
+                background: var(--accent, #6366f1);
+                border-color: var(--accent, #6366f1);
+            }
+            
+            .eyedropper-btn.active {
+                background: var(--accent, #6366f1);
+                border-color: var(--accent, #6366f1);
+                animation: eyedropper-pulse 1.5s ease-in-out infinite;
+            }
+            
+            @keyframes eyedropper-pulse {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+                50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
+            }
+            
             .color-history-section {
                 border-top: 1px solid rgba(255, 255, 255, 0.1);
                 padding-top: 12px;
@@ -454,6 +509,90 @@ function createColorInfoContent() {
 }
 
 /**
+ * Enable eyedropper mode
+ */
+function enableEyedropper() {
+    if (eyedropperActive) return
+    
+    eyedropperActive = true
+    
+    // Create bound handlers if not exists
+    if (!boundHandleCanvasMove) {
+        boundHandleCanvasMove = handleCanvasMove
+    }
+    if (!boundHandleCanvasClick) {
+        boundHandleCanvasClick = handleCanvasClick
+    }
+    
+    // Add event listeners
+    const canvasDiv = document.getElementById('imageCanvasDiv')
+    if (canvasDiv) {
+        canvasDiv.addEventListener('mousemove', boundHandleCanvasMove)
+        canvasDiv.addEventListener('click', boundHandleCanvasClick)
+        canvasDiv.style.cursor = 'crosshair'
+    }
+    
+    // Update button state
+    updateEyedropperButtonState()
+}
+
+/**
+ * Disable eyedropper mode
+ */
+function disableEyedropper() {
+    if (!eyedropperActive) return
+    
+    eyedropperActive = false
+    
+    // Remove event listeners
+    const canvasDiv = document.getElementById('imageCanvasDiv')
+    if (canvasDiv) {
+        if (boundHandleCanvasMove) {
+            canvasDiv.removeEventListener('mousemove', boundHandleCanvasMove)
+        }
+        if (boundHandleCanvasClick) {
+            canvasDiv.removeEventListener('click', boundHandleCanvasClick)
+        }
+        canvasDiv.style.cursor = ''
+    }
+    
+    // Update button state
+    updateEyedropperButtonState()
+}
+
+/**
+ * Toggle eyedropper mode
+ */
+function toggleEyedropper() {
+    if (eyedropperActive) {
+        disableEyedropper()
+    } else {
+        enableEyedropper()
+    }
+}
+
+/**
+ * Update eyedropper button visual state
+ */
+function updateEyedropperButtonState() {
+    if (!colorInfoWindow) return
+    
+    const content = colorInfoWindow.getContentElement()
+    const btn = content?.querySelector('.eyedropper-btn')
+    const textEl = content?.querySelector('.eyedropper-text')
+    
+    if (btn) {
+        if (eyedropperActive) {
+            btn.classList.add('active')
+            if (textEl) textEl.textContent = 'Picking... (click to stop)'
+        } else {
+            btn.classList.remove('active')
+            if (textEl) textEl.textContent = 'Pick Color'
+        }
+    }
+}
+
+/**
  * Open or focus color info window
  */
 export function openColorInfoWindow(editor) {
@@ -478,22 +617,24 @@ export function openColorInfoWindow(editor) {
             <circle cx="12" cy="12" r="2"></circle>
         </svg>`,
         width: 280,
-        height: 340,
+        height: 380,
         minWidth: 250,
-        minHeight: 300,
+        minHeight: 340,
         content,
         contentClass: 'no-padding',
         onClose: () => {
+            // Disable eyedropper on close
+            disableEyedropper()
             colorInfoWindow = null
-            // Remove event listeners
-            const canvasDiv = document.getElementById('imageCanvasDiv')
-            if (canvasDiv) {
-                canvasDiv.removeEventListener('mousemove', handleCanvasMove)
-                canvasDiv.removeEventListener('click', handleCanvasClick)
-            }
         },
         onCreate: (win) => {
             const contentEl = win.getContentElement()
+            
+            // Setup eyedropper button
+            const eyedropperBtn = contentEl.querySelector('.eyedropper-btn')
+            if (eyedropperBtn) {
+                eyedropperBtn.addEventListener('click', toggleEyedropper)
+            }
             
             // Setup copy on hex click
             contentEl.querySelector('[data-copy="hex"]')?.addEventListener('click', () => {
@@ -509,15 +650,11 @@ export function openColorInfoWindow(editor) {
                 updateHistoryDisplay()
             })
             
-            // Setup canvas event listeners
-            const canvasDiv = document.getElementById('imageCanvasDiv')
-            if (canvasDiv) {
-                canvasDiv.addEventListener('mousemove', handleCanvasMove)
-                canvasDiv.addEventListener('click', handleCanvasClick)
-            }
-            
             // Update history display
             updateHistoryDisplay()
+            
+            // Auto-enable eyedropper on first open
+            enableEyedropper()
         }
     })
     
@@ -534,8 +671,8 @@ export function closeColorInfoWindow() {
 }
 
 /**
- * Check if color info is open
+ * Check if color info is open (exists and not closed)
  */
 export function isColorInfoOpen() {
-    return colorInfoWindow !== null && colorInfoWindow.isVisible()
+    return colorInfoWindow !== null
 }
