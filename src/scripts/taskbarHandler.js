@@ -583,6 +583,202 @@ function isImageFile(file) {
 }
 
 /**
+ * Handle drag and drop image loading
+ * Supports dropping single or multiple images onto the page
+ */
+function initializeDragAndDrop() {
+    const body = document.body
+    let dropOverlay = null
+    let dragCounter = 0
+
+    // Create drop overlay element
+    function createDropOverlay() {
+        if (dropOverlay) return dropOverlay
+        dropOverlay = document.createElement('div')
+        dropOverlay.className = 'dropOverlay'
+        dropOverlay.innerHTML = `
+            <div class="dropOverlayContent">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p>Drop image(s) here to load</p>
+                <span>Multiple images will be combined into a GIF</span>
+            </div>
+        `
+        body.appendChild(dropOverlay)
+        return dropOverlay
+    }
+
+    function showDropOverlay() {
+        const overlay = createDropOverlay()
+        overlay.classList.add('active')
+    }
+
+    function hideDropOverlay() {
+        if (dropOverlay) {
+            dropOverlay.classList.remove('active')
+        }
+    }
+
+    // Prevent default drag behaviors on the whole document
+    ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        body.addEventListener(eventName, (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+        }, false)
+    })
+
+    // Handle drag enter - show overlay
+    body.addEventListener('dragenter', (e) => {
+        dragCounter++
+        if (e.dataTransfer?.types?.includes('Files')) {
+            showDropOverlay()
+        }
+    }, false)
+
+    // Handle drag over - keep overlay visible
+    body.addEventListener('dragover', (e) => {
+        if (e.dataTransfer?.types?.includes('Files')) {
+            e.dataTransfer.dropEffect = 'copy'
+        }
+    }, false)
+
+    // Handle drag leave - hide overlay when leaving the window
+    body.addEventListener('dragleave', (e) => {
+        dragCounter--
+        if (dragCounter === 0) {
+            hideDropOverlay()
+        }
+    }, false)
+
+    // Handle drop - process files
+    body.addEventListener('drop', async (e) => {
+        dragCounter = 0
+        hideDropOverlay()
+
+        const files = Array.from(e.dataTransfer?.files || [])
+        const imageFiles = files.filter(f => isImageFile(f))
+
+        if (imageFiles.length === 0) {
+            return
+        }
+
+        // Process the dropped files
+        await processDroppedImages(imageFiles)
+    }, false)
+}
+
+/**
+ * Process images dropped onto the page
+ * Single image: load normally
+ * Multiple images: compose into GIF
+ */
+async function processDroppedImages(files) {
+    if (files.length === 0) return
+
+    if (files.length === 1) {
+        // Single file - load directly
+        const file = files[0]
+        resetEditor()
+
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+        const isRaw = RAW_EXTENSIONS.includes(fileExtension)
+
+        if (isRaw) {
+            await uploadRawImage(file)
+            return
+        }
+
+        const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')
+
+        if (isGif) {
+            // Load GIF with frame stack
+            try {
+                await loadGifFrames(file)
+
+                const editGifBtn = document.getElementById('editGifBtn')
+                if (editGifBtn) {
+                    editGifBtn.style.display = ''
+                }
+
+                const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
+                if (gifPlayStopBtn) {
+                    gifPlayStopBtn.classList.remove('hidden')
+                }
+
+                if (gifFrameStack.length > 0) {
+                    const frame = gifFrameStack.getFrame(0)
+                    const canvas = document.createElement('canvas')
+                    canvas.width = frame.imageData.width
+                    canvas.height = frame.imageData.height
+                    const ctx = canvas.getContext('2d')
+                    ctx.putImageData(frame.imageData, 0, 0)
+
+                    const image = new Image()
+                    const name = file.name.substring(0, file.name.lastIndexOf('.'))
+                    const type = file.type || 'image/gif'
+                    const extension = 'gif'
+                    const mainCanvas = document.getElementById('imageCanvas')
+
+                    image.onload = () => {
+                        imageEditor = new ImageEditor(image, name, type, extension, mainCanvas)
+                        window.imageEditor = imageEditor
+
+                        const imageEditorInstantiationEvent = new CustomEvent('imageEditorReady', { detail: { instance: imageEditor } })
+                        window.dispatchEvent(imageEditorInstantiationEvent)
+                    }
+                    image.src = canvas.toDataURL()
+                }
+            } catch (err) {
+                console.error('Failed to load GIF:', err)
+                alert('Failed to load GIF: ' + err.message)
+            }
+        } else {
+            // Hide GIF-specific UI for non-GIF files
+            const editGifBtn = document.getElementById('editGifBtn')
+            if (editGifBtn) {
+                editGifBtn.style.display = 'none'
+            }
+
+            const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
+            if (gifPlayStopBtn) {
+                gifPlayStopBtn.classList.add('hidden')
+            }
+
+            gifFrameStack.clear()
+
+            // Standard image loading
+            const reader = new FileReader()
+            const image = new Image()
+
+            const name = file.name.substring(0, file.name.lastIndexOf('.'))
+            const type = file.type
+            const extension = type.slice(6)
+            const canvas = document.getElementById('imageCanvas')
+
+            reader.onload = () => {
+                image.src = reader.result
+            }
+
+            image.onload = () => {
+                imageEditor = new ImageEditor(image, name, type, extension, canvas)
+                window.imageEditor = imageEditor
+
+                const imageEditorInstantiationEvent = new CustomEvent('imageEditorReady', { detail: { instance: imageEditor } })
+                window.dispatchEvent(imageEditorInstantiationEvent)
+            }
+
+            reader.readAsDataURL(file)
+        }
+    } else {
+        // Multiple files - compose into GIF
+        await uploadMultipleAsGif(files)
+    }
+}
+
+/**
  * Upload multiple images and compose them into a GIF
  * Images are sorted by filename and resized to match the first image's dimensions
  * Supports both standard image formats and RAW files
@@ -1963,6 +2159,11 @@ window.toggleGifPlayback = toggleGifPlayback
 window.addEventListener('load', () => {
 
     /*
+    * Initialize Drag and Drop Image Loading
+    */
+    initializeDragAndDrop()
+
+    /*
     * Mobile Menu Navigation Setup
     */
     
@@ -2065,10 +2266,43 @@ window.addEventListener('load', () => {
 
     const saveActionButton = document.getElementById('saveAction')
     if (saveActionButton) {
-        saveActionButton.addEventListener('click', () => {
-            if (!imageEditor) return
-            imageEditor.quickExport()
+        saveActionButton.addEventListener('click', async () => {
+            console.log('Save button clicked, imageEditor:', imageEditor)
+            if (!imageEditor) {
+                console.log('No imageEditor, returning early')
+                return
+            }
+            
+            console.log('Extension:', imageEditor.extension, 'Frame count:', gifFrameStack.length)
+            
+            // Check if we should export as animated GIF (extension is gif AND we have multiple frames)
+            if (imageEditor.extension === 'gif' && gifFrameStack.length > 1) {
+                console.log('Exporting as animated GIF')
+                // Save current frame edits before exporting
+                saveEditorToFrame(imageEditor, gifFrameStack.currentFrameIndex)
+                
+                try {
+                    const blob = await exportFrameStackAsGif(gifFrameStack, {
+                        quality: 10
+                    })
+                    downloadBlob(blob, `${imageEditor.name}_PhotoEditsExport.gif`)
+                } catch (err) {
+                    console.error('Failed to export GIF:', err)
+                    alert('Failed to export GIF: ' + err.message)
+                }
+            } else {
+                console.log('Exporting as single image')
+                // Single image export (or user changed extension to extract single frame)
+                try {
+                    imageEditor.quickExport()
+                } catch (err) {
+                    console.error('Failed to export image:', err)
+                    alert('Failed to export image: ' + err.message)
+                }
+            }
         })
+    } else {
+        console.error('Save button not found!')
     }
 
     // Core image modifications
