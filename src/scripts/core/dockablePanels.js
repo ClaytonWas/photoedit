@@ -16,6 +16,23 @@ let imagePropertiesWindow = null
 let panelsInitialized = false
 
 /**
+ * Check if we're on a mobile device
+ * More conservative check - only trigger for truly mobile contexts
+ */
+function isMobile() {
+    const mobileBreakpoint = 768
+    const isNarrow = window.innerWidth <= mobileBreakpoint
+    
+    // Only consider mobile UA if also narrow
+    const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    const isMobileDevice = mobileUA && window.innerWidth <= 1024
+    
+    // Must be narrow screen to be considered mobile
+    // Touch capability alone shouldn't trigger mobile mode (VS Code webview has touch)
+    return isNarrow || isMobileDevice
+}
+
+/**
  * Initialize all dockable panels
  */
 export function initDockablePanels() {
@@ -31,15 +48,81 @@ export function initDockablePanels() {
 }
 
 function setupPanels() {
-    // Move existing content into windows
-    createLayersWindow()
-    createImagePropertiesWindow()
-    
     // Hide old static modules
     hideStaticPanels()
     
     // Update CSS for new layout
     updateLayoutStyles()
+    
+    // Create windows - windowManager handles mobile vs desktop automatically
+    createLayersWindow()
+    createImagePropertiesWindow()
+    
+    // On desktop, merge into a tab group and dock
+    if (!isMobile()) {
+        setupDefaultDockedLayout()
+    }
+}
+
+/**
+ * Set up the default docked layout for desktop
+ * Merges Layers and Image Properties into a tabbed panel docked to the right
+ * taking 25% of viewport height
+ */
+function setupDefaultDockedLayout() {
+    if (!layersWindow || !imagePropertiesWindow) return
+    
+    // Wait a short moment for windows to be fully created
+    requestAnimationFrame(() => {
+        // Merge Image Properties into Layers as a tab group
+        windowManager.mergeIntoTabGroup(imagePropertiesWindow.id, layersWindow.id)
+        
+        // Get the tab group ID from the window's state
+        const win = windowManager.windows.get(layersWindow.id)
+        if (!win || !win.state.tabGroupId) return
+        
+        const tabGroup = windowManager.tabGroups.get(win.state.tabGroupId)
+        if (!tabGroup) return
+        
+        // Calculate position: 25% viewport width on the right side, full height
+        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '64')
+        const screenWidth = window.innerWidth
+        const screenHeight = window.innerHeight - bottomNavHeight
+        
+        // 25% of viewport width for the panel
+        const panelWidth = Math.max(280, screenWidth * 0.25)
+        
+        // Position to the right side, full height
+        const dockStyle = {
+            x: screenWidth - panelWidth,
+            y: 0,
+            width: panelWidth,
+            height: screenHeight
+        }
+        
+        // Apply the position/size
+        tabGroup.element.style.left = `${dockStyle.x}px`
+        tabGroup.element.style.top = `${dockStyle.y}px`
+        tabGroup.element.style.width = `${dockStyle.width}px`
+        tabGroup.element.style.height = `${dockStyle.height}px`
+        
+        // Update state
+        tabGroup.state.x = dockStyle.x
+        tabGroup.state.y = dockStyle.y
+        tabGroup.state.width = dockStyle.width
+        tabGroup.state.height = dockStyle.height
+        tabGroup.state.docked = 'right-25'
+        
+        // Save pre-dock state for undocking later
+        tabGroup.state.preDockState = {
+            x: layersWindow.state.x,
+            y: layersWindow.state.y,
+            width: layersWindow.state.width,
+            height: layersWindow.state.height
+        }
+        
+        tabGroup.element.classList.add('wm-docked')
+    })
 }
 
 /**
@@ -54,13 +137,30 @@ function createLayersWindow() {
     const content = document.createElement('div')
     content.className = 'layers-panel-content'
     content.innerHTML = `
-        <div class="layers-props" id="windowCurrentLayerSelector">
-            <!-- Layer properties populated dynamically -->
+        <div class="layers-section layers-props-section" data-section="props">
+            <div class="layers-section-header">
+                <span class="layers-section-title">Parameters</span>
+                <button class="layers-section-collapse" title="Collapse">−</button>
+            </div>
+            <div class="layers-section-content">
+                <div class="layers-props" id="windowCurrentLayerSelector">
+                    <!-- Layer properties populated dynamically -->
+                </div>
+            </div>
         </div>
-        <div class="layers-list-container">
-            <ul class="layers-list" id="windowLayersList">
-                <!-- Layers list populated dynamically -->
-            </ul>
+        <div class="layers-resize-divider" title="Drag to resize"></div>
+        <div class="layers-section layers-list-section" data-section="layers">
+            <div class="layers-section-header">
+                <span class="layers-section-title">Layers</span>
+                <button class="layers-section-collapse" title="Collapse">−</button>
+            </div>
+            <div class="layers-section-content">
+                <div class="layers-list-container">
+                    <ul class="layers-list" id="windowLayersList">
+                        <!-- Layers list populated dynamically -->
+                    </ul>
+                </div>
+            </div>
         </div>
         <div class="layers-controls">
             <div class="layer-reorder-group">
@@ -88,6 +188,7 @@ function createLayersWindow() {
         content,
         contentClass: 'no-padding',
         closable: true,
+        autoFocus: !isMobile(),
         onClose: () => {
             layersWindow = null
         },
@@ -97,6 +198,9 @@ function createLayersWindow() {
             // Wire up button events - they'll be handled by layersHandler.js
             // We just need to sync with the existing system
             syncLayersWithWindow()
+            
+            // Setup section collapse and drag reorder
+            setupLayersSectionBehavior(win.getContentElement())
         }
     })
     
@@ -158,6 +262,7 @@ function createImagePropertiesWindow() {
         content,
         contentClass: 'no-padding',
         closable: true,
+        autoFocus: !isMobile(),
         onClose: () => {
             imagePropertiesWindow = null
         },
@@ -192,6 +297,24 @@ function syncLayersWithWindow() {
             // The handlers look up by ID, so we need to update them
             // For now, add data attribute and we'll handle in the sync
             windowEl.dataset.syncWith = originalId
+        }
+    })
+    
+    // Wire up button clicks to proxy to original buttons
+    const buttonMappings = [
+        ['windowMoveLayerUp', 'moveLayerUp'],
+        ['windowMoveLayerDown', 'moveLayerDown'],
+        ['windowDeleteLayer', 'deleteLayer']
+    ]
+    
+    buttonMappings.forEach(([windowId, originalId]) => {
+        const windowBtn = document.getElementById(windowId)
+        const originalBtn = document.getElementById(originalId)
+        
+        if (windowBtn && originalBtn) {
+            windowBtn.addEventListener('click', () => {
+                originalBtn.click()
+            })
         }
     })
     
@@ -278,6 +401,108 @@ function syncImagePropsWithWindow() {
 /**
  * Setup observer to sync layers list content
  */
+/**
+ * Setup section collapse and drag-to-reorder behavior
+ */
+function setupLayersSectionBehavior(container) {
+    const sections = container.querySelectorAll('.layers-section')
+    const divider = container.querySelector('.layers-resize-divider')
+    const propsSection = container.querySelector('.layers-props-section')
+    const listSection = container.querySelector('.layers-list-section')
+    
+    // Setup collapse buttons
+    sections.forEach(section => {
+        const collapseBtn = section.querySelector('.layers-section-collapse')
+        const content = section.querySelector('.layers-section-content')
+        
+        if (collapseBtn && content) {
+            collapseBtn.addEventListener('click', () => {
+                const isCollapsed = section.classList.toggle('collapsed')
+                collapseBtn.textContent = isCollapsed ? '+' : '−'
+                
+                // When collapsed, hide divider if both sections are collapsed
+                if (divider) {
+                    const bothCollapsed = Array.from(sections).every(s => s.classList.contains('collapsed'))
+                    divider.style.display = bothCollapsed ? 'none' : ''
+                }
+            })
+        }
+    })
+    
+    // Setup resizable divider
+    if (divider && propsSection && listSection) {
+        let isResizing = false
+        let startY = 0
+        let startPropsHeight = 0
+        let startListHeight = 0
+        
+        const onStart = (e) => {
+            isResizing = true
+            startY = e.touches ? e.touches[0].clientY : e.clientY
+            startPropsHeight = propsSection.offsetHeight
+            startListHeight = listSection.offsetHeight
+            
+            // Disable transitions during resize for instant response
+            container.classList.add('resizing')
+            divider.classList.add('active')
+            document.body.style.cursor = 'row-resize'
+            document.body.style.userSelect = 'none'
+            
+            e.preventDefault()
+        }
+        
+        const onMove = (e) => {
+            if (!isResizing) return
+            
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY
+            const deltaY = clientY - startY
+            
+            // Calculate new heights
+            let newPropsHeight = startPropsHeight + deltaY
+            let newListHeight = startListHeight - deltaY
+            
+            // Minimum heights
+            const minHeight = 50
+            
+            // Clamp to minimums
+            if (newPropsHeight < minHeight) {
+                newPropsHeight = minHeight
+                newListHeight = startPropsHeight + startListHeight - minHeight
+            }
+            if (newListHeight < minHeight) {
+                newListHeight = minHeight
+                newPropsHeight = startPropsHeight + startListHeight - minHeight
+            }
+            
+            // Apply heights directly - no flex, just height for instant response
+            propsSection.style.height = newPropsHeight + 'px'
+            propsSection.style.flex = 'none'
+            listSection.style.height = newListHeight + 'px'
+            listSection.style.flex = 'none'
+        }
+        
+        const onEnd = () => {
+            if (!isResizing) return
+            isResizing = false
+            
+            container.classList.remove('resizing')
+            divider.classList.remove('active')
+            document.body.style.cursor = ''
+            document.body.style.userSelect = ''
+        }
+        
+        // Mouse events
+        divider.addEventListener('mousedown', onStart)
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onEnd)
+        
+        // Touch events
+        divider.addEventListener('touchstart', onStart, { passive: false })
+        document.addEventListener('touchmove', onMove, { passive: false })
+        document.addEventListener('touchend', onEnd)
+    }
+}
+
 function setupLayersSyncObserver() {
     const originalLayersList = document.getElementById('layersList')
     const windowLayersList = document.getElementById('windowLayersList')
@@ -287,6 +512,7 @@ function setupLayersSyncObserver() {
     if (originalLayersList && windowLayersList) {
         // Initial sync
         windowLayersList.innerHTML = originalLayersList.innerHTML
+        reattachLayerClickHandlers()
         
         // Observe changes
         const observer = new MutationObserver(() => {
@@ -300,6 +526,7 @@ function setupLayersSyncObserver() {
     if (originalLayerSelector && windowLayerSelector) {
         // Initial sync
         windowLayerSelector.innerHTML = originalLayerSelector.innerHTML
+        reattachLayerPropertyHandlers()
         
         // Observe changes
         const observer = new MutationObserver(() => {
@@ -325,9 +552,28 @@ function reattachLayerClickHandlers() {
     
     windowItems.forEach((item, index) => {
         if (originalItems[index]) {
-            item.addEventListener('click', () => {
+            // Clone to remove old listeners
+            const newItem = item.cloneNode(true)
+            item.parentNode.replaceChild(newItem, item)
+            
+            // Handle layer selection click
+            newItem.addEventListener('click', (e) => {
+                // Don't trigger selection if clicking on checkbox
+                if (e.target.type === 'checkbox') return
                 originalItems[index].click()
             })
+            
+            // Handle visibility checkbox
+            const windowCheckbox = newItem.querySelector('.layerDivToggleVisability')
+            const originalCheckbox = originalItems[index].querySelector('.layerDivToggleVisability')
+            
+            if (windowCheckbox && originalCheckbox) {
+                windowCheckbox.addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    originalCheckbox.checked = windowCheckbox.checked
+                    originalCheckbox.click()
+                })
+            }
         }
     })
 }
@@ -349,13 +595,36 @@ function reattachLayerPropertyHandlers() {
         if (originalInputs[index]) {
             const originalInput = originalInputs[index]
             
-            windowInput.addEventListener('input', () => {
-                originalInput.value = windowInput.value
+            // Clone the input to remove any old listeners
+            const newWindowInput = windowInput.cloneNode(true)
+            windowInput.parentNode.replaceChild(newWindowInput, windowInput)
+            
+            // Sync initial value
+            if (newWindowInput.type === 'checkbox') {
+                newWindowInput.checked = originalInput.checked
+            } else if (newWindowInput.type === 'range' || newWindowInput.type === 'number') {
+                newWindowInput.value = originalInput.value
+            }
+            
+            // Forward input events to original (for live updates while dragging sliders)
+            newWindowInput.addEventListener('input', (e) => {
+                e.stopPropagation()
+                if (newWindowInput.type === 'checkbox') {
+                    originalInput.checked = newWindowInput.checked
+                } else {
+                    originalInput.value = newWindowInput.value
+                }
                 originalInput.dispatchEvent(new Event('input', { bubbles: true }))
             })
             
-            windowInput.addEventListener('change', () => {
-                originalInput.value = windowInput.value
+            // Forward change events to original (for final values / snapshots)
+            newWindowInput.addEventListener('change', (e) => {
+                e.stopPropagation()
+                if (newWindowInput.type === 'checkbox') {
+                    originalInput.checked = newWindowInput.checked
+                } else {
+                    originalInput.value = newWindowInput.value
+                }
                 originalInput.dispatchEvent(new Event('change', { bubbles: true }))
             })
         }
@@ -435,13 +704,127 @@ function injectLayersPanelStyles() {
             gap: 10px;
         }
         
-        .layers-props {
-            min-height: 80px;
-            max-height: 150px;
-            overflow-y: auto;
-            padding: 10px;
+        /* Section styling for collapsible sections */
+        .layers-section {
             background: var(--bg-tertiary, #334155);
             border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .layers-panel-content:not(.resizing) .layers-section {
+            transition: flex 0.15s ease;
+        }
+        
+        .layers-section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.2);
+            cursor: default;
+            user-select: none;
+        }
+        
+        .layers-section-title {
+            flex: 1;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary, #94a3b8);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .layers-section-collapse {
+            width: 20px;
+            height: 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary, #64748b);
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        
+        .layers-section-collapse:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary, #f1f5f9);
+        }
+        
+        .layers-section-content {
+            transition: all 0.2s ease;
+        }
+        
+        .layers-section.collapsed .layers-section-content {
+            display: none;
+        }
+        
+        .layers-section.collapsed {
+            flex: 0 0 auto !important;
+        }
+        
+        .layers-props-section {
+            flex: 0 0 auto;
+            min-height: 40px;
+        }
+        
+        .layers-list-section {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: 60px;
+        }
+        
+        /* Resize divider between sections */
+        .layers-resize-divider {
+            height: 8px;
+            background: transparent;
+            cursor: row-resize;
+            position: relative;
+            flex-shrink: 0;
+            margin: 2px 0;
+        }
+        
+        .layers-resize-divider::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 4px;
+            background: var(--border-color, #475569);
+            border-radius: 2px;
+            transition: all 0.15s ease;
+        }
+        
+        .layers-resize-divider:hover::before,
+        .layers-resize-divider.active::before {
+            background: var(--accent, #6366f1);
+            width: 60px;
+        }
+        
+        .layers-resize-divider.active {
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .layers-list-section .layers-section-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .layers-props {
+            min-height: 60px;
+            max-height: 150px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 10px;
             font-size: 12px;
         }
         
@@ -455,22 +838,33 @@ function injectLayersPanelStyles() {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 8px;
             margin-bottom: 8px;
             color: var(--text-secondary, #94a3b8);
+            flex-wrap: wrap;
+        }
+        
+        .layers-props label > span:first-child {
+            flex-shrink: 0;
+            min-width: 60px;
         }
         
         .layers-props input[type="range"] {
-            width: 120px;
+            flex: 1;
+            min-width: 60px;
+            max-width: 150px;
         }
         
         .layers-props input[type="number"] {
-            width: 60px;
-            padding: 4px 6px;
+            width: 50px;
+            min-width: 40px;
+            padding: 4px 4px;
             background: var(--bg-secondary, #1e293b);
             border: 1px solid var(--border, rgba(255,255,255,0.1));
             border-radius: 4px;
             color: var(--text-primary, #f1f5f9);
             font-size: 12px;
+            text-align: center;
         }
         
         .layers-props input[type="color"] {
@@ -485,8 +879,6 @@ function injectLayersPanelStyles() {
         .layers-list-container {
             flex: 1;
             overflow-y: auto;
-            background: var(--bg-tertiary, #334155);
-            border-radius: 6px;
             padding: 6px;
         }
         
@@ -549,6 +941,16 @@ function injectLayersPanelStyles() {
             border-color: var(--accent);
         }
         
+        .layer-reorder-group button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .layer-reorder-group button:disabled:hover {
+            background: var(--bg-tertiary, #334155);
+            border-color: var(--border, rgba(255,255,255,0.1));
+        }
+        
         .layers-controls .delete-btn {
             flex: 1;
             padding: 8px 12px;
@@ -590,6 +992,7 @@ function injectImagePropsStyles() {
             display: flex;
             flex-direction: column;
             gap: 6px;
+            overflow: hidden;
         }
         
         .props-label {
@@ -621,12 +1024,15 @@ function injectImagePropsStyles() {
         .props-dimensions {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            flex-wrap: wrap;
         }
         
         .props-dimensions input {
             flex: 1;
-            padding: 8px 10px;
+            min-width: 50px;
+            max-width: 80px;
+            padding: 6px 4px;
             background: var(--bg-tertiary, #334155);
             border: 1px solid var(--border, rgba(255,255,255,0.1));
             border-radius: 6px;
@@ -643,25 +1049,29 @@ function injectImagePropsStyles() {
         .props-separator {
             color: var(--text-tertiary, #64748b);
             font-weight: 500;
+            flex-shrink: 0;
         }
         
         .props-dim-actions {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             margin-top: 4px;
+            flex-wrap: wrap;
         }
         
         .props-dim-actions button {
             flex: 1;
-            padding: 6px 10px;
+            min-width: 40px;
+            padding: 5px 6px;
             background: var(--bg-tertiary, #334155);
             border: 1px solid var(--border, rgba(255,255,255,0.1));
             border-radius: 4px;
             color: var(--text-primary, #f1f5f9);
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.15s ease;
+            white-space: nowrap;
         }
         
         .props-dim-actions button:hover {

@@ -38,19 +38,19 @@ class WindowManager {
     
     /**
      * Check if we're on a mobile device or narrow screen
+     * More conservative - touch capability alone doesn't mean mobile
      */
     isMobile() {
         // Check screen width
         const isNarrow = window.innerWidth <= this.mobileBreakpoint
         
-        // Check if it's a touch device with a relatively small screen
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-        const isSmallTouchScreen = isTouchDevice && window.innerWidth <= 1024
-        
-        // Check user agent for mobile devices
+        // Check user agent for mobile devices (only if also reasonably narrow)
         const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        const isMobileDevice = mobileUA && window.innerWidth <= 1024
         
-        return isNarrow || isSmallTouchScreen || (mobileUA && window.innerWidth <= 1024)
+        // Must be narrow to be considered mobile
+        // Touch capability alone shouldn't trigger mobile (VS Code webview has touch)
+        return isNarrow || isMobileDevice
     }
     
     init() {
@@ -1459,14 +1459,15 @@ class WindowManager {
             const deltaX = Math.abs(clientX - startX)
             const deltaY = Math.abs(clientY - startY)
             
-            // If dragged far enough, detach the tab
+            // If dragged far enough, detach the tab and continue dragging as window
             if (!hasMoved && (deltaX > dragThreshold || deltaY > dragThreshold)) {
                 hasMoved = true
                 isDragging = false
                 
                 // Only detach if more than one tab
                 if (tabGroup.tabs.length > 1) {
-                    this.detachFromTabGroup(windowId)
+                    // Detach and immediately start window dragging
+                    this.detachAndStartDragging(windowId, clientX, clientY)
                 }
             }
         }
@@ -1480,6 +1481,110 @@ class WindowManager {
         tabEl.addEventListener('touchstart', onStart, { passive: true })
         document.addEventListener('mousemove', onMove)
         document.addEventListener('touchmove', onMove, { passive: true })
+        document.addEventListener('mouseup', onEnd)
+        document.addEventListener('touchend', onEnd)
+    }
+    
+    /**
+     * Detach a window from tab group and immediately start dragging it
+     */
+    detachAndStartDragging(windowId, clientX, clientY) {
+        const win = this.windows.get(windowId)
+        if (!win) return
+        
+        // Detach from tab group
+        this.detachFromTabGroup(windowId)
+        
+        // Position window centered under cursor
+        const width = win.element.offsetWidth
+        const height = win.element.offsetHeight
+        const newX = clientX - width / 2
+        const newY = clientY - 20 // Position near top of window under cursor
+        
+        win.element.style.left = `${newX}px`
+        win.element.style.top = `${newY}px`
+        win.state.x = newX
+        win.state.y = newY
+        
+        // Trigger synthetic drag start on the window
+        this.startWindowDrag(win, clientX, clientY)
+    }
+    
+    /**
+     * Programmatically start dragging a window
+     */
+    startWindowDrag(windowInstance, clientX, clientY) {
+        const { element, state, config, id } = windowInstance
+        
+        element.classList.add('wm-dragging')
+        this.focusWindow(id)
+        
+        let startX = clientX
+        let startY = clientY
+        let startLeft = element.offsetLeft
+        let startTop = element.offsetTop
+        
+        const onMove = (e) => {
+            const cx = e.touches ? e.touches[0].clientX : e.clientX
+            const cy = e.touches ? e.touches[0].clientY : e.clientY
+            
+            let newX = startLeft + (cx - startX)
+            let newY = startTop + (cy - startY)
+            
+            // Check for tab merge target
+            const tabTarget = this.detectTabMergeTarget(id, cx, cy)
+            this.showTabMergePreview(tabTarget)
+            
+            // Check for edge snap zones
+            if (!tabTarget) {
+                const snapZone = this.detectEdgeSnapZone(cx, cy)
+                this.showSnapPreview(snapZone)
+            } else {
+                this.hideSnapPreview()
+            }
+            
+            // Check for window snapping
+            const windowSnap = this.detectWindowSnap(id, newX, newY, element.offsetWidth, element.offsetHeight)
+            if (windowSnap.x !== null) newX = windowSnap.x
+            if (windowSnap.y !== null) newY = windowSnap.y
+            
+            // Keep titlebar visible
+            newY = Math.max(0, newY)
+            
+            element.style.left = `${newX}px`
+            element.style.top = `${newY}px`
+            state.x = newX
+            state.y = newY
+            
+            if (config.onMove) config.onMove(windowInstance)
+        }
+        
+        const onEnd = () => {
+            element.classList.remove('wm-dragging')
+            
+            // Check if we should merge into a tab group
+            if (this.currentTabTarget) {
+                this.mergeIntoTabGroup(id, this.currentTabTarget)
+                this.hideTabMergePreview()
+                this.hideSnapPreview()
+            } else if (this.currentSnapZone) {
+                // Check if we should dock to an edge
+                this.dockWindowToZone(id, this.currentSnapZone)
+            }
+            
+            this.hideSnapPreview()
+            this.hideTabMergePreview()
+            this.saveWindowState(id)
+            
+            // Clean up listeners
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('touchmove', onMove)
+            document.removeEventListener('mouseup', onEnd)
+            document.removeEventListener('touchend', onEnd)
+        }
+        
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('touchmove', onMove, { passive: false })
         document.addEventListener('mouseup', onEnd)
         document.addEventListener('touchend', onEnd)
     }
