@@ -543,8 +543,9 @@ async function uploadImages() {
             gifPlayStopBtn.classList.add('hidden')
         }
         
-        // Clear frame stack
+        // Clear frame stack and thumbnail cache
         gifFrameStack.clear()
+        clearThumbnailCache()
         
         // Standard image loading
         const reader = new FileReader()
@@ -748,6 +749,7 @@ async function processDroppedImages(files) {
             }
 
             gifFrameStack.clear()
+            clearThumbnailCache()
 
             // Standard image loading
             const reader = new FileReader()
@@ -823,8 +825,9 @@ async function uploadMultipleAsGif(files) {
         const targetWidth = loadedImages[0].width
         const targetHeight = loadedImages[0].height
         
-        // Clear existing frame stack
+        // Clear existing frame stack and thumbnail cache
         gifFrameStack.clear()
+        clearThumbnailCache()
         
         // Default frame delay (100ms = 10 fps)
         const defaultDelay = 100
@@ -1148,8 +1151,9 @@ async function uploadRawImage(file) {
             gifPlayStopBtn.classList.add('hidden')
         }
         
-        // Clear frame stack
+        // Clear frame stack and thumbnail cache
         gifFrameStack.clear()
+        clearThumbnailCache()
         
         // Extract preview from RAW file
         const image = await extractRawPreview(file)
@@ -1774,6 +1778,23 @@ function createGifFrameEditorDialog() {
                         <input type="number" id="gifFrameDelayInput" value="100" min="20" max="5000" disabled>
                         <button id="gifApplyDelay" class="btn btnSecondary" disabled>Apply</button>
                     </div>
+                    <hr class="gifFrameDivider">
+                    <div class="bulkSettingsSection">
+                        <h4>Bulk Settings</h4>
+                        <div class="bulkSettingsRow">
+                            <label>Set All Delays (ms):</label>
+                            <input type="number" id="gifBulkDelayInput" value="100" min="20" max="5000">
+                            <button id="gifApplyBulkDelay" class="btn btnSecondary">Apply to All</button>
+                        </div>
+                        <div class="bulkSettingsRow">
+                            <label>Resize GIF:</label>
+                            <input type="number" id="gifResizeWidth" placeholder="Width" min="1">
+                            <span>×</span>
+                            <input type="number" id="gifResizeHeight" placeholder="Height" min="1">
+                            <label class="checkboxLabel"><input type="checkbox" id="gifResizeConstrain" checked> Lock</label>
+                            <button id="gifApplyResize" class="btn btnSecondary">Resize All</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="gifFrameProgress hidden" id="gifFrameProgress">
                     <div class="progressBar">
@@ -1948,6 +1969,56 @@ function createGifFrameEditorDialog() {
             padding: 0;
             line-height: 1;
         }
+        .gifFrameDivider {
+            border: none;
+            border-top: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+            margin: 16px 0;
+        }
+        .bulkSettingsSection {
+            background: var(--bg-tertiary, #334155);
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .bulkSettingsSection h4 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            color: var(--text-secondary, #94a3b8);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .bulkSettingsRow {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .bulkSettingsRow:last-child {
+            margin-bottom: 0;
+        }
+        .bulkSettingsRow label {
+            color: var(--text-primary, #f1f5f9);
+            font-size: 13px;
+            min-width: 110px;
+        }
+        .bulkSettingsRow input[type="number"] {
+            width: 70px;
+            padding: 6px;
+            border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+            border-radius: 4px;
+            background: var(--bg-primary, #0f172a);
+            color: var(--text-primary, #f1f5f9);
+        }
+        .bulkSettingsRow span {
+            color: var(--text-secondary, #94a3b8);
+        }
+        .bulkSettingsRow .checkboxLabel {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--text-secondary, #94a3b8);
+        }
     `
     document.head.appendChild(style)
     document.body.appendChild(dialog)
@@ -1972,6 +2043,7 @@ function setupGifFrameEditorEvents() {
         
         try {
             await loadGifFrames(file)
+            clearThumbnailCache() // Clear cache when loading new GIF
             renderGifFrameList()
             updateGifFrameControls()
             
@@ -2018,6 +2090,12 @@ function setupGifFrameEditorEvents() {
     document.getElementById('gifSaveFrame')?.addEventListener('click', () => {
         if (imageEditor && gifFrameStack.length > 0) {
             saveEditorToFrame(imageEditor, gifFrameStack.currentFrameIndex)
+            // Clear thumbnail cache for updated frame
+            const frame = gifFrameStack.getFrame(gifFrameStack.currentFrameIndex)
+            if (frame) {
+                const cacheKey = `${gifFrameStack.currentFrameIndex}_${frame.imageData.width}_${frame.imageData.height}`
+                gifThumbnailCache.delete(cacheKey)
+            }
             renderGifFrameList()
         }
     })
@@ -2025,6 +2103,7 @@ function setupGifFrameEditorEvents() {
     document.getElementById('gifDuplicateFrame')?.addEventListener('click', () => {
         if (gifFrameStack.length > 0) {
             gifFrameStack.duplicateFrame(gifFrameStack.currentFrameIndex)
+            clearThumbnailCache() // Indices shift after duplication
             renderGifFrameList()
             updateGifFrameControls()
         }
@@ -2033,6 +2112,7 @@ function setupGifFrameEditorEvents() {
     document.getElementById('gifDeleteFrame')?.addEventListener('click', () => {
         if (gifFrameStack.length > 1) {
             gifFrameStack.deleteFrame(gifFrameStack.currentFrameIndex)
+            clearThumbnailCache() // Indices shift after deletion
             renderGifFrameList()
             updateGifFrameControls()
         }
@@ -2044,6 +2124,98 @@ function setupGifFrameEditorEvents() {
         const delay = parseInt(delayInput?.value, 10)
         if (!isNaN(delay) && delay >= 20) {
             gifFrameStack.setDelay(gifFrameStack.currentFrameIndex, delay)
+        }
+    })
+
+    // Bulk delay - apply to all frames
+    document.getElementById('gifApplyBulkDelay')?.addEventListener('click', () => {
+        const delayInput = document.getElementById('gifBulkDelayInput')
+        const delay = parseInt(delayInput?.value, 10)
+        if (!isNaN(delay) && delay >= 20 && gifFrameStack.length > 0) {
+            for (let i = 0; i < gifFrameStack.length; i++) {
+                gifFrameStack.setDelay(i, delay)
+            }
+            // Update current frame delay input to match
+            document.getElementById('gifFrameDelayInput').value = delay
+        }
+    })
+
+    // Resize constraint checkbox
+    const resizeWidthInput = document.getElementById('gifResizeWidth')
+    const resizeHeightInput = document.getElementById('gifResizeHeight')
+    const resizeConstrainCheckbox = document.getElementById('gifResizeConstrain')
+
+    resizeWidthInput?.addEventListener('input', () => {
+        if (resizeConstrainCheckbox?.checked && gifFrameStack.length > 0) {
+            const ratio = gifFrameStack.height / gifFrameStack.width
+            const newWidth = parseInt(resizeWidthInput.value, 10)
+            if (!isNaN(newWidth) && newWidth > 0) {
+                resizeHeightInput.value = Math.round(newWidth * ratio)
+            }
+        }
+    })
+
+    resizeHeightInput?.addEventListener('input', () => {
+        if (resizeConstrainCheckbox?.checked && gifFrameStack.length > 0) {
+            const ratio = gifFrameStack.width / gifFrameStack.height
+            const newHeight = parseInt(resizeHeightInput.value, 10)
+            if (!isNaN(newHeight) && newHeight > 0) {
+                resizeWidthInput.value = Math.round(newHeight * ratio)
+            }
+        }
+    })
+
+    // Bulk resize - apply to all frames
+    document.getElementById('gifApplyResize')?.addEventListener('click', async () => {
+        const newWidth = parseInt(resizeWidthInput?.value, 10)
+        const newHeight = parseInt(resizeHeightInput?.value, 10)
+        
+        if (isNaN(newWidth) || isNaN(newHeight) || newWidth < 1 || newHeight < 1) {
+            alert('Please enter valid width and height values')
+            return
+        }
+        
+        if (gifFrameStack.length === 0) return
+
+        // Resize all frames
+        for (let i = 0; i < gifFrameStack.frames.length; i++) {
+            const frame = gifFrameStack.frames[i]
+            
+            // Create a temp canvas for resizing
+            const tempCanvas = document.createElement('canvas')
+            tempCanvas.width = newWidth
+            tempCanvas.height = newHeight
+            const tempCtx = tempCanvas.getContext('2d')
+            
+            // Use high quality scaling
+            tempCtx.imageSmoothingEnabled = true
+            tempCtx.imageSmoothingQuality = 'high'
+            
+            // Draw the original frame scaled to new size
+            tempCtx.drawImage(frame.canvas, 0, 0, newWidth, newHeight)
+            
+            // Get the resized image data
+            const newImageData = tempCtx.getImageData(0, 0, newWidth, newHeight)
+            
+            // Update the frame
+            frame.imageData = newImageData
+            frame.canvas.width = newWidth
+            frame.canvas.height = newHeight
+            const frameCtx = frame.canvas.getContext('2d')
+            frameCtx.putImageData(newImageData, 0, 0)
+        }
+        
+        // Update frame stack dimensions
+        gifFrameStack.width = newWidth
+        gifFrameStack.height = newHeight
+        
+        // Clear thumbnail cache and re-render
+        clearThumbnailCache()
+        renderGifFrameList()
+        
+        // Also update the main editor if it's displaying a frame
+        if (imageEditor && gifFrameStack.length > 0) {
+            loadFrameToEditor(imageEditor, gifFrameStack.currentFrameIndex)
         }
     })
 
@@ -2078,12 +2250,55 @@ function setupGifFrameEditorEvents() {
     })
 }
 
+// Thumbnail cache for GIF frame editor performance
+const gifThumbnailCache = new Map()
+const THUMBNAIL_MAX_SIZE = 80 // Max width/height for thumbnails
+
+function generateThumbnail(frame, index) {
+    // Check cache first
+    const cacheKey = `${index}_${frame.imageData.width}_${frame.imageData.height}`
+    if (gifThumbnailCache.has(cacheKey)) {
+        return gifThumbnailCache.get(cacheKey)
+    }
+    
+    // Calculate thumbnail dimensions maintaining aspect ratio
+    const srcWidth = frame.canvas.width
+    const srcHeight = frame.canvas.height
+    const scale = Math.min(THUMBNAIL_MAX_SIZE / srcWidth, THUMBNAIL_MAX_SIZE / srcHeight, 1)
+    const thumbWidth = Math.round(srcWidth * scale)
+    const thumbHeight = Math.round(srcHeight * scale)
+    
+    // Create thumbnail canvas
+    const thumbCanvas = document.createElement('canvas')
+    thumbCanvas.width = thumbWidth
+    thumbCanvas.height = thumbHeight
+    const thumbCtx = thumbCanvas.getContext('2d')
+    
+    // Use faster image smoothing for thumbnails
+    thumbCtx.imageSmoothingEnabled = true
+    thumbCtx.imageSmoothingQuality = 'medium'
+    
+    // Draw scaled down version
+    thumbCtx.drawImage(frame.canvas, 0, 0, thumbWidth, thumbHeight)
+    
+    // Cache the data URL
+    const dataUrl = thumbCanvas.toDataURL('image/jpeg', 0.7)
+    gifThumbnailCache.set(cacheKey, dataUrl)
+    
+    return dataUrl
+}
+
+function clearThumbnailCache() {
+    gifThumbnailCache.clear()
+}
+
 function renderGifFrameList() {
     const frameList = document.getElementById('gifFrameList')
     if (!frameList) return
 
     if (gifFrameStack.length === 0) {
         frameList.innerHTML = '<p class="noFrames">No GIF loaded. Click "Load GIF" to import a GIF file.</p>'
+        clearThumbnailCache()
         return
     }
 
@@ -2092,7 +2307,7 @@ function renderGifFrameList() {
     gifFrameStack.frames.forEach((frame, index) => {
         const img = document.createElement('img')
         img.className = 'gifFrameThumb' + (index === gifFrameStack.currentFrameIndex ? ' selected' : '')
-        img.src = frame.canvas.toDataURL()
+        img.src = generateThumbnail(frame, index)
         img.title = `Frame ${index + 1} (${frame.delay}ms)`
         img.addEventListener('click', () => {
             gifFrameStack.currentFrameIndex = index
@@ -2123,6 +2338,17 @@ function updateGifFrameControls() {
 
     if (currentFrame) {
         document.getElementById('gifFrameDelayInput').value = currentFrame.delay
+    }
+    
+    // Update bulk settings inputs
+    const resizeWidthInput = document.getElementById('gifResizeWidth')
+    const resizeHeightInput = document.getElementById('gifResizeHeight')
+    const bulkDelayInput = document.getElementById('gifBulkDelayInput')
+    
+    if (hasFrames) {
+        if (resizeWidthInput) resizeWidthInput.value = gifFrameStack.width
+        if (resizeHeightInput) resizeHeightInput.value = gifFrameStack.height
+        if (bulkDelayInput && currentFrame) bulkDelayInput.value = currentFrame.delay
     }
 }
 
