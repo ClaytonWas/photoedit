@@ -171,6 +171,8 @@ function adjustDimensionsByFactor(factor) {
     if (!Number.isFinite(factor) || factor <= 0) return
     const widthInput = document.getElementById('imageWidthInput')
     const heightInput = document.getElementById('imageHeightInput')
+    const windowWidthInput = document.getElementById('windowImageWidthInput')
+    const windowHeightInput = document.getElementById('windowImageHeightInput')
     if (!widthInput || !heightInput) return
 
     const fallbackWidth = imageEditor?.image?.width
@@ -184,8 +186,13 @@ function adjustDimensionsByFactor(factor) {
 
     if (!Number.isFinite(baseWidth) || !Number.isFinite(baseHeight)) return
 
-    widthInput.value = Math.max(1, Math.round(baseWidth * factor))
-    heightInput.value = Math.max(1, Math.round(baseHeight * factor))
+    const newWidth = Math.max(1, Math.round(baseWidth * factor))
+    const newHeight = Math.max(1, Math.round(baseHeight * factor))
+    
+    widthInput.value = newWidth
+    heightInput.value = newHeight
+    if (windowWidthInput) windowWidthInput.value = newWidth
+    if (windowHeightInput) windowHeightInput.value = newHeight
 }
 
 function syncConstrainedDimensions(changedField) {
@@ -195,6 +202,8 @@ function syncConstrainedDimensions(changedField) {
 
     const widthInput = document.getElementById('imageWidthInput')
     const heightInput = document.getElementById('imageHeightInput')
+    const windowWidthInput = document.getElementById('windowImageWidthInput')
+    const windowHeightInput = document.getElementById('windowImageHeightInput')
     if (!widthInput || !heightInput) return
 
     const ratio = imageEditor.image.width / imageEditor.image.height
@@ -203,11 +212,15 @@ function syncConstrainedDimensions(changedField) {
     if (changedField === 'width') {
         const newWidth = parseFloat(widthInput.value)
         if (!Number.isFinite(newWidth) || newWidth <= 0) return
-        heightInput.value = Math.max(1, Math.round(newWidth / ratio))
+        const newHeight = Math.max(1, Math.round(newWidth / ratio))
+        heightInput.value = newHeight
+        if (windowHeightInput) windowHeightInput.value = newHeight
     } else if (changedField === 'height') {
         const newHeight = parseFloat(heightInput.value)
         if (!Number.isFinite(newHeight) || newHeight <= 0) return
-        widthInput.value = Math.max(1, Math.round(newHeight * ratio))
+        const newWidth = Math.max(1, Math.round(newHeight * ratio))
+        widthInput.value = newWidth
+        if (windowWidthInput) windowWidthInput.value = newWidth
     }
 }
 
