@@ -281,7 +281,21 @@ class WindowManager {
             hide: () => {
                 windowEl.classList.add('wm-hidden')
             },
-            isVisible: () => !windowEl.classList.contains('wm-hidden'),
+            isVisible: () => {
+                // If minimized, not visible
+                if (windowInstance.state.minimized) return false
+                // If in a tab group, check tab group visibility
+                if (windowInstance.state.tabGroupId) {
+                    const tabGroup = this.tabGroups.get(windowInstance.state.tabGroupId)
+                    if (tabGroup) {
+                        return !tabGroup.element.classList.contains('wm-hidden') && 
+                               !tabGroup.element.classList.contains('wm-minimized')
+                    }
+                }
+                // Otherwise check window's own visibility
+                return !windowEl.classList.contains('wm-hidden') && 
+                       !windowEl.classList.contains('wm-minimized')
+            },
             isDocked: () => windowInstance.state.docked !== null,
             isInTabGroup: () => windowInstance.state.tabGroupId !== null,
             getTabGroup: () => windowInstance.state.tabGroupId ? this.tabGroups.get(windowInstance.state.tabGroupId) : null,
@@ -1784,6 +1798,20 @@ class WindowManager {
             return
         }
         
+        // If window is in a tab group, focus the tab group and activate this tab
+        if (windowInstance.state.tabGroupId) {
+            const tabGroup = this.tabGroups.get(windowInstance.state.tabGroupId)
+            if (tabGroup) {
+                // If tab group is minimized, restore it first
+                if (tabGroup.state.minimized) {
+                    this.restoreTabGroup(windowInstance.state.tabGroupId)
+                }
+                this.focusTabGroup(windowInstance.state.tabGroupId)
+                this.activateTab(windowInstance.state.tabGroupId, id)
+            }
+            return
+        }
+        
         // Remove from current position and add to end (top)
         const index = this.windowOrder.indexOf(id)
         if (index > -1) {
@@ -1807,6 +1835,12 @@ class WindowManager {
         const windowInstance = this.windows.get(id)
         if (!windowInstance || windowInstance.state.minimized) return
         
+        // If window is in a tab group, minimize the whole tab group
+        if (windowInstance.state.tabGroupId) {
+            this.minimizeTabGroup(windowInstance.state.tabGroupId)
+            return
+        }
+        
         windowInstance.state.minimized = true
         windowInstance.element.classList.add('wm-minimized')
         
@@ -1824,6 +1858,60 @@ class WindowManager {
         if (windowInstance.config.onMinimize) {
             windowInstance.config.onMinimize(windowInstance)
         }
+    }
+    
+    /**
+     * Minimize a tab group
+     */
+    minimizeTabGroup(groupId) {
+        const tabGroup = this.tabGroups.get(groupId)
+        if (!tabGroup || tabGroup.state.minimized) return
+        
+        tabGroup.state.minimized = true
+        tabGroup.element.classList.add('wm-minimized')
+        
+        // Mark all windows in the group as minimized
+        tabGroup.tabs.forEach(windowId => {
+            const win = this.windows.get(windowId)
+            if (win) win.state.minimized = true
+        })
+        
+        // Create dock button for the tab group (use first tab's info)
+        const firstWinId = tabGroup.tabs[0]
+        const firstWin = this.windows.get(firstWinId)
+        const dockBtn = document.createElement('button')
+        dockBtn.className = 'wm-dock-btn'
+        dockBtn.dataset.tabGroupId = groupId
+        dockBtn.innerHTML = `
+            ${firstWin?.config.icon || ''}
+            <span>${tabGroup.tabs.length > 1 ? `${tabGroup.tabs.length} Panels` : (firstWin?.config.title || 'Panel')}</span>
+        `
+        dockBtn.addEventListener('click', () => this.restoreTabGroup(groupId))
+        this.dock.appendChild(dockBtn)
+    }
+    
+    /**
+     * Restore a minimized tab group
+     */
+    restoreTabGroup(groupId) {
+        const tabGroup = this.tabGroups.get(groupId)
+        if (!tabGroup || !tabGroup.state.minimized) return
+        
+        tabGroup.state.minimized = false
+        tabGroup.element.classList.remove('wm-minimized')
+        
+        // Mark all windows in the group as not minimized
+        tabGroup.tabs.forEach(windowId => {
+            const win = this.windows.get(windowId)
+            if (win) win.state.minimized = false
+        })
+        
+        // Remove dock button
+        const dockBtn = this.dock.querySelector(`[data-tab-group-id="${groupId}"]`)
+        if (dockBtn) dockBtn.remove()
+        
+        // Focus the tab group
+        this.focusTabGroup(groupId)
     }
     
     maximizeWindow(id) {
@@ -1853,6 +1941,17 @@ class WindowManager {
     restoreWindow(id) {
         const windowInstance = this.windows.get(id)
         if (!windowInstance) return
+        
+        // If window is in a tab group, restore the tab group
+        if (windowInstance.state.tabGroupId) {
+            const tabGroup = this.tabGroups.get(windowInstance.state.tabGroupId)
+            if (tabGroup && tabGroup.state.minimized) {
+                this.restoreTabGroup(windowInstance.state.tabGroupId)
+            }
+            // Also activate this tab
+            this.activateTab(windowInstance.state.tabGroupId, id)
+            return
+        }
         
         // Restore from minimized
         if (windowInstance.state.minimized) {
@@ -2537,6 +2636,10 @@ class WindowManager {
             
             .wm-tab-group.wm-dragging {
                 opacity: 0.95;
+            }
+            
+            .wm-tab-group.wm-minimized {
+                display: none;
             }
             
             .wm-tab-group.wm-docked {
