@@ -85,19 +85,21 @@ function setupDefaultDockedLayout() {
         if (!tabGroup) return
         
         // Calculate position: 25% viewport width on the right side, full height
-        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '64')
+        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '60')
+        // Account for safe area inset at bottom (for mobile devices with notches)
+        const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0') || 0
         const screenWidth = window.innerWidth
-        const screenHeight = window.innerHeight - bottomNavHeight
+        const availableHeight = window.innerHeight - bottomNavHeight - safeAreaBottom - 8 // 8px gap from taskbar
         
         // 25% of viewport width for the panel
         const panelWidth = Math.max(280, screenWidth * 0.25)
         
-        // Position to the right side, full height
+        // Position to the right side, full height (with gap from taskbar)
         const dockStyle = {
             x: screenWidth - panelWidth,
             y: 0,
             width: panelWidth,
-            height: screenHeight
+            height: availableHeight
         }
         
         // Apply the position/size
@@ -720,16 +722,17 @@ function injectLayersPanelStyles() {
             flex-direction: column;
             height: 100%;
             min-height: 0;
-            padding: 10px;
-            gap: 10px;
+            padding: 8px;
+            gap: 8px;
             overflow: hidden;
         }
         
         /* Section styling for collapsible sections */
         .layers-section {
-            background: var(--bg-tertiary, #334155);
-            border-radius: 6px;
+            background: var(--bg-tertiary, #f1f5f9);
+            border-radius: 8px;
             overflow: hidden;
+            border: 1px solid var(--border, rgba(0,0,0,0.06));
         }
         
         .layers-panel-content:not(.resizing) .layers-section {
@@ -741,29 +744,30 @@ function injectLayersPanelStyles() {
             align-items: center;
             gap: 8px;
             padding: 8px 10px;
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--bg-secondary, #ffffff);
             cursor: default;
             user-select: none;
             position: relative;
             z-index: 1;
+            border-bottom: 1px solid var(--border, rgba(0,0,0,0.06));
         }
         
         .layers-section-title {
             flex: 1;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
-            color: var(--text-secondary, #94a3b8);
+            color: var(--text-tertiary, #94a3b8);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.06em;
         }
         
         .layers-section-collapse {
-            width: 22px;
-            height: 22px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-secondary, #94a3b8);
-            font-size: 14px;
+            width: 20px;
+            height: 20px;
+            background: var(--bg-primary, #f8fafc);
+            border: 1px solid var(--border, rgba(0,0,0,0.08));
+            color: var(--text-tertiary, #94a3b8);
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
             border-radius: 4px;
@@ -777,13 +781,15 @@ function injectLayersPanelStyles() {
         }
         
         .layers-section-collapse:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.2);
-            color: var(--text-primary, #f1f5f9);
+            background: var(--bg-tertiary, #f1f5f9);
+            border-color: var(--border-strong, rgba(0,0,0,0.12));
+            color: var(--text-secondary, #475569);
         }
         
         .layers-section-collapse:active {
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--accent-soft, rgba(37,99,235,0.08));
+            border-color: var(--accent, #2563eb);
+            color: var(--accent, #2563eb);
         }
         
         .layers-section-content {
@@ -803,7 +809,8 @@ function injectLayersPanelStyles() {
         }
         
         .layers-section.collapsed .layers-section-header {
-            border-radius: 6px;
+            border-radius: 8px;
+            border-bottom: none;
         }
         
         .layers-props-section {
@@ -840,7 +847,7 @@ function injectLayersPanelStyles() {
         
         /* Resize divider between sections - desktop only */
         .layers-resize-divider {
-            height: 8px;
+            height: 6px;
             background: transparent;
             cursor: row-resize;
             position: relative;
@@ -903,21 +910,21 @@ function injectLayersPanelStyles() {
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            width: 40px;
-            height: 4px;
-            background: var(--border-color, #475569);
+            width: 32px;
+            height: 3px;
+            background: var(--border-strong, rgba(0,0,0,0.12));
             border-radius: 2px;
             transition: all 0.15s ease;
         }
         
         .layers-resize-divider:hover::before,
         .layers-resize-divider.active::before {
-            background: var(--accent, #6366f1);
-            width: 60px;
+            background: var(--accent, #2563eb);
+            width: 48px;
         }
         
         .layers-resize-divider.active {
-            background: rgba(99, 102, 241, 0.1);
+            background: var(--accent-soft, rgba(37,99,235,0.08));
         }
         
         .layers-list-section .layers-section-content {
@@ -938,8 +945,9 @@ function injectLayersPanelStyles() {
         
         .layers-props:empty::before {
             content: 'Select a layer to edit properties';
-            color: var(--text-tertiary, #64748b);
+            color: var(--text-tertiary, #94a3b8);
             font-style: italic;
+            font-size: 11px;
         }
         
         .layers-props label {
@@ -948,8 +956,10 @@ function injectLayersPanelStyles() {
             align-items: center;
             gap: 8px;
             margin-bottom: 8px;
-            color: var(--text-secondary, #94a3b8);
+            color: var(--text-secondary, #475569);
             flex-wrap: wrap;
+            font-size: 11px;
+            font-weight: 500;
         }
         
         .layers-props label > span:first-child {
@@ -961,25 +971,33 @@ function injectLayersPanelStyles() {
             flex: 1;
             min-width: 60px;
             max-width: 150px;
+            accent-color: var(--accent, #2563eb);
         }
         
         .layers-props input[type="number"] {
-            width: 50px;
+            width: 48px;
             min-width: 40px;
-            padding: 4px 4px;
-            background: var(--bg-secondary, #1e293b);
-            border: 1px solid var(--border, rgba(255,255,255,0.1));
+            padding: 4px;
+            background: var(--bg-primary, #f8fafc);
+            border: 1px solid var(--border, rgba(0,0,0,0.08));
             border-radius: 4px;
-            color: var(--text-primary, #f1f5f9);
-            font-size: 12px;
+            color: var(--text-primary, #0f172a);
+            font-size: 11px;
             text-align: center;
+            font-weight: 500;
+        }
+        
+        .layers-props input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent, #2563eb);
+            box-shadow: 0 0 0 2px var(--accent-soft, rgba(37,99,235,0.08));
         }
         
         .layers-props input[type="color"] {
-            width: 40px;
-            height: 24px;
+            width: 36px;
+            height: 22px;
             padding: 0;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border, rgba(0,0,0,0.08));
             border-radius: 4px;
             cursor: pointer;
             background: transparent;
@@ -1015,16 +1033,20 @@ function injectLayersPanelStyles() {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
-            padding: 10px 12px;
+            gap: 8px;
+            padding: 8px 10px;
             margin-bottom: 4px;
-            background: var(--bg-secondary, #1e293b);
-            border: 1px solid transparent;
-            border-radius: 4px;
+            background: var(--bg-secondary, #ffffff);
+            border: 1px solid var(--border, rgba(0,0,0,0.06));
+            border-radius: 6px;
             cursor: pointer;
-            transition: all 0.15s ease;
-            font-size: 13px;
-            color: var(--text-primary, #f1f5f9);
+            transition: all 0.12s ease;
+            font-size: 12px;
+            color: var(--text-primary, #0f172a);
+        }
+        
+        .layers-list .layerDiv:last-child {
+            margin-bottom: 0;
         }
         
         .layers-list .layerDiv p {
@@ -1033,41 +1055,44 @@ function injectLayersPanelStyles() {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            font-weight: 500;
         }
         
         .layers-list .layerDiv:hover {
-            background: var(--bg-primary, #0f172a);
+            background: var(--bg-tertiary, #f1f5f9);
+            border-color: var(--border-strong, rgba(0,0,0,0.1));
         }
         
         .layers-list .layerDiv.selectedLayerDiv,
         .layers-list .selectedLayerDiv {
-            border-color: var(--accent, #6366f1);
-            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--accent, #2563eb);
+            background: var(--accent-soft, rgba(37,99,235,0.08));
         }
         
         /* Layer visibility checkbox - default browser style */
         .layers-list .layerDivToggleVisability {
-            width: 20px !important;
-            height: 20px !important;
-            min-width: 20px !important;
-            min-height: 20px !important;
+            width: 16px !important;
+            height: 16px !important;
+            min-width: 16px !important;
+            min-height: 16px !important;
             margin: 0 !important;
-            margin-left: 8px !important;
+            margin-left: 6px !important;
             cursor: pointer !important;
             flex-shrink: 0 !important;
             display: inline-block !important;
             visibility: visible !important;
             opacity: 1 !important;
             position: relative !important;
+            accent-color: var(--accent, #2563eb);
         }
         
         .layers-controls {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
             flex-shrink: 0;
             padding-top: 8px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid var(--border, rgba(0,0,0,0.06));
             margin-top: auto;
         }
         
@@ -1077,20 +1102,21 @@ function injectLayersPanelStyles() {
         }
         
         .layer-reorder-group button {
-            width: 32px;
-            height: 32px;
-            background: var(--bg-tertiary, #334155);
-            border: 1px solid var(--border, rgba(255,255,255,0.1));
-            border-radius: 4px;
-            color: var(--text-primary, #f1f5f9);
+            width: 30px;
+            height: 30px;
+            background: var(--bg-primary, #f8fafc);
+            border: 1px solid var(--border, rgba(0,0,0,0.08));
+            border-radius: 6px;
+            color: var(--text-secondary, #475569);
             cursor: pointer;
-            font-size: 12px;
-            transition: all 0.15s ease;
+            font-size: 11px;
+            transition: all 0.12s ease;
         }
         
         .layer-reorder-group button:hover {
-            background: var(--accent, #6366f1);
-            border-color: var(--accent);
+            background: var(--accent, #2563eb);
+            border-color: var(--accent, #2563eb);
+            color: white;
         }
         
         .layer-reorder-group button:disabled {
@@ -1099,26 +1125,27 @@ function injectLayersPanelStyles() {
         }
         
         .layer-reorder-group button:disabled:hover {
-            background: var(--bg-tertiary, #334155);
-            border-color: var(--border, rgba(255,255,255,0.1));
+            background: var(--bg-primary, #f8fafc);
+            border-color: var(--border, rgba(0,0,0,0.08));
+            color: var(--text-secondary, #475569);
         }
         
         .layers-controls .delete-btn {
             flex: 1;
-            padding: 8px 12px;
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 4px;
+            padding: 6px 10px;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 6px;
             color: #ef4444;
             cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: all 0.15s ease;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.12s ease;
         }
         
         .layers-controls .delete-btn:hover {
-            background: rgba(239, 68, 68, 0.25);
-            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
         }
     `
     document.head.appendChild(style)
@@ -1134,10 +1161,10 @@ function injectImagePropsStyles() {
     style.id = 'image-props-styles'
     style.textContent = `
         .image-props-content {
-            padding: 12px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
         }
         
         .props-group {
@@ -1148,29 +1175,37 @@ function injectImagePropsStyles() {
         }
         
         .props-label {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
-            color: var(--text-tertiary, #64748b);
+            color: var(--text-tertiary, #94a3b8);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.06em;
         }
         
         .props-input,
         .props-select {
             width: 100%;
             padding: 8px 10px;
-            background: var(--bg-tertiary, #334155);
-            border: 1px solid var(--border, rgba(255,255,255,0.1));
+            background: var(--bg-primary, #f8fafc);
+            border: 1px solid var(--border, rgba(0,0,0,0.08));
             border-radius: 6px;
-            color: var(--text-primary, #f1f5f9);
-            font-size: 13px;
-            transition: border-color 0.15s ease;
+            color: var(--text-primary, #0f172a);
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.12s ease;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+        }
+        
+        .props-input:hover,
+        .props-select:hover {
+            border-color: var(--border-strong, rgba(0,0,0,0.12));
         }
         
         .props-input:focus,
         .props-select:focus {
             outline: none;
-            border-color: var(--accent, #6366f1);
+            border-color: var(--accent, #2563eb);
+            box-shadow: 0 0 0 2px var(--accent-soft, rgba(37,99,235,0.08));
         }
         
         .props-dimensions {
@@ -1182,20 +1217,27 @@ function injectImagePropsStyles() {
         
         .props-dimensions input {
             flex: 1;
-            min-width: 50px;
-            max-width: 80px;
-            padding: 6px 4px;
-            background: var(--bg-tertiary, #334155);
-            border: 1px solid var(--border, rgba(255,255,255,0.1));
+            min-width: 48px;
+            max-width: 72px;
+            padding: 6px;
+            background: var(--bg-primary, #f8fafc);
+            border: 1px solid var(--border, rgba(0,0,0,0.08));
             border-radius: 6px;
-            color: var(--text-primary, #f1f5f9);
-            font-size: 13px;
+            color: var(--text-primary, #0f172a);
+            font-size: 12px;
             text-align: center;
+            font-weight: 500;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+        }
+        
+        .props-dimensions input:hover {
+            border-color: var(--border-strong, rgba(0,0,0,0.12));
         }
         
         .props-dimensions input:focus {
             outline: none;
-            border-color: var(--accent, #6366f1);
+            border-color: var(--accent, #2563eb);
+            box-shadow: 0 0 0 2px var(--accent-soft, rgba(37,99,235,0.08));
         }
         
         .props-separator {

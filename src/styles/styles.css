@@ -1,61 +1,95 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   MOBILE-FIRST PHOTO EDITOR UI
-   Clean, tap-friendly interface that works on all devices
+   MODERN PHOTO EDITOR UI
+   Sleek, unified interface with seamless component integration
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-    /* Core colors */
-    --bg-primary: #f5f7fa;
+    /* Core colors - unified cool gray palette */
+    --bg-primary: #f8fafc;
     --bg-secondary: #ffffff;
-    --bg-tertiary: #eef1f5;
+    --bg-tertiary: #f1f5f9;
+    --bg-elevated: #ffffff;
+    --bg-canvas: #e2e8f0;
     
-    /* Accent */
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
-    --accent-soft: rgba(59, 130, 246, 0.1);
-    --accent-glow: rgba(59, 130, 246, 0.25);
+    /* Accent - refined blue */
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-soft: rgba(37, 99, 235, 0.08);
+    --accent-glow: rgba(37, 99, 235, 0.2);
+    --accent-border: rgba(37, 99, 235, 0.3);
     
-    /* Text */
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
+    /* Success/Danger */
+    --success: #10b981;
+    --danger: #ef4444;
+    --danger-soft: rgba(239, 68, 68, 0.1);
+    
+    /* Text - better contrast hierarchy */
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
     --text-tertiary: #94a3b8;
+    --text-muted: #cbd5e1;
     
-    /* Borders */
-    --border: rgba(0, 0, 0, 0.08);
+    /* Borders - subtle and consistent */
+    --border: rgba(15, 23, 42, 0.08);
+    --border-strong: rgba(15, 23, 42, 0.12);
     --border-focus: var(--accent);
     
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.15);
+    /* Shadows - layered depth system */
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+    --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
+    --shadow-inset: inset 0 1px 2px rgba(15, 23, 42, 0.06);
     
-    /* Layout */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
+    /* Layout - tighter, more modern radii */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 20px;
+    
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
     
     /* Touch targets */
-    --touch-target: 48px;
-    --bottom-nav-height: 64px;
+    --touch-target: 44px;
+    --bottom-nav-height: 60px;
     
-    /* Transitions */
-    --transition: 0.2s ease;
+    /* Transitions - snappier */
+    --transition-fast: 0.1s ease;
+    --transition: 0.15s ease;
+    --transition-slow: 0.25s ease;
 }
 
-/* Dark mode */
+/* Dark mode - refined dark theme */
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg-primary: #0f172a;
-        --bg-secondary: #1e293b;
-        --bg-tertiary: #334155;
+        --bg-primary: #0c1222;
+        --bg-secondary: #151d2e;
+        --bg-tertiary: #1e293b;
+        --bg-elevated: #1a2438;
+        --bg-canvas: #0a0f1a;
         --text-primary: #f1f5f9;
         --text-secondary: #94a3b8;
         --text-tertiary: #64748b;
-        --border: rgba(255, 255, 255, 0.1);
-        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-        --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+        --text-muted: #475569;
+        --border: rgba(255, 255, 255, 0.06);
+        --border-strong: rgba(255, 255, 255, 0.1);
+        --accent-soft: rgba(37, 99, 235, 0.15);
+        --danger-soft: rgba(239, 68, 68, 0.15);
+        --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.2);
     }
 }
 
@@ -78,12 +112,16 @@ html, body {
 
 body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     background: var(--bg-primary);
     color: var(--text-primary);
     display: flex;
     flex-direction: column;
     min-height: 100vh;
     min-height: 100dvh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 button {
@@ -91,6 +129,8 @@ button {
     cursor: pointer;
     border: none;
     background: none;
+    font-size: inherit;
+    line-height: inherit;
 }
 
 input, select {
@@ -107,37 +147,38 @@ input, select {
 
 .renderStatus {
     position: fixed;
-    top: 12px;
-    left: 12px;
+    top: var(--space-3);
+    left: var(--space-3);
     z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 8px 14px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     font-size: 0.7rem;
     font-weight: 500;
     color: var(--text-tertiary);
     white-space: nowrap;
-    background: var(--surface);
+    background: var(--bg-elevated);
     border: 1px solid var(--border);
-    border-radius: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     pointer-events: none;
-    transition: opacity 0.15s ease;
+    transition: all var(--transition);
 }
 
 .renderStatus.faded {
     opacity: 0;
+    transform: translateY(-4px);
 }
 
 .renderStatus .spinner {
     display: none;
     width: 12px;
     height: 12px;
-    border: 2px solid var(--border);
+    border: 2px solid var(--border-strong);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
@@ -145,7 +186,8 @@ input, select {
 
 .renderStatus.isRendering {
     color: var(--accent);
-    border-color: var(--accent);
+    border-color: var(--accent-border);
+    background: var(--accent-soft);
 }
 
 .renderStatus.isRendering .spinner {
@@ -153,11 +195,12 @@ input, select {
 }
 
 .renderStatus.isError {
-    border-color: #ef4444;
+    border-color: var(--danger);
+    background: var(--danger-soft);
 }
 
 .renderStatus.isError span {
-    color: #ef4444;
+    color: var(--danger);
 }
 
 @keyframes spin {
@@ -172,11 +215,12 @@ input, select {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 12px;
-    padding-top: max(12px, env(safe-area-inset-top, 0px));
+    gap: var(--space-3);
+    padding: var(--space-3);
+    padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
     overflow: hidden;
-    padding-bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--bottom-nav-height) + var(--space-2) + env(safe-area-inset-bottom, 0px));
+    background: var(--bg-primary);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -187,7 +231,7 @@ input, select {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
     min-height: 0;
     overflow: hidden;
 }
@@ -195,9 +239,10 @@ input, select {
 .imageViewingModule {
     flex: 1;
     min-height: 150px;
-    background: var(--bg-secondary);
+    background: var(--bg-canvas);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border);
+    box-shadow: var(--shadow-inset);
     overflow: hidden;
     cursor: grab;
     position: relative;
@@ -216,6 +261,7 @@ input, select {
     transform-origin: center;
     overflow: hidden;
     position: relative;
+    padding: var(--space-4);
 }
 
 #imageCanvas {
@@ -224,33 +270,35 @@ input, select {
     width: auto;
     height: auto;
     border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
+    background: var(--bg-secondary);
 }
 
 /* GIF Play/Stop Button */
 .gifPlayStopBtn {
     position: absolute;
-    bottom: 16px;
-    right: 16px;
-    width: 48px;
-    height: 48px;
+    bottom: var(--space-4);
+    right: var(--space-4);
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    background: var(--bg-secondary);
-    border: 2px solid var(--border);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
     color: var(--text-primary);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all var(--transition);
     z-index: 100;
     box-shadow: var(--shadow-md);
 }
 
 .gifPlayStopBtn:hover {
     background: var(--bg-tertiary);
-    border-color: var(--accent);
+    border-color: var(--accent-border);
     transform: scale(1.05);
+    box-shadow: var(--shadow-lg);
 }
 
 .gifPlayStopBtn:active {
@@ -262,8 +310,8 @@ input, select {
 }
 
 .gifPlayStopBtn svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     fill: var(--text-primary);
 }
 
@@ -301,24 +349,27 @@ input, select {
     background: var(--bg-secondary);
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
-    padding: 12px;
+    padding: var(--space-3);
+    box-shadow: var(--shadow-xs);
 }
 
 .imageDataModuleHeader {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
     color: var(--text-tertiary);
-    margin-bottom: 10px;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border);
 }
 
 .imageDataModuleRow {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
 }
 
 .imageDataModuleRow:last-child {
@@ -326,7 +377,7 @@ input, select {
 }
 
 .sectionLabel {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 500;
     color: var(--text-secondary);
     min-width: fit-content;
@@ -335,26 +386,29 @@ input, select {
 .singleLineControls {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     flex-wrap: wrap;
     flex: 1;
 }
 
 .singleLineControls span {
-    color: var(--text-tertiary);
+    color: var(--text-muted);
     font-weight: 500;
+    font-size: 0.8rem;
 }
 
 .singleLineControls input[type="number"],
 #imageNameInput {
-    width: 80px;
-    padding: 8px 10px;
+    width: 72px;
+    padding: var(--space-2) var(--space-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--bg-primary);
     color: var(--text-primary);
-    font-size: 0.85rem;
-    transition: border-color var(--transition);
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all var(--transition);
+    box-shadow: var(--shadow-inset);
 }
 
 #imageNameInput {
@@ -364,54 +418,83 @@ input, select {
     width: auto;
 }
 
+.singleLineControls input:hover,
+#imageNameInput:hover,
+#imageExtensionSelector:hover {
+    border-color: var(--border-strong);
+}
+
 .singleLineControls input:focus,
 #imageNameInput:focus,
 #imageExtensionSelector:focus {
     outline: none;
     border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .singleLineControls button {
-    min-width: var(--touch-target);
-    min-height: var(--touch-target);
-    padding: 8px 12px;
+    min-width: 40px;
+    min-height: 36px;
+    padding: var(--space-2) var(--space-3);
     background: var(--accent);
     color: white;
     border-radius: var(--radius-sm);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    transition: background var(--transition);
+    transition: all var(--transition);
+    box-shadow: var(--shadow-xs);
+}
+
+.singleLineControls button:hover {
+    background: var(--accent-hover);
+    box-shadow: var(--shadow-sm);
 }
 
 .singleLineControls button:active {
-    background: var(--accent-hover);
+    transform: scale(0.97);
 }
 
 #imageExtensionSelector {
-    padding: 8px 12px;
-    min-height: var(--touch-target);
+    padding: var(--space-2) var(--space-3);
+    min-height: 36px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--bg-primary);
     color: var(--text-primary);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 500;
     appearance: none;
     cursor: pointer;
+    box-shadow: var(--shadow-inset);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
 }
 
 .checkboxLabel {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
+    gap: var(--space-2);
+    font-size: 0.75rem;
+    font-weight: 500;
     color: var(--text-secondary);
     white-space: nowrap;
+    cursor: pointer;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: background var(--transition);
+}
+
+.checkboxLabel:hover {
+    background: var(--bg-tertiary);
 }
 
 .checkboxLabel input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     accent-color: var(--accent);
+    cursor: pointer;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -422,25 +505,27 @@ input, select {
     display: none; /* Hidden on mobile by default, shown on larger screens */
     flex-direction: column;
     background: var(--bg-secondary);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
-    padding: 12px;
+    padding: var(--space-3);
     max-height: 200px;
+    box-shadow: var(--shadow-xs);
 }
 
 #currentLayerSelector {
     min-height: 100px;
-    margin-bottom: 12px;
-    padding: 10px;
+    margin-bottom: var(--space-3);
+    padding: var(--space-3);
     background: var(--bg-primary);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     border: 1px solid var(--border);
+    box-shadow: var(--shadow-inset);
 }
 
 /* Color picker styling for effect parameters */
 #currentLayerSelector input[type="color"],
 #mobileCurrentLayerSelector input[type="color"] {
-    width: 50px;
+    width: 44px;
     height: 28px;
     padding: 0;
     border: 1px solid var(--border);
@@ -450,6 +535,7 @@ input, select {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+    box-shadow: var(--shadow-xs);
 }
 
 #currentLayerSelector input[type="color"]::-webkit-color-swatch-wrapper,
@@ -466,7 +552,7 @@ input, select {
 #layersSelector {
     flex: 1;
     overflow-y: auto;
-    margin-bottom: 10px;
+    margin-bottom: var(--space-2);
 }
 
 #layersList {
@@ -477,15 +563,19 @@ input, select {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 12px;
-    margin-bottom: 6px;
-    min-height: var(--touch-target);
+    gap: var(--space-2);
+    padding: var(--space-3);
+    margin-bottom: var(--space-2);
+    min-height: 42px;
     background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all var(--transition);
+}
+
+.layerDiv:last-child {
+    margin-bottom: 0;
 }
 
 .layerDiv p {
@@ -494,6 +584,13 @@ input, select {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.layerDiv:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-tertiary);
 }
 
 .layerDiv:active,
@@ -504,34 +601,35 @@ input, select {
 
 /* Layer visibility checkbox - default browser style */
 .layerDivToggleVisability {
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
-    min-height: 20px !important;
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
     margin: 0 !important;
-    margin-left: 8px !important;
+    margin-left: var(--space-2) !important;
     cursor: pointer !important;
     flex-shrink: 0 !important;
     display: inline-block !important;
     visibility: visible !important;
     opacity: 1 !important;
     position: relative !important;
+    accent-color: var(--accent);
 }
 
 #layersControls {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     flex-wrap: wrap;
 }
 
 #layersControls button {
     flex: 1;
-    min-height: var(--touch-target);
-    padding: 10px;
+    min-height: 38px;
+    padding: var(--space-2);
     background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
     color: var(--text-primary);
     transition: all var(--transition);
@@ -542,6 +640,11 @@ input, select {
     cursor: not-allowed;
 }
 
+#layersControls button:hover:not(:disabled) {
+    border-color: var(--border-strong);
+    background: var(--bg-tertiary);
+}
+
 #layersControls button:active:not(:disabled) {
     background: var(--accent-soft);
     border-color: var(--accent);
@@ -549,12 +652,12 @@ input, select {
 
 .layerReorderGroup {
     display: flex;
-    gap: 6px;
+    gap: var(--space-1);
 }
 
 .layerReorderGroup button {
     flex: none;
-    width: var(--touch-target);
+    width: 38px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -574,6 +677,7 @@ input, select {
     justify-content: space-around;
     align-items: stretch;
     z-index: 100;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
 }
 
 .navBtn {
@@ -582,10 +686,10 @@ input, select {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 4px;
     color: var(--text-secondary);
     transition: all var(--transition);
-    padding: 10px 4px;
+    padding: var(--space-2) var(--space-1);
     background: transparent;
     border: none;
     min-height: var(--touch-target);
@@ -593,16 +697,23 @@ input, select {
 }
 
 .navBtn svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     flex-shrink: 0;
-    transition: transform var(--transition);
+    transition: all var(--transition);
+    stroke-width: 1.75;
 }
 
 .navBtn span {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.navBtn:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
 }
 
 .navBtn:active,
@@ -611,7 +722,7 @@ input, select {
 }
 
 .navBtn:active svg {
-    transform: scale(0.9);
+    transform: scale(0.92);
 }
 
 .navBtn.active {
@@ -624,10 +735,10 @@ input, select {
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 32px;
-    height: 3px;
+    width: 28px;
+    height: 2px;
     background: var(--accent);
-    border-radius: 0 0 3px 3px;
+    border-radius: 0 0 2px 2px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -637,11 +748,13 @@ input, select {
 .menuOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 150;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.25s ease;
+    transition: opacity var(--transition-slow);
 }
 
 .menuOverlay.active {
@@ -659,10 +772,23 @@ input, select {
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     z-index: 200;
     transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
     display: flex;
     flex-direction: column;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: var(--shadow-xl);
+}
+
+.menuPanel::before {
+    content: '';
+    position: absolute;
+    top: var(--space-2);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    background: var(--border-strong);
+    border-radius: 2px;
 }
 
 .menuPanel.active {
@@ -673,29 +799,33 @@ input, select {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
+    padding: var(--space-5) var(--space-5) var(--space-4);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
 }
 
 .menuPanelHeader h2 {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
+    letter-spacing: -0.01em;
 }
 
 .menuClose {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     font-weight: 300;
     color: var(--text-secondary);
     background: var(--bg-tertiary);
     border-radius: 50%;
     transition: all var(--transition);
-    box-shadow: var(--shadow-sm);
+}
+
+.menuClose:hover {
+    background: var(--bg-primary);
 }
 
 .menuClose:active {
@@ -707,81 +837,85 @@ input, select {
 .menuPanelContent {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 20px 28px;
+    padding: var(--space-4) var(--space-5) var(--space-6);
     -webkit-overflow-scrolling: touch;
 }
 
 .menuItem {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: var(--space-3);
     width: 100%;
-    padding: 14px 16px;
-    min-height: 52px;
+    padding: var(--space-3) var(--space-4);
+    min-height: 48px;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 500;
     color: var(--text-primary);
     text-align: left;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
     transition: all var(--transition);
-    box-shadow: var(--shadow-sm);
 }
 
 .menuItem svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
     color: var(--accent);
+    stroke-width: 1.75;
+}
+
+.menuItem:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    border-color: var(--border-strong);
 }
 
 .menuItem:active:not(:disabled) {
     background: var(--accent-soft);
     border-color: var(--accent);
-    transform: scale(0.98);
+    transform: scale(0.99);
 }
 
 .menuItem:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    box-shadow: none;
 }
 
 .menuItem.compact {
     flex: 1;
     justify-content: center;
-    padding: 14px 12px;
-    min-height: 48px;
-    font-size: 0.9rem;
+    padding: var(--space-3);
+    min-height: 44px;
+    font-size: 0.85rem;
     font-weight: 600;
 }
 
 .menuDivider {
     border: none;
     border-top: 1px solid var(--border);
-    margin: 12px 0;
+    margin: var(--space-3) 0;
 }
 
 .menuGroup {
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
 }
 
 .menuGroupLabel {
     display: block;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
     color: var(--text-tertiary);
-    margin-bottom: 8px;
-    padding-left: 4px;
+    margin-bottom: var(--space-2);
+    padding-left: var(--space-1);
 }
 
 .menuRow {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 .menuRow .menuItem {
@@ -795,15 +929,16 @@ input, select {
 .layersPanel .menuPanelContent {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
 .mobileLayerEditor {
-    min-height: 120px;
-    padding: 12px;
+    min-height: 100px;
+    padding: var(--space-3);
     background: var(--bg-primary);
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
+    box-shadow: var(--shadow-inset);
 }
 
 .mobileLayersList {
@@ -821,14 +956,23 @@ input, select {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px;
-    margin-bottom: 6px;
-    min-height: var(--touch-target);
+    padding: var(--space-3);
+    margin-bottom: var(--space-2);
+    min-height: 44px;
     background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all var(--transition);
+}
+
+.mobileLayersList .layerDiv:last-child {
+    margin-bottom: 0;
+}
+
+.mobileLayersList .layerDiv:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-strong);
 }
 
 .mobileLayersList .layerDiv:active,
@@ -839,29 +983,32 @@ input, select {
 
 .mobileLayersControls {
     display: flex;
-    gap: 10px;
+    gap: var(--space-2);
     flex-wrap: wrap;
-    margin-top: 12px;
+    margin-top: var(--space-3);
 }
 
 .mobileLayersControls button {
     flex: 1;
-    min-height: 52px;
-    padding: 12px 16px;
+    min-height: 44px;
+    padding: var(--space-3) var(--space-4);
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-primary);
     transition: all var(--transition);
-    box-shadow: var(--shadow-sm);
 }
 
 .mobileLayersControls button:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    box-shadow: none;
+}
+
+.mobileLayersControls button:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    border-color: var(--border-strong);
 }
 
 .mobileLayersControls button:active:not(:disabled) {
@@ -871,27 +1018,31 @@ input, select {
 }
 
 .mobileLayersControls #mobileDeleteLayer {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    background: var(--danger-soft);
+    color: var(--danger);
     border-color: rgba(239, 68, 68, 0.2);
+}
+
+.mobileLayersControls #mobileDeleteLayer:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.15);
 }
 
 .mobileLayersControls #mobileDeleteLayer:active:not(:disabled) {
     background: rgba(239, 68, 68, 0.2);
-    border-color: #ef4444;
+    border-color: var(--danger);
 }
 
 .mobileLayersControls .layerReorderGroup {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     flex: 0 0 auto;
 }
 
 .mobileLayersControls .layerReorderGroup button {
     flex: none;
-    width: 52px;
-    min-width: 52px;
-    font-size: 1rem;
+    width: 44px;
+    min-width: 44px;
+    font-size: 0.9rem;
 }
 
 /* Hide layers nav button on tablet+ where sidebar shows */
@@ -907,23 +1058,23 @@ input, select {
 
 .floatingPanel {
     position: fixed;
-    bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom, 0px));
-    left: 12px;
-    right: 12px;
-    max-width: 400px;
+    bottom: calc(var(--bottom-nav-height) + var(--space-3) + env(safe-area-inset-bottom, 0px));
+    left: var(--space-3);
+    right: var(--space-3);
+    max-width: 380px;
     margin: 0 auto;
     background: var(--bg-secondary);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-xl);
     z-index: 120;
-    animation: slideUp 0.25s ease;
+    animation: slideUp 0.2s ease;
 }
 
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(12px);
     }
     to {
         opacity: 1;
@@ -935,82 +1086,103 @@ input, select {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 16px;
+    padding: var(--space-3) var(--space-4);
     border-bottom: 1px solid var(--border);
 }
 
 .floatingPanelHeader h3 {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
 }
 
 .floatingPanelHeader button {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     color: var(--text-secondary);
     background: var(--bg-tertiary);
     border-radius: 50%;
+    transition: all var(--transition);
+}
+
+.floatingPanelHeader button:hover {
+    background: var(--bg-primary);
 }
 
 .floatingPanelBody {
-    padding: 16px;
+    padding: var(--space-4);
 }
 
 .floatingPanelRow {
     display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
 }
 
 .floatingPanelRow label {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-secondary);
+    gap: var(--space-2);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
 }
 
 .floatingPanelRow input {
     width: 100%;
-    padding: 12px;
+    padding: var(--space-3);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--bg-primary);
     color: var(--text-primary);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: var(--shadow-inset);
+    transition: all var(--transition);
+}
+
+.floatingPanelRow input:hover {
+    border-color: var(--border-strong);
 }
 
 .floatingPanelRow input:focus {
     outline: none;
     border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .panelActions {
     display: flex;
-    gap: 10px;
-    margin-top: 16px;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
 }
 
 .panelActions button {
     flex: 1;
-    padding: 14px;
-    min-height: var(--touch-target);
+    padding: var(--space-3);
+    min-height: 44px;
     background: var(--accent);
     color: white;
     border-radius: var(--radius-md);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    transition: background var(--transition);
+    transition: all var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.panelActions button:hover {
+    background: var(--accent-hover);
+    box-shadow: var(--shadow-md);
 }
 
 .panelActions button:active {
-    background: var(--accent-hover);
+    transform: scale(0.98);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1020,8 +1192,9 @@ input, select {
 @media (min-width: 768px) {
     .mainContent {
         flex-direction: row;
-        padding: 16px;
-        padding-bottom: calc(var(--bottom-nav-height) + 16px + env(safe-area-inset-bottom, 0px));
+        padding: var(--space-4);
+        gap: var(--space-4);
+        padding-bottom: calc(var(--bottom-nav-height) + var(--space-4) + env(safe-area-inset-bottom, 0px));
     }
     
     .imageModule {
@@ -1030,7 +1203,7 @@ input, select {
     
     .layersModule {
         display: flex;
-        width: 280px;
+        width: 260px;
         flex-shrink: 0;
         max-height: none;
     }
@@ -1038,7 +1211,7 @@ input, select {
     .contextModules {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
+        gap: var(--space-3);
     }
     
     .imageDataModule {
@@ -1053,28 +1226,32 @@ input, select {
 
 @media (min-width: 1024px) {
     :root {
-        --bottom-nav-height: 56px;
+        --bottom-nav-height: 52px;
     }
     
     .bottomTaskbar {
         justify-content: center;
-        gap: 8px;
-        padding: 8px 16px;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
         height: auto;
         min-height: var(--bottom-nav-height);
-        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+        background: var(--bg-secondary);
+        box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.04);
     }
     
     .navBtn {
         flex: none;
         flex-direction: row;
-        gap: 8px;
-        padding: 10px 20px;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
         border-radius: var(--radius-md);
     }
     
     .navBtn span {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
+        text-transform: none;
+        letter-spacing: normal;
     }
     
     .navBtn:hover {
@@ -1082,18 +1259,26 @@ input, select {
         color: var(--text-primary);
     }
     
+    .navBtn.active::before {
+        display: none;
+    }
+    
     .menuPanel {
-        max-width: 420px;
+        max-width: 400px;
         left: 50%;
-        margin-left: -210px; /* half of max-width */
+        margin-left: -200px;
         border-radius: var(--radius-xl);
-        /* Position from bottom when active, but hide off-screen when inactive */
-        bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(var(--bottom-nav-height) + var(--space-3) + env(safe-area-inset-bottom, 0px));
         max-height: 60vh;
         visibility: hidden;
         opacity: 0;
-        transform: translateY(20px);
-        transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s;
+        transform: translateY(12px);
+        transition: transform 0.2s ease, opacity 0.2s ease, visibility 0.2s;
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .menuPanel::before {
+        display: none;
     }
     
     .menuPanel.active {
@@ -1103,17 +1288,19 @@ input, select {
     }
     
     .menuOverlay {
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(15, 23, 42, 0.25);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
     }
     
     .layersModule {
-        width: 320px;
+        width: 300px;
     }
     
     .mainContent {
-        padding: 20px;
-        gap: 20px;
-        padding-bottom: calc(var(--bottom-nav-height) + 20px + env(safe-area-inset-bottom, 0px));
+        padding: var(--space-5);
+        gap: var(--space-5);
+        padding-bottom: calc(var(--bottom-nav-height) + var(--space-5) + env(safe-area-inset-bottom, 0px));
     }
 }
 
@@ -1124,6 +1311,7 @@ input, select {
 @media (max-height: 500px) and (orientation: landscape) {
     .mainContent {
         flex-direction: row;
+        gap: var(--space-3);
     }
     
     .imageModule {
@@ -1149,13 +1337,13 @@ input, select {
 
 @supports (padding: env(safe-area-inset-bottom)) {
     .topHeader {
-        padding-left: max(16px, env(safe-area-inset-left));
-        padding-right: max(16px, env(safe-area-inset-right));
+        padding-left: max(var(--space-4), env(safe-area-inset-left));
+        padding-right: max(var(--space-4), env(safe-area-inset-right));
     }
     
     .mainContent {
-        padding-left: max(12px, env(safe-area-inset-left));
-        padding-right: max(12px, env(safe-area-inset-right));
+        padding-left: max(var(--space-3), env(safe-area-inset-left));
+        padding-right: max(var(--space-3), env(safe-area-inset-right));
     }
     
     .bottomTaskbar {

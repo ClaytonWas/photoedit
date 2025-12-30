@@ -571,9 +571,10 @@ class WindowManager {
             return
         }
         
-        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '64')
+        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '60')
+        const taskbarGap = 8 // Gap from taskbar
         const screenWidth = window.innerWidth
-        const screenHeight = window.innerHeight - bottomNavHeight
+        const screenHeight = window.innerHeight - bottomNavHeight - taskbarGap
         
         let previewStyle = {}
         
@@ -621,9 +622,10 @@ class WindowManager {
         if (!windowInstance) return
         
         const { element, state, config } = windowInstance
-        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '64')
+        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '60')
+        const taskbarGap = 8 // Gap from taskbar
         const screenWidth = window.innerWidth
-        const screenHeight = window.innerHeight - bottomNavHeight
+        const screenHeight = window.innerHeight - bottomNavHeight - taskbarGap
         
         // Store pre-dock state for restoration
         if (!state.preDockState) {
@@ -1608,9 +1610,10 @@ class WindowManager {
         const tabGroup = this.tabGroups.get(groupId)
         if (!tabGroup) return
         
-        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '64')
+        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '60')
+        const taskbarGap = 8 // Gap from taskbar
         const screenWidth = window.innerWidth
-        const screenHeight = window.innerHeight - bottomNavHeight
+        const screenHeight = window.innerHeight - bottomNavHeight - taskbarGap
         
         // Save pre-dock state
         if (!tabGroup.state.preDockState) {
@@ -2220,23 +2223,23 @@ class WindowManager {
             
             .wm-window {
                 position: absolute;
-                background: var(--bg-secondary, #1e293b);
-                border-radius: 8px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+                background: var(--bg-secondary, #ffffff);
+                border-radius: 10px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border, rgba(0,0,0,0.08));
                 display: flex;
                 flex-direction: column;
                 pointer-events: auto;
-                transition: box-shadow 0.15s ease;
+                transition: box-shadow 0.12s ease;
                 overflow: hidden;
             }
             
             .wm-window.wm-focused {
-                box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--accent, #6366f1);
+                box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18), 0 0 0 1px var(--accent, #2563eb);
             }
             
             .wm-window.wm-dragging,
             .wm-window.wm-resizing {
-                opacity: 0.9;
+                opacity: 0.95;
                 transition: none;
             }
             
@@ -2248,7 +2251,7 @@ class WindowManager {
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
-                height: calc(100% - var(--bottom-nav-height, 64px) - env(safe-area-inset-bottom, 0px)) !important;
+                height: calc(100% - var(--bottom-nav-height, 60px) - env(safe-area-inset-bottom, 0px)) !important;
                 border-radius: 0;
             }
             
@@ -2260,8 +2263,8 @@ class WindowManager {
                 display: flex;
                 align-items: center;
                 padding: 8px 12px;
-                background: var(--bg-tertiary, #334155);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                background: var(--bg-tertiary, #f1f5f9);
+                border-bottom: 1px solid var(--border, rgba(0,0,0,0.06));
                 cursor: move;
                 user-select: none;
                 flex-shrink: 0;
@@ -2272,6 +2275,7 @@ class WindowManager {
                 font-size: 14px;
                 display: flex;
                 align-items: center;
+                color: var(--accent, #2563eb);
             }
             
             .wm-icon svg {
@@ -2281,9 +2285,9 @@ class WindowManager {
             
             .wm-title {
                 flex: 1;
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 600;
-                color: var(--text-primary, #f1f5f9);
+                color: var(--text-primary, #0f172a);
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -2296,37 +2300,38 @@ class WindowManager {
             }
             
             .wm-btn {
-                width: 24px;
-                height: 24px;
+                width: 22px;
+                height: 22px;
                 border: none;
                 background: transparent;
                 border-radius: 4px;
-                color: var(--text-secondary, #94a3b8);
-                font-size: 14px;
+                color: var(--text-tertiary, #94a3b8);
+                font-size: 12px;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.15s ease;
+                transition: all 0.12s ease;
             }
             
             .wm-btn:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: var(--text-primary, #f1f5f9);
+                background: var(--bg-primary, #f8fafc);
+                color: var(--text-primary, #0f172a);
             }
             
             .wm-close:hover {
-                background: #ef4444;
-                color: white;
+                background: rgba(239, 68, 68, 0.1);
+                color: #ef4444;
             }
             
             .wm-content {
                 flex: 1;
                 overflow: auto;
-                padding: 12px;
+                padding: 10px;
                 min-height: 0;
                 display: flex;
                 flex-direction: column;
+                background: var(--bg-secondary, #ffffff);
             }
             
             .wm-content > * {
@@ -2412,15 +2417,15 @@ class WindowManager {
             /* Dock for minimized windows */
             .wm-dock {
                 position: fixed;
-                bottom: calc(var(--bottom-nav-height, 64px) + 8px + env(safe-area-inset-bottom, 0px));
+                bottom: calc(var(--bottom-nav-height, 60px) + 8px + env(safe-area-inset-bottom, 0px));
                 left: 50%;
                 transform: translateX(-50%);
                 display: flex;
-                gap: 8px;
-                padding: 8px;
-                background: var(--bg-secondary, #1e293b);
-                border-radius: 12px;
-                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+                gap: 6px;
+                padding: 6px;
+                background: var(--bg-secondary, #ffffff);
+                border-radius: 10px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border, rgba(0,0,0,0.08));
                 z-index: 999;
                 pointer-events: auto;
             }
@@ -2433,18 +2438,21 @@ class WindowManager {
                 display: flex;
                 align-items: center;
                 gap: 6px;
-                padding: 8px 12px;
-                background: var(--bg-tertiary, #334155);
-                border: none;
-                border-radius: 8px;
-                color: var(--text-primary, #f1f5f9);
-                font-size: 12px;
+                padding: 6px 10px;
+                background: var(--bg-tertiary, #f1f5f9);
+                border: 1px solid var(--border, rgba(0,0,0,0.06));
+                border-radius: 6px;
+                color: var(--text-primary, #0f172a);
+                font-size: 11px;
+                font-weight: 500;
                 cursor: pointer;
-                transition: all 0.15s ease;
+                transition: all 0.12s ease;
             }
             
             .wm-dock-btn:hover {
-                background: var(--accent, #6366f1);
+                background: var(--accent, #2563eb);
+                border-color: var(--accent, #2563eb);
+                color: white;
             }
             
             .wm-dock-btn svg {
@@ -2454,8 +2462,8 @@ class WindowManager {
             
             /* Scrollbar styling for window content */
             .wm-content::-webkit-scrollbar {
-                width: 8px;
-                height: 8px;
+                width: 6px;
+                height: 6px;
             }
             
             .wm-content::-webkit-scrollbar-track {
@@ -2463,27 +2471,27 @@ class WindowManager {
             }
             
             .wm-content::-webkit-scrollbar-thumb {
-                background: var(--text-tertiary, #64748b);
-                border-radius: 4px;
+                background: var(--text-muted, #cbd5e1);
+                border-radius: 3px;
             }
             
             .wm-content::-webkit-scrollbar-thumb:hover {
-                background: var(--text-secondary, #94a3b8);
+                background: var(--text-tertiary, #94a3b8);
             }
             
             /* Snap preview overlay */
             .wm-snap-preview {
                 position: fixed;
-                background: var(--accent, #6366f1);
+                background: var(--accent, #2563eb);
                 opacity: 0;
                 border-radius: 8px;
                 pointer-events: none;
                 z-index: 998;
-                transition: opacity 0.15s ease, left 0.1s ease, top 0.1s ease, width 0.1s ease, height 0.1s ease;
+                transition: opacity 0.12s ease, left 0.08s ease, top 0.08s ease, width 0.08s ease, height 0.08s ease;
             }
             
             .wm-snap-preview-visible {
-                opacity: 0.2;
+                opacity: 0.15;
             }
             
             /* Docked window state */
@@ -2500,7 +2508,7 @@ class WindowManager {
             /* Snap indicator lines (shown when near another window) */
             .wm-snap-line {
                 position: fixed;
-                background: var(--accent, #6366f1);
+                background: var(--accent, #2563eb);
                 z-index: 999;
                 pointer-events: none;
             }
@@ -2518,9 +2526,9 @@ class WindowManager {
             /* Tab Groups */
             .wm-tab-group {
                 position: absolute;
-                background: var(--bg-secondary, #1e293b);
-                border-radius: 8px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+                background: var(--bg-secondary, #ffffff);
+                border-radius: 10px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border, rgba(0,0,0,0.08));
                 display: flex;
                 flex-direction: column;
                 pointer-events: auto;
@@ -2528,7 +2536,7 @@ class WindowManager {
             }
             
             .wm-tab-group.wm-dragging {
-                opacity: 0.9;
+                opacity: 0.95;
             }
             
             .wm-tab-group.wm-docked {
@@ -2543,8 +2551,8 @@ class WindowManager {
             .wm-tab-bar-container {
                 display: flex;
                 align-items: stretch;
-                background: var(--bg-tertiary, #334155);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                background: var(--bg-tertiary, #f1f5f9);
+                border-bottom: 1px solid var(--border, rgba(0,0,0,0.06));
                 cursor: move;
             }
             
@@ -2554,35 +2562,35 @@ class WindowManager {
                 padding: 4px 4px 0;
                 gap: 2px;
                 overflow-x: auto;
-                min-height: 36px;
+                min-height: 34px;
                 align-items: flex-end;
             }
             
             .wm-tab-bar::-webkit-scrollbar {
-                height: 4px;
+                height: 3px;
             }
             
             .wm-tab-bar::-webkit-scrollbar-thumb {
-                background: var(--text-tertiary, #64748b);
+                background: var(--text-muted, #cbd5e1);
                 border-radius: 2px;
             }
             
             .wm-tab-group-close {
-                width: 32px;
+                width: 30px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 background: transparent;
                 border: none;
-                color: var(--text-tertiary, #64748b);
-                font-size: 18px;
+                color: var(--text-tertiary, #94a3b8);
+                font-size: 16px;
                 cursor: pointer;
-                transition: all 0.15s ease;
+                transition: all 0.12s ease;
                 flex-shrink: 0;
             }
             
             .wm-tab-group-close:hover {
-                background: rgba(239, 68, 68, 0.2);
+                background: rgba(239, 68, 68, 0.1);
                 color: #ef4444;
             }
             
@@ -2590,27 +2598,28 @@ class WindowManager {
                 display: flex;
                 align-items: center;
                 gap: 6px;
-                padding: 8px 10px;
+                padding: 6px 10px;
                 background: transparent;
                 border-radius: 6px 6px 0 0;
-                font-size: 12px;
-                color: var(--text-secondary, #94a3b8);
+                font-size: 11px;
+                font-weight: 500;
+                color: var(--text-tertiary, #94a3b8);
                 cursor: pointer;
                 user-select: none;
                 white-space: nowrap;
-                transition: all 0.15s ease;
+                transition: all 0.12s ease;
                 border: none;
                 position: relative;
             }
             
             .wm-tab:hover {
-                background: rgba(255, 255, 255, 0.05);
-                color: var(--text-primary, #f1f5f9);
+                background: var(--bg-primary, #f8fafc);
+                color: var(--text-primary, #0f172a);
             }
             
             .wm-tab.wm-tab-active {
-                background: var(--bg-secondary, #1e293b);
-                color: var(--text-primary, #f1f5f9);
+                background: var(--bg-secondary, #ffffff);
+                color: var(--text-primary, #0f172a);
             }
             
             .wm-tab.wm-tab-active::after {
@@ -2620,12 +2629,13 @@ class WindowManager {
                 left: 0;
                 right: 0;
                 height: 2px;
-                background: var(--accent, #6366f1);
+                background: var(--accent, #2563eb);
             }
             
             .wm-tab-icon {
                 display: flex;
                 align-items: center;
+                color: var(--accent, #2563eb);
             }
             
             .wm-tab-icon svg {
@@ -2634,7 +2644,7 @@ class WindowManager {
             }
             
             .wm-tab-title {
-                max-width: 120px;
+                max-width: 100px;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
@@ -2644,21 +2654,21 @@ class WindowManager {
                 height: 16px;
                 border: none;
                 background: transparent;
-                color: var(--text-tertiary, #64748b);
-                font-size: 14px;
+                color: var(--text-muted, #cbd5e1);
+                font-size: 12px;
                 line-height: 1;
                 cursor: pointer;
                 border-radius: 3px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.15s ease;
+                transition: all 0.12s ease;
                 padding: 0;
                 margin-left: 2px;
             }
             
             .wm-tab-close:hover {
-                background: rgba(239, 68, 68, 0.2);
+                background: rgba(239, 68, 68, 0.1);
                 color: #ef4444;
             }
             
@@ -2666,6 +2676,7 @@ class WindowManager {
                 flex: 1;
                 overflow: hidden;
                 position: relative;
+                background: var(--bg-secondary, #ffffff);
             }
             
             .wm-tab-panel {
@@ -2675,7 +2686,7 @@ class WindowManager {
                 right: 0;
                 bottom: 0;
                 overflow: auto;
-                padding: 12px;
+                padding: 10px;
             }
             
             .wm-tab-panel.no-padding {
@@ -2684,7 +2695,7 @@ class WindowManager {
             
             /* Tab merge preview */
             .wm-tab-merge-target {
-                box-shadow: 0 0 0 3px var(--accent, #6366f1), 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+                box-shadow: 0 0 0 2px var(--accent, #2563eb), 0 8px 32px rgba(0, 0, 0, 0.15) !important;
             }
             
             /* Tab group resize handles */
