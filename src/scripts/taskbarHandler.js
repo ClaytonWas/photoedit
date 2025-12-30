@@ -142,11 +142,10 @@ function triggerCursorCropSelection() {
 
 function positionSelectionOverlay(canvas, overlay) {
     if (!canvas || !overlay || !canvas.parentElement) return
-    // Since the overlay is a child of imageCanvasDiv (which has transforms),
-    // and the canvas is also a child, we just need to position relative to the canvas within that container
-    // The overlay should cover the canvas exactly, positioned at 0,0 within the parent
-    overlay.style.left = '0px'
-    overlay.style.top = '0px'
+    // Position the overlay to match the canvas's position within the parent container
+    // Use offsetLeft/Top to get the canvas position relative to its offset parent
+    overlay.style.left = `${canvas.offsetLeft}px`
+    overlay.style.top = `${canvas.offsetTop}px`
 }
 
 function getSelectionOverlay(canvas, rect) {
@@ -158,13 +157,15 @@ function getSelectionOverlay(canvas, rect) {
         canvas.parentElement.appendChild(overlay)
     }
 
-    // Use the actual canvas dimensions, not the visual (transformed) dimensions
-    // The overlay is inside imageCanvasDiv which gets transformed, so it will
-    // scale along with the canvas. We need it to match the canvas pixel dimensions.
+    // The overlay canvas needs to match the actual canvas pixel dimensions
+    // for accurate drawing coordinates. The CSS will handle visual scaling.
     overlay.width = canvas.width
     overlay.height = canvas.height
-    overlay.style.width = `${canvas.width}px`
-    overlay.style.height = `${canvas.height}px`
+    
+    // Match the visual size of the main canvas (offsetWidth/Height reflect CSS-constrained size)
+    // This ensures the overlay aligns visually with the canvas
+    overlay.style.width = `${canvas.offsetWidth}px`
+    overlay.style.height = `${canvas.offsetHeight}px`
     overlay.style.position = 'absolute'
     positionSelectionOverlay(canvas, overlay)
     return overlay
@@ -370,6 +371,7 @@ function stopRenderStatusPolling() {
 
 function enableSelection(callback) {
     const canvas = document.getElementById('imageCanvas')
+    const canvasDiv = document.getElementById('imageCanvasDiv')
     let isSelecting = false
     let startX, startY, endX, endY
     let overlayCanvas = null
@@ -377,13 +379,26 @@ function enableSelection(callback) {
 
     function getCanvasCoordinates(clientX, clientY) {
         const rect = canvas.getBoundingClientRect()
-        const scaleX = canvas.width / rect.width
-        const scaleY = canvas.height / rect.height
-
-        return {
-            x: (clientX - rect.left) * scaleX,
-            y: (clientY - rect.top) * scaleY
+        
+        // Get the CSS transform scale from imageCanvasDiv
+        // The transform is in format: translate(Xpx, Ypx) scale(N)
+        let cssScale = 1
+        if (canvasDiv) {
+            const transform = canvasDiv.style.transform
+            const scaleMatch = transform.match(/scale\(([^)]+)\)/)
+            if (scaleMatch) {
+                cssScale = parseFloat(scaleMatch[1]) || 1
+            }
         }
+        
+        // The bounding rect is already scaled by CSS transform,
+        // so we need to account for that when calculating coordinates
+        // rect.width = canvas.width * cssScale (approximately, due to CSS)
+        // We want to convert client coords to canvas pixel coords
+        const x = (clientX - rect.left) * (canvas.width / rect.width)
+        const y = (clientY - rect.top) * (canvas.height / rect.height)
+
+        return { x, y }
     }
 
     // Store event listener functions in named variables
