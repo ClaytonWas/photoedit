@@ -423,6 +423,52 @@ function deinterlace(imageData, width, height) {
 }
 
 /**
+ * Prepares image data for GIF export with transparency support.
+ * GIF only supports 1-bit transparency (fully transparent or fully opaque).
+ * We use index 0 in the color palette as the transparent color.
+ * 
+ * @param {CanvasRenderingContext2D} ctx - The canvas context
+ * @param {number} width - Canvas width
+ * @param {number} height - Canvas height  
+ * @returns {{canvas: HTMLCanvasElement, hasTransparency: boolean}}
+ */
+function prepareFrameForGif(ctx, width, height) {
+    const imageData = ctx.getImageData(0, 0, width, height)
+    const data = imageData.data
+    let hasTransparency = false
+    
+    // Two-pass approach:
+    // 1. First, shift any actual black pixels (0,0,0) to near-black (1,1,1) so they don't become transparent
+    // 2. Then, set transparent pixels to pure black (0,0,0) which becomes the transparency key
+    for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] >= 128) {
+            // Opaque pixel - check if it's pure black and shift it slightly
+            if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0) {
+                data[i] = 1
+                data[i + 1] = 1
+                data[i + 2] = 1
+            }
+        } else {
+            // Transparent pixel - mark with pure black (the transparency key)
+            data[i] = 0
+            data[i + 1] = 0  
+            data[i + 2] = 0
+            data[i + 3] = 255  // Must be opaque for gif.js to process
+            hasTransparency = true
+        }
+    }
+    
+    // Create a new canvas with the processed data
+    const processedCanvas = document.createElement('canvas')
+    processedCanvas.width = width
+    processedCanvas.height = height
+    const processedCtx = processedCanvas.getContext('2d')
+    processedCtx.putImageData(imageData, 0, 0)
+    
+    return { canvas: processedCanvas, hasTransparency }
+}
+
+/**
  * Export frame stack as GIF using gif.js
  */
 export function exportFrameStackAsGif(frameStack = gifFrameStack, options = {}) {
@@ -439,16 +485,43 @@ export function exportFrameStackAsGif(frameStack = gifFrameStack, options = {}) 
             return
         }
 
-        const gif = new GIF({
+        // Check if any frame has transparency
+        let hasAnyTransparency = false
+        for (const frame of frameStack.frames) {
+            const data = frame.imageData.data
+            for (let i = 3; i < data.length; i += 4) {
+                if (data[i] < 128) {
+                    hasAnyTransparency = true
+                    break
+                }
+            }
+            if (hasAnyTransparency) break
+        }
+
+        const gifOptions = {
             workers: workers,
             quality: quality,
             width: frameStack.width,
             height: frameStack.height,
             workerScript: workerScript
-        })
+        }
+        
+        // If we have transparency, tell gif.js to use black (0x000000) as transparent
+        if (hasAnyTransparency) {
+            gifOptions.transparent = 0x000000
+        }
+
+        const gif = new GIF(gifOptions)
 
         for (const frame of frameStack.frames) {
-            gif.addFrame(frame.canvas, { delay: frame.delay, copy: true })
+            if (hasAnyTransparency) {
+                // Process frame to mark transparent pixels
+                const frameCtx = frame.canvas.getContext('2d')
+                const { canvas } = prepareFrameForGif(frameCtx, frameStack.width, frameStack.height)
+                gif.addFrame(canvas, { delay: frame.delay, copy: true, dispose: 2 })
+            } else {
+                gif.addFrame(frame.canvas, { delay: frame.delay, copy: true })
+            }
         }
 
         gif.on('progress', (p) => onProgress(Math.round(p * 100)))
@@ -544,14 +617,33 @@ export async function createSliderAnimation(imageEditor, layerIndex, config, onP
     tempCanvas.height = outputHeight
     const tempCtx = tempCanvas.getContext('2d')
 
+    // First pass: check if any frame has transparency
+    let hasTransparency = false
+    layer.effectParameters[parameterName].value = frameValues[0]
+    await renderFrameSync(imageEditor)
+    tempCtx.drawImage(imageEditor.canvas, 0, 0, outputWidth, outputHeight)
+    const checkData = tempCtx.getImageData(0, 0, outputWidth, outputHeight).data
+    for (let i = 3; i < checkData.length; i += 4) {
+        if (checkData[i] < 128) {
+            hasTransparency = true
+            break
+        }
+    }
+
     // Create GIF encoder
-    const gif = new GIF({
+    const gifOptions = {
         workers: 2,
         quality: quality,
         width: outputWidth,
         height: outputHeight,
         workerScript: WORKER_PATH
-    })
+    }
+    
+    if (hasTransparency) {
+        gifOptions.transparent = 0x000000
+    }
+    
+    const gif = new GIF(gifOptions)
 
     // Capture frames
     for (let i = 0; i < totalFrames; i++) {
@@ -571,8 +663,13 @@ export async function createSliderAnimation(imageEditor, layerIndex, config, onP
         // Scale and capture
         tempCtx.clearRect(0, 0, outputWidth, outputHeight)
         tempCtx.drawImage(imageEditor.canvas, 0, 0, outputWidth, outputHeight)
-
-        gif.addFrame(tempCtx, { delay: frameDelay, copy: true })
+        
+        if (hasTransparency) {
+            const { canvas } = prepareFrameForGif(tempCtx, outputWidth, outputHeight)
+            gif.addFrame(canvas, { delay: frameDelay, copy: true, dispose: 2 })
+        } else {
+            gif.addFrame(tempCtx, { delay: frameDelay, copy: true })
+        }
 
         onProgress(Math.round((i + 1) / totalFrames * 50)) // 50% for capture
     }
@@ -671,13 +768,35 @@ export async function createMultiParameterAnimation(imageEditor, layerIndex, con
     tempCanvas.height = outputHeight
     const tempCtx = tempCanvas.getContext('2d')
 
-    const gif = new GIF({
+    // First pass: check if any frame has transparency
+    let hasTransparency = false
+    for (const { parameterName, values } of allFrameValues) {
+        layer.effectParameters[parameterName].value = values[0]
+    }
+    await renderFrameSync(imageEditor)
+    tempCtx.drawImage(imageEditor.canvas, 0, 0, outputWidth, outputHeight)
+    const checkData = tempCtx.getImageData(0, 0, outputWidth, outputHeight).data
+    for (let i = 3; i < checkData.length; i += 4) {
+        if (checkData[i] < 128) {
+            hasTransparency = true
+            break
+        }
+    }
+
+    // Create GIF encoder
+    const gifOptions = {
         workers: 2,
         quality: quality,
         width: outputWidth,
         height: outputHeight,
         workerScript: WORKER_PATH
-    })
+    }
+    
+    if (hasTransparency) {
+        gifOptions.transparent = 0x000000
+    }
+    
+    const gif = new GIF(gifOptions)
 
     for (let i = 0; i < totalFrames; i++) {
         for (const { parameterName, values } of allFrameValues) {
@@ -688,8 +807,13 @@ export async function createMultiParameterAnimation(imageEditor, layerIndex, con
 
         tempCtx.clearRect(0, 0, outputWidth, outputHeight)
         tempCtx.drawImage(imageEditor.canvas, 0, 0, outputWidth, outputHeight)
-
-        gif.addFrame(tempCtx, { delay: frameDelay, copy: true })
+        
+        if (hasTransparency) {
+            const { canvas } = prepareFrameForGif(tempCtx, outputWidth, outputHeight)
+            gif.addFrame(canvas, { delay: frameDelay, copy: true, dispose: 2 })
+        } else {
+            gif.addFrame(tempCtx, { delay: frameDelay, copy: true })
+        }
 
         onProgress(Math.round((i + 1) / totalFrames * 50))
     }
@@ -699,6 +823,7 @@ export async function createMultiParameterAnimation(imageEditor, layerIndex, con
     }
     await renderFrameSync(imageEditor)
 
+    // Clean up temp canvas
     tempCanvas.remove()
 
     return new Promise((resolve, reject) => {
