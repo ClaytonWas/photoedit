@@ -276,6 +276,14 @@ function handleKeyboardShortcuts(event) {
         if (imageEditor && !redoMenuItem?.disabled) {
             imageEditor.redo()
         }
+    } else if (key === 'o') {
+        event.preventDefault()
+        triggerOpenFileDialog()
+    } else if (key === 's') {
+        event.preventDefault()
+        if (imageEditor) {
+            imageEditor.downloadCanvas()
+        }
     }
 }
 
@@ -305,13 +313,15 @@ function handleImageEditorStateChange(event) {
 
 function updateRenderStatus(isRendering, renderFailed = false) {
     const renderStatus = document.getElementById('renderStatus')
-    if (!renderStatus) return
-    const statusLabel = renderStatus.querySelector('span')
-
-    const setStatus = (stateClass, label) => {
-        renderStatus.classList.remove('isRendering', 'isError', 'isReady')
+    const desktopRenderStatus = document.getElementById('desktopRenderStatus')
+    const hasImage = !!imageEditor
+    
+    const setStatus = (element, stateClass, label) => {
+        if (!element) return
+        const statusLabel = element.querySelector('span')
+        element.classList.remove('isRendering', 'isError', 'isReady', 'noImage')
         if (stateClass) {
-            renderStatus.classList.add(stateClass)
+            element.classList.add(stateClass)
         }
         if (statusLabel) {
             statusLabel.textContent = label
@@ -319,15 +329,23 @@ function updateRenderStatus(isRendering, renderFailed = false) {
     }
 
     if (renderFailed) {
-        setStatus('isError', 'Render failed')
-        setTimeout(() => setStatus('isReady', 'Ready'), 2000)
+        setStatus(renderStatus, 'isError', 'Render failed')
+        setStatus(desktopRenderStatus, 'isError', 'Error')
+        setTimeout(() => {
+            const defaultLabel = hasImage ? 'Ready' : 'No Image'
+            setStatus(renderStatus, 'isReady', defaultLabel)
+            setStatus(desktopRenderStatus, 'isReady', defaultLabel)
+        }, 2000)
         return
     }
 
     if (isRendering) {
-        setStatus('isRendering', 'Rendering…')
+        setStatus(renderStatus, 'isRendering', 'Rendering…')
+        setStatus(desktopRenderStatus, 'isRendering', 'Rendering…')
     } else {
-        setStatus('isReady', 'Ready')
+        const defaultLabel = hasImage ? 'Ready' : 'No Image'
+        setStatus(renderStatus, 'isReady', defaultLabel)
+        setStatus(desktopRenderStatus, 'isReady', defaultLabel)
     }
 }
 
@@ -2357,7 +2375,6 @@ window.addEventListener('load', () => {
         navFile: document.getElementById('fileMenu'),
         navImage: document.getElementById('imageMenu'),
         navFilter: document.getElementById('filterMenu'),
-        navVisual: document.getElementById('visualMenu'),
         navWindows: document.getElementById('windowsMenu')
     }
     const navButtons = document.querySelectorAll('.navBtn')
@@ -2432,6 +2449,11 @@ window.addEventListener('load', () => {
     setMenuItemDisabled(undoMenuItem, true)
     setMenuItemDisabled(redoMenuItem, true)
     window.addEventListener('imageEditorStateChanged', handleImageEditorStateChange)
+    
+    // Update status when image editor is ready
+    window.addEventListener('imageEditorReady', () => {
+        updateRenderStatus(false, false)
+    })
 
     undoMenuItem?.addEventListener('click', async () => {
         if (!imageEditor || undoMenuItem.disabled) return
@@ -2944,6 +2966,272 @@ window.addEventListener('load', () => {
             location.reload()
         }
     })
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DESKTOP MENU BAR (1024px+ only)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const desktopMenuBar = document.getElementById('desktopMenuBar')
+    if (desktopMenuBar) {
+        const menuBarItems = desktopMenuBar.querySelectorAll('.menuBarItem')
+        let activeMenu = null
+        let menuBarActive = false
+        
+        function closeDesktopMenus() {
+            menuBarItems.forEach(item => item.classList.remove('active'))
+            activeMenu = null
+            menuBarActive = false
+        }
+        
+        function openDesktopMenu(menuItem) {
+            closeDesktopMenus()
+            menuItem.classList.add('active')
+            activeMenu = menuItem
+            menuBarActive = true
+        }
+        
+        // Click to open menu
+        menuBarItems.forEach(item => {
+            const label = item.querySelector(':scope > span')
+            if (label) {
+                label.addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    if (item.classList.contains('active')) {
+                        closeDesktopMenus()
+                    } else {
+                        openDesktopMenu(item)
+                    }
+                })
+            }
+            
+            // Hover to switch menus when one is already open
+            item.addEventListener('mouseenter', () => {
+                if (menuBarActive && activeMenu !== item) {
+                    openDesktopMenu(item)
+                }
+            })
+        })
+        
+        // Close menus when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!desktopMenuBar.contains(e.target)) {
+                closeDesktopMenus()
+            }
+        })
+        
+        // Close menus on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && menuBarActive) {
+                closeDesktopMenus()
+            }
+        })
+        
+        // Desktop menu item handlers - close menu after action
+        const closeAndRun = (fn) => {
+            closeDesktopMenus()
+            fn()
+        }
+        
+        // Desktop Undo/Redo references
+        const desktopUndoBtn = document.getElementById('desktopUndoAction')
+        const desktopRedoBtn = document.getElementById('desktopRedoAction')
+        
+        // Sync desktop undo/redo state with mobile
+        const originalUpdateHistoryMenuState = updateHistoryMenuState
+        updateHistoryMenuState = (detail = { undoAvailable: false, redoAvailable: false }) => {
+            originalUpdateHistoryMenuState(detail)
+            setMenuItemDisabled(desktopUndoBtn, !detail.undoAvailable)
+            setMenuItemDisabled(desktopRedoBtn, !detail.redoAvailable)
+        }
+        
+        // FILE MENU
+        document.getElementById('desktopOpenFile')?.addEventListener('click', () => closeAndRun(triggerOpenFileDialog))
+        document.getElementById('desktopSaveAction')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.downloadCanvas()
+        }))
+        document.getElementById('desktopCreateGifBtn')?.addEventListener('click', () => closeAndRun(openGifAnimatorDialog))
+        document.getElementById('desktopEditGifBtn')?.addEventListener('click', () => closeAndRun(openGifFrameEditorDialog))
+        desktopUndoBtn?.addEventListener('click', () => closeAndRun(async () => {
+            if (!imageEditor || desktopUndoBtn.disabled) return
+            await imageEditor.undo()
+        }))
+        desktopRedoBtn?.addEventListener('click', () => closeAndRun(async () => {
+            if (!imageEditor || desktopRedoBtn.disabled) return
+            await imageEditor.redo()
+        }))
+        
+        // IMAGE MENU
+        document.getElementById('desktopRotateCW90')?.addEventListener('click', () => closeAndRun(async () => {
+            if (!imageEditor) return
+            await imageEditor.rotate(90)
+            setTimeout(() => {
+                updateCropInputsFromEditor(imageEditor)
+                updateDimensionControlsFromEditor(imageEditor)
+                initializeModifiedImageDataModule(imageEditor)
+            }, 50)
+        }))
+        document.getElementById('desktopRotateCCW90')?.addEventListener('click', () => closeAndRun(async () => {
+            if (!imageEditor) return
+            await imageEditor.rotate(-90)
+            setTimeout(() => {
+                updateCropInputsFromEditor(imageEditor)
+                updateDimensionControlsFromEditor(imageEditor)
+                initializeModifiedImageDataModule(imageEditor)
+            }, 50)
+        }))
+        document.getElementById('desktopCursorCrop')?.addEventListener('click', () => closeAndRun(triggerCursorCropSelection))
+        document.getElementById('desktopManualCrop')?.addEventListener('click', () => closeAndRun(() => openCropPanel(true)))
+        document.getElementById('desktopResetImage')?.addEventListener('click', () => closeAndRun(async () => {
+            if (!imageEditor) return
+            await imageEditor.resetImage()
+            setTimeout(() => {
+                updateCropInputsFromEditor(imageEditor)
+                updateDimensionControlsFromEditor(imageEditor)
+                initializeModifiedImageDataModule(imageEditor)
+            }, 50)
+        }))
+        
+        // FILTER MENU
+        document.getElementById('desktopGreyscale')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Greyscale', greyscale)
+            renderLayerProperties(imageEditor)
+        }))
+        document.getElementById('desktopSepia')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Sepia', sepia, { intensity: { value: 1, range: [0, 1], valueStep: 0.01 } })
+            renderLayerProperties(imageEditor)
+        }))
+        document.getElementById('desktopFilmEffects')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Film Effects', filmEffects, {
+                contrast: { value: 0, range: [0, 255], valueStep: 1 },
+                colourPalette: { value: 0, range: [-100, 100], valueStep: 1 }
+            })
+            renderLayerProperties(imageEditor)
+        }))
+        document.getElementById('desktopPaintedStylization')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Painted Stylization', paintedStylization, {
+                width: { value: 5, range: [1, 150], valueStep: 1 },
+                length: { value: 5, range: [1, 250], valueStep: 1 },
+                angle: { value: 145, range: [0, 360], valueStep: 1 },
+                sampling: { value: 10, range: [5, 10000], valueStep: 1 },
+                edgeThreshold: { value: 100, range: [1, 255], valueStep: 1 },
+                overwritePixels: { value: false },
+                overwriteEdges: { value: false }
+            })
+            renderLayerProperties(imageEditor)
+        }))
+        document.getElementById('desktopHsvAdjust')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            const index = imageEditor.changeCanvasHSV(0, 100, 100)
+            imageEditor.setSelectedIndex(index)
+            renderLayerProperties(imageEditor)
+        }))
+        
+        // VISUALIZATIONS (in Filter menu)
+        document.getElementById('desktopPointsInSpace')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Points In Space', pointsInSpace, {
+                sampling: { value: 10, range: [2, 100], valueStep: 1 }
+            })
+            renderLayerProperties(imageEditor)
+        }))
+        document.getElementById('desktopVectorsInSpace')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Vectors In Space', vectorsInSpace, {
+                width: { value: 1, range: [1, 500], valueStep: 1 },
+                length: { value: 3, range: [1, 1000], valueStep: 1 },
+                angle: { value: 0, range: [0, 360], valueStep: 1 },
+                sampling: { value: 10, range: [2, 1000000], valueStep: 1 },
+                R: { value: 255, range: [0, 255], valueStep: 1 },
+                G: { value: 255, range: [0, 255], valueStep: 1 },
+                B: { value: 255, range: [0, 255], valueStep: 1 },
+                A: { value: 255, range: [0, 255], valueStep: 1 }
+            })
+            renderLayerProperties(imageEditor)
+        }))
+        document.getElementById('desktopSobelEdges')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Sobel Edges', sobelEdges, {
+                edgeThreshold: { value: 50, range: [0, 255], valueStep: 1 },
+                edgeColor: { value: '#ffffff' },
+                blackoutBackground: { value: true },
+                transparentBackground: { value: false }
+            })
+            renderLayerProperties(imageEditor)
+        }))
+        document.getElementById('desktopSobelEdgesColoured')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Sobel Edges (Colour)', sobelEdgesColouredDirections, {
+                edgeThreshold: { value: 50, range: [0, 255], valueStep: 1 },
+                colorX: { value: '#ff0000' },
+                colorY: { value: '#00ff00' },
+                blackoutBackground: { value: true },
+                transparentBackground: { value: false }
+            })
+            renderLayerProperties(imageEditor)
+        }))
+        document.getElementById('desktopPrewireEdges')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Prewire Edges', prewireEdges, {
+                edgeThreshold: { value: 50, range: [0, 255], valueStep: 1 },
+                edgeColor: { value: '#ffffff' },
+                blackoutBackground: { value: true },
+                transparentBackground: { value: false }
+            })
+            renderLayerProperties(imageEditor)
+        }))
+        document.getElementById('desktopPrewireEdgesColoured')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) return
+            imageEditor.addEffectLayer('Prewire Edges (Colour)', prewireEdgesColouredDirections, {
+                edgeThreshold: { value: 50, range: [0, 255], valueStep: 1 },
+                colorX: { value: '#ff0000' },
+                colorY: { value: '#00ff00' },
+                blackoutBackground: { value: true },
+                transparentBackground: { value: false }
+            })
+            renderLayerProperties(imageEditor)
+        }))
+        
+        // WINDOW MENU
+        document.getElementById('desktopToggleLayers')?.addEventListener('click', () => closeAndRun(toggleLayersWindow))
+        document.getElementById('desktopToggleProps')?.addEventListener('click', () => closeAndRun(toggleImagePropertiesWindow))
+        document.getElementById('desktopOpenHistogram')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) { alert('Please load an image first'); return }
+            openHistogramWindow(imageEditor)
+        }))
+        document.getElementById('desktopOpenColorInfo')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) { alert('Please load an image first'); return }
+            openColorInfoWindow(imageEditor)
+        }))
+        document.getElementById('desktopOpenStats')?.addEventListener('click', () => closeAndRun(() => {
+            if (!imageEditor) { alert('Please load an image first'); return }
+            openImageStatsWindow(imageEditor)
+        }))
+        document.getElementById('desktopResetLayout')?.addEventListener('click', () => closeAndRun(() => {
+            localStorage.removeItem('wm-window-states')
+            if (confirm('This will reset all window positions and reload the page. Continue?')) {
+                location.reload()
+            }
+        }))
+        
+        // Sync Edit GIF button visibility
+        const desktopEditGifBtn = document.getElementById('desktopEditGifBtn')
+        const mobileEditGifBtn = document.getElementById('editGifBtn')
+        if (desktopEditGifBtn && mobileEditGifBtn) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'style') {
+                        desktopEditGifBtn.style.display = mobileEditGifBtn.style.display
+                    }
+                })
+            })
+            observer.observe(mobileEditGifBtn, { attributes: true, attributeFilter: ['style'] })
+        }
+    }
 })
 
 window.addEventListener('keydown', handleKeyboardShortcuts)

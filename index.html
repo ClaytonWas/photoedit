@@ -14,6 +14,106 @@
     <title>photoedit</title>
 </head>
 <body>
+    <!-- Desktop Top Menu Bar (hidden on mobile) -->
+    <nav class="desktopMenuBar" id="desktopMenuBar">
+        <div class="desktopRenderStatus" id="desktopRenderStatus">
+            <div class="spinner" aria-hidden="true"></div>
+            <span>No Image</span>
+        </div>
+        <div class="menuBarItem" data-menu="desktopFileMenu">
+            <span>File</span>
+            <div class="dropdownMenu" id="desktopFileMenu">
+                <button class="dropdownItem" id="desktopOpenFile">
+                    <span class="dropdownItemLabel">Open</span>
+                    <span class="dropdownItemShortcut">Ctrl+O</span>
+                </button>
+                <button class="dropdownItem" id="desktopSaveAction">
+                    <span class="dropdownItemLabel">Save</span>
+                    <span class="dropdownItemShortcut">Ctrl+S</span>
+                </button>
+                <div class="dropdownDivider"></div>
+                <button class="dropdownItem" id="desktopCreateGifBtn">
+                    <span class="dropdownItemLabel">Create GIF</span>
+                </button>
+                <button class="dropdownItem" id="desktopEditGifBtn" style="display: none;">
+                    <span class="dropdownItemLabel">Edit GIF Frames</span>
+                </button>
+                <div class="dropdownDivider"></div>
+                <button class="dropdownItem" id="desktopUndoAction" disabled>
+                    <span class="dropdownItemLabel">Undo</span>
+                    <span class="dropdownItemShortcut">Ctrl+Z</span>
+                </button>
+                <button class="dropdownItem" id="desktopRedoAction" disabled>
+                    <span class="dropdownItemLabel">Redo</span>
+                    <span class="dropdownItemShortcut">Ctrl+Y</span>
+                </button>
+            </div>
+        </div>
+        <div class="menuBarItem" data-menu="desktopImageMenu">
+            <span>Image</span>
+            <div class="dropdownMenu" id="desktopImageMenu">
+                <div class="dropdownSubmenu">
+                    <span class="dropdownSubmenuLabel">Rotate</span>
+                    <div class="dropdownSubmenuItems">
+                        <button class="dropdownItem" id="desktopRotateCW90">90° Clockwise</button>
+                        <button class="dropdownItem" id="desktopRotateCCW90">90° Counter-Clockwise</button>
+                    </div>
+                </div>
+                <div class="dropdownSubmenu">
+                    <span class="dropdownSubmenuLabel">Crop</span>
+                    <div class="dropdownSubmenuItems">
+                        <button class="dropdownItem" id="desktopCursorCrop">Select with Cursor</button>
+                        <button class="dropdownItem" id="desktopManualCrop">Manual Entry</button>
+                    </div>
+                </div>
+                <div class="dropdownDivider"></div>
+                <button class="dropdownItem" id="desktopResetImage">
+                    <span class="dropdownItemLabel">Reset Image</span>
+                </button>
+            </div>
+        </div>
+        <div class="menuBarItem" data-menu="desktopFilterMenu">
+            <span>Filter</span>
+            <div class="dropdownMenu" id="desktopFilterMenu">
+                <button class="dropdownItem" id="desktopGreyscale">Greyscale</button>
+                <button class="dropdownItem" id="desktopSepia">Sepia</button>
+                <button class="dropdownItem" id="desktopFilmEffects">Film Effects</button>
+                <button class="dropdownItem" id="desktopPaintedStylization">Painted Stylization</button>
+                <button class="dropdownItem" id="desktopHsvAdjust">HSV Adjustment</button>
+                <div class="dropdownDivider"></div>
+                <div class="dropdownSubmenu">
+                    <span class="dropdownSubmenuLabel">Visualizations</span>
+                    <div class="dropdownSubmenuItems">
+                        <span class="dropdownGroupLabel">Spatial Geometry</span>
+                        <button class="dropdownItem" id="desktopPointsInSpace">Points in Space</button>
+                        <button class="dropdownItem" id="desktopVectorsInSpace">Vectors in Space</button>
+                        <span class="dropdownGroupLabel">Sobel Edge Detection</span>
+                        <button class="dropdownItem" id="desktopSobelEdges">Sobel Edges</button>
+                        <button class="dropdownItem" id="desktopSobelEdgesColoured">Sobel Edges (Colored)</button>
+                        <span class="dropdownGroupLabel">Prewitt Edge Detection</span>
+                        <button class="dropdownItem" id="desktopPrewireEdges">Prewitt Edges</button>
+                        <button class="dropdownItem" id="desktopPrewireEdgesColoured">Prewitt Edges (Colored)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="menuBarItem" data-menu="desktopWindowMenu">
+            <span>Window</span>
+            <div class="dropdownMenu" id="desktopWindowMenu">
+                <span class="dropdownGroupLabel">Panels</span>
+                <button class="dropdownItem" id="desktopToggleLayers">Layers</button>
+                <button class="dropdownItem" id="desktopToggleProps">Image Properties</button>
+                <div class="dropdownDivider"></div>
+                <span class="dropdownGroupLabel">Analysis</span>
+                <button class="dropdownItem" id="desktopOpenHistogram">Histogram</button>
+                <button class="dropdownItem" id="desktopOpenColorInfo">Color Info</button>
+                <button class="dropdownItem" id="desktopOpenStats">Statistics</button>
+                <div class="dropdownDivider"></div>
+                <button class="dropdownItem" id="desktopResetLayout">Reset Window Layout</button>
+            </div>
+        </div>
+    </nav>
+
     <!-- Main Content Area -->
     <main class="mainContent">
         <!-- Image Module -->
@@ -113,15 +213,6 @@
             <span>Filter</span>
         </button>
         
-        <button class="navBtn" id="navVisual" aria-label="Visualizations menu" aria-expanded="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-            </svg>
-            <span>Visual</span>
-        </button>
-        
         <button class="navBtn" id="navWindows" aria-label="Windows menu" aria-expanded="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="7" height="7" rx="1"></rect>
@@ -136,7 +227,7 @@
     <!-- Render Status Bubble (fixed top-right) -->
     <div id="renderStatus" class="renderStatus" role="status" aria-live="polite">
         <div class="spinner" aria-hidden="true"></div>
-        <span>Ready</span>
+        <span>No Image</span>
     </div>
 
     <!-- Menu Panels (tap to open, appear as bottom sheets) -->
@@ -229,15 +320,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
                 HSV Adjust
             </button>
-        </div>
-    </div>
-
-    <div class="menuPanel" id="visualMenu" aria-hidden="true">
-        <div class="menuPanelHeader">
-            <h2>Visualizations</h2>
-            <button class="menuClose" aria-label="Close menu">×</button>
-        </div>
-        <div class="menuPanelContent">
+            <hr class="menuDivider">
+            <div class="menuGroup">
+                <span class="menuGroupLabel">Visualizations</span>
+            </div>
             <div class="menuGroup">
                 <span class="menuGroupLabel">Spatial Geometry</span>
                 <div class="menuRow">
@@ -253,7 +339,7 @@
                 </div>
             </div>
             <div class="menuGroup">
-                <span class="menuGroupLabel">Prewire Edge Detection</span>
+                <span class="menuGroupLabel">Prewitt Edge Detection</span>
                 <div class="menuRow">
                     <button class="menuItem compact" id="prewireEdges">Regular</button>
                     <button class="menuItem compact" id="prewireEdgesColouredDirections">Colored</button>

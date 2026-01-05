@@ -85,11 +85,14 @@ function setupDefaultDockedLayout() {
         if (!tabGroup) return
         
         // Calculate position: 25% viewport width on the right side, full height
-        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '60')
+        // On desktop (1024px+), we have a top menu bar (32px) and no bottom taskbar
+        const isDesktop = window.innerWidth >= 1024
+        const topMenuHeight = isDesktop ? 32 : 0
+        const bottomNavHeight = isDesktop ? 0 : parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '60')
         // Account for safe area inset at bottom (for mobile devices with notches)
         const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0') || 0
         const screenWidth = window.innerWidth
-        const availableHeight = window.innerHeight - bottomNavHeight - safeAreaBottom - 8 // 8px gap from taskbar
+        const availableHeight = window.innerHeight - topMenuHeight - bottomNavHeight - safeAreaBottom
         
         // 25% of viewport width for the panel
         const panelWidth = Math.max(280, screenWidth * 0.25)
@@ -97,7 +100,7 @@ function setupDefaultDockedLayout() {
         // Position to the right side, full height (with gap from taskbar)
         const dockStyle = {
             x: screenWidth - panelWidth,
-            y: 0,
+            y: topMenuHeight,
             width: panelWidth,
             height: availableHeight
         }

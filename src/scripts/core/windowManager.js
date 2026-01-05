@@ -53,6 +53,36 @@ class WindowManager {
         return isNarrow || isMobileDevice
     }
     
+    /**
+     * Check if we're on desktop (1024px+)
+     */
+    isDesktop() {
+        return window.innerWidth >= 1024
+    }
+    
+    /**
+     * Get the height of the top menu bar (only on desktop)
+     */
+    getTopMenuHeight() {
+        return this.isDesktop() ? 32 : 0
+    }
+    
+    /**
+     * Get the usable screen area accounting for taskbars/menus
+     */
+    getUsableArea() {
+        const topMenuHeight = this.getTopMenuHeight()
+        const bottomNavHeight = this.isDesktop() ? 0 : parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '60')
+        const taskbarGap = this.isDesktop() ? 0 : 8
+        
+        return {
+            x: 0,
+            y: topMenuHeight,
+            width: window.innerWidth,
+            height: window.innerHeight - topMenuHeight - bottomNavHeight - taskbarGap
+        }
+    }
+    
     init() {
         // Create container for all managed windows
         this.container = document.createElement('div')
@@ -466,8 +496,9 @@ class WindowManager {
                 }
             }
             
-            // Keep titlebar visible
-            newY = Math.max(0, newY)
+            // Keep titlebar visible (account for top menu bar on desktop)
+            const minY = this.getTopMenuHeight()
+            newY = Math.max(minY, newY)
             
             element.style.left = `${newX}px`
             element.style.top = `${newY}px`
@@ -514,21 +545,28 @@ class WindowManager {
      * Detect if cursor is in an edge snap zone
      */
     detectEdgeSnapZone(clientX, clientY) {
-        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '64')
-        const screenWidth = window.innerWidth
-        const screenHeight = window.innerHeight - bottomNavHeight
+        const area = this.getUsableArea()
+        const screenWidth = area.width
+        const topOffset = area.y
+        const bottomEdge = topOffset + area.height
         const threshold = this.edgeSnapThreshold
         
+        // Use absolute Y coordinates for detection
+        const nearTop = clientY < topOffset + threshold
+        const nearBottom = clientY > bottomEdge - threshold
+        const nearLeft = clientX < threshold
+        const nearRight = clientX > screenWidth - threshold
+        
         // Corner zones (for quarter-screen docking)
-        if (clientX < threshold && clientY < threshold) return 'top-left'
-        if (clientX > screenWidth - threshold && clientY < threshold) return 'top-right'
-        if (clientX < threshold && clientY > screenHeight - threshold) return 'bottom-left'
-        if (clientX > screenWidth - threshold && clientY > screenHeight - threshold) return 'bottom-right'
+        if (nearLeft && nearTop) return 'top-left'
+        if (nearRight && nearTop) return 'top-right'
+        if (nearLeft && nearBottom) return 'bottom-left'
+        if (nearRight && nearBottom) return 'bottom-right'
         
         // Edge zones (for half-screen docking)
-        if (clientX < threshold) return 'left'
-        if (clientX > screenWidth - threshold) return 'right'
-        if (clientY < threshold) return 'top'
+        if (nearLeft) return 'left'
+        if (nearRight) return 'right'
+        if (nearTop) return 'top'
         
         return null
     }
@@ -585,34 +623,34 @@ class WindowManager {
             return
         }
         
-        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '60')
-        const taskbarGap = 8 // Gap from taskbar
-        const screenWidth = window.innerWidth
-        const screenHeight = window.innerHeight - bottomNavHeight - taskbarGap
+        const area = this.getUsableArea()
+        const screenWidth = area.width
+        const screenHeight = area.height
+        const topOffset = area.y
         
         let previewStyle = {}
         
         switch (zone) {
             case 'left':
-                previewStyle = { left: 0, top: 0, width: screenWidth / 2, height: screenHeight }
+                previewStyle = { left: 0, top: topOffset, width: screenWidth / 2, height: screenHeight }
                 break
             case 'right':
-                previewStyle = { left: screenWidth / 2, top: 0, width: screenWidth / 2, height: screenHeight }
+                previewStyle = { left: screenWidth / 2, top: topOffset, width: screenWidth / 2, height: screenHeight }
                 break
             case 'top':
-                previewStyle = { left: 0, top: 0, width: screenWidth, height: screenHeight }
+                previewStyle = { left: 0, top: topOffset, width: screenWidth, height: screenHeight }
                 break
             case 'top-left':
-                previewStyle = { left: 0, top: 0, width: screenWidth / 2, height: screenHeight / 2 }
+                previewStyle = { left: 0, top: topOffset, width: screenWidth / 2, height: screenHeight / 2 }
                 break
             case 'top-right':
-                previewStyle = { left: screenWidth / 2, top: 0, width: screenWidth / 2, height: screenHeight / 2 }
+                previewStyle = { left: screenWidth / 2, top: topOffset, width: screenWidth / 2, height: screenHeight / 2 }
                 break
             case 'bottom-left':
-                previewStyle = { left: 0, top: screenHeight / 2, width: screenWidth / 2, height: screenHeight / 2 }
+                previewStyle = { left: 0, top: topOffset + screenHeight / 2, width: screenWidth / 2, height: screenHeight / 2 }
                 break
             case 'bottom-right':
-                previewStyle = { left: screenWidth / 2, top: screenHeight / 2, width: screenWidth / 2, height: screenHeight / 2 }
+                previewStyle = { left: screenWidth / 2, top: topOffset + screenHeight / 2, width: screenWidth / 2, height: screenHeight / 2 }
                 break
         }
         
@@ -636,10 +674,10 @@ class WindowManager {
         if (!windowInstance) return
         
         const { element, state, config } = windowInstance
-        const bottomNavHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-height') || '60')
-        const taskbarGap = 8 // Gap from taskbar
-        const screenWidth = window.innerWidth
-        const screenHeight = window.innerHeight - bottomNavHeight - taskbarGap
+        const area = this.getUsableArea()
+        const screenWidth = area.width
+        const screenHeight = area.height
+        const topOffset = area.y
         
         // Store pre-dock state for restoration
         if (!state.preDockState) {
@@ -655,26 +693,26 @@ class WindowManager {
         
         switch (zone) {
             case 'left':
-                dockStyle = { x: 0, y: 0, width: screenWidth / 2, height: screenHeight }
+                dockStyle = { x: 0, y: topOffset, width: screenWidth / 2, height: screenHeight }
                 break
             case 'right':
-                dockStyle = { x: screenWidth / 2, y: 0, width: screenWidth / 2, height: screenHeight }
+                dockStyle = { x: screenWidth / 2, y: topOffset, width: screenWidth / 2, height: screenHeight }
                 break
             case 'top':
                 // Maximize
-                dockStyle = { x: 0, y: 0, width: screenWidth, height: screenHeight }
+                dockStyle = { x: 0, y: topOffset, width: screenWidth, height: screenHeight }
                 break
             case 'top-left':
-                dockStyle = { x: 0, y: 0, width: screenWidth / 2, height: screenHeight / 2 }
+                dockStyle = { x: 0, y: topOffset, width: screenWidth / 2, height: screenHeight / 2 }
                 break
             case 'top-right':
-                dockStyle = { x: screenWidth / 2, y: 0, width: screenWidth / 2, height: screenHeight / 2 }
+                dockStyle = { x: screenWidth / 2, y: topOffset, width: screenWidth / 2, height: screenHeight / 2 }
                 break
             case 'bottom-left':
-                dockStyle = { x: 0, y: screenHeight / 2, width: screenWidth / 2, height: screenHeight / 2 }
+                dockStyle = { x: 0, y: topOffset + screenHeight / 2, width: screenWidth / 2, height: screenHeight / 2 }
                 break
             case 'bottom-right':
-                dockStyle = { x: screenWidth / 2, y: screenHeight / 2, width: screenWidth / 2, height: screenHeight / 2 }
+                dockStyle = { x: screenWidth / 2, y: topOffset + screenHeight / 2, width: screenWidth / 2, height: screenHeight / 2 }
                 break
         }
         
@@ -1576,8 +1614,9 @@ class WindowManager {
             if (windowSnap.x !== null) newX = windowSnap.x
             if (windowSnap.y !== null) newY = windowSnap.y
             
-            // Keep titlebar visible
-            newY = Math.max(0, newY)
+            // Keep titlebar visible (account for top menu bar on desktop)
+            const minY = this.getTopMenuHeight()
+            newY = Math.max(minY, newY)
             
             element.style.left = `${newX}px`
             element.style.top = `${newY}px`
@@ -2262,11 +2301,12 @@ class WindowManager {
     }
     
     getDefaultPosition() {
-        // Cascade windows
+        // Cascade windows, accounting for top menu bar on desktop
         const offset = (this.windows.size % 10) * 30
+        const topOffset = this.getTopMenuHeight()
         return {
             x: 50 + offset,
-            y: 50 + offset
+            y: topOffset + 20 + offset
         }
     }
     
@@ -2352,6 +2392,14 @@ class WindowManager {
                 width: 100% !important;
                 height: calc(100% - var(--bottom-nav-height, 60px) - env(safe-area-inset-bottom, 0px)) !important;
                 border-radius: 0;
+            }
+            
+            /* Desktop: account for top menu bar */
+            @media (min-width: 1024px) {
+                .wm-window.wm-maximized {
+                    top: 32px !important;
+                    height: calc(100% - 32px - 8px) !important;
+                }
             }
             
             .wm-window.wm-hidden {
@@ -2527,6 +2575,13 @@ class WindowManager {
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border, rgba(0,0,0,0.08));
                 z-index: 999;
                 pointer-events: auto;
+            }
+            
+            /* Desktop: dock at bottom with no taskbar */
+            @media (min-width: 1024px) {
+                .wm-dock {
+                    bottom: 8px;
+                }
             }
             
             .wm-dock:empty {

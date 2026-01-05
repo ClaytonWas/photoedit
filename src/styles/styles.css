@@ -661,6 +661,236 @@ input, select {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   DESKTOP TOP MENU BAR (hidden on mobile)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.desktopMenuBar {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .desktopMenuBar {
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 32px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        z-index: 1000;
+        padding: 0 var(--space-2);
+        gap: 0;
+        font-size: 0.8125rem;
+    }
+    
+    /* Desktop Render Status - integrated into menu bar */
+    .desktopRenderStatus {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 0 var(--space-3);
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        border-right: 1px solid var(--border);
+        margin-right: var(--space-1);
+        min-width: 95px;
+    }
+    
+    .desktopRenderStatus .spinner {
+        display: none;
+        width: 10px;
+        height: 10px;
+        border: 1.5px solid var(--border-strong);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+    
+    .desktopRenderStatus.isRendering {
+        color: var(--accent);
+    }
+    
+    .desktopRenderStatus.isRendering .spinner {
+        display: block;
+    }
+    
+    .desktopRenderStatus.isError {
+        color: var(--danger);
+    }
+    
+    .desktopRenderStatus.isReady {
+        color: var(--text-secondary);
+    }
+    
+    /* Hide floating render status on desktop */
+    .renderStatus {
+        display: none;
+    }
+    
+    .menuBarItem {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    
+    .menuBarItem > span {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding: 0 var(--space-3);
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: background var(--transition), color var(--transition);
+        user-select: none;
+    }
+    
+    .menuBarItem > span:hover,
+    .menuBarItem.active > span {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+    
+    .menuBarItem.active > span {
+        background: var(--accent-soft);
+        color: var(--accent);
+    }
+    
+    /* Dropdown Menu */
+    .dropdownMenu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 220px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        padding: var(--space-1) 0;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-4px);
+        transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+        z-index: 1001;
+    }
+    
+    .menuBarItem.active .dropdownMenu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+    
+    .dropdownItem {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: var(--space-2) var(--space-3);
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-size: 0.8125rem;
+        text-align: left;
+        cursor: pointer;
+        transition: background var(--transition);
+    }
+    
+    .dropdownItem:hover:not(:disabled) {
+        background: var(--bg-tertiary);
+    }
+    
+    .dropdownItem:disabled {
+        color: var(--text-muted);
+        cursor: not-allowed;
+    }
+    
+    .dropdownItemLabel {
+        flex: 1;
+    }
+    
+    .dropdownItemShortcut {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        margin-left: var(--space-4);
+    }
+    
+    .dropdownDivider {
+        height: 1px;
+        background: var(--border);
+        margin: var(--space-1) 0;
+    }
+    
+    .dropdownGroupLabel {
+        display: block;
+        padding: var(--space-2) var(--space-3) var(--space-1);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+    
+    /* Submenu styling */
+    .dropdownSubmenu {
+        position: relative;
+    }
+    
+    .dropdownSubmenuLabel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: var(--space-2) var(--space-3);
+        color: var(--text-primary);
+        font-size: 0.8125rem;
+        cursor: pointer;
+        transition: background var(--transition);
+    }
+    
+    .dropdownSubmenuLabel::after {
+        content: '›';
+        font-size: 1rem;
+        color: var(--text-muted);
+    }
+    
+    .dropdownSubmenuLabel:hover {
+        background: var(--bg-tertiary);
+    }
+    
+    .dropdownSubmenuItems {
+        position: absolute;
+        left: 100%;
+        top: 0;
+        min-width: 200px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        padding: var(--space-1) 0;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(-4px);
+        transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+        z-index: 1002;
+    }
+    
+    .dropdownSubmenu:hover .dropdownSubmenuItems {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0);
+    }
+    
+    .dropdownSubmenuItems .dropdownGroupLabel {
+        padding-top: var(--space-2);
+    }
+    
+    .dropdownSubmenuItems .dropdownGroupLabel:first-child {
+        padding-top: var(--space-1);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    BOTTOM NAVIGATION TASKBAR
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -1226,71 +1456,24 @@ input, select {
 
 @media (min-width: 1024px) {
     :root {
-        --bottom-nav-height: 52px;
+        --bottom-nav-height: 0px;
+        --top-menu-height: 32px;
     }
     
+    /* Hide bottom taskbar on desktop */
     .bottomTaskbar {
-        justify-content: center;
-        gap: var(--space-2);
-        padding: var(--space-2) var(--space-4);
-        height: auto;
-        min-height: var(--bottom-nav-height);
-        padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
-        background: var(--bg-secondary);
-        box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.04);
-    }
-    
-    .navBtn {
-        flex: none;
-        flex-direction: row;
-        gap: var(--space-2);
-        padding: var(--space-2) var(--space-4);
-        border-radius: var(--radius-md);
-    }
-    
-    .navBtn span {
-        font-size: 0.8rem;
-        text-transform: none;
-        letter-spacing: normal;
-    }
-    
-    .navBtn:hover {
-        background: var(--bg-tertiary);
-        color: var(--text-primary);
-    }
-    
-    .navBtn.active::before {
         display: none;
     }
     
-    .menuPanel {
-        max-width: 400px;
-        left: 50%;
-        margin-left: -200px;
-        border-radius: var(--radius-xl);
-        bottom: calc(var(--bottom-nav-height) + var(--space-3) + env(safe-area-inset-bottom, 0px));
-        max-height: 60vh;
-        visibility: hidden;
-        opacity: 0;
-        transform: translateY(12px);
-        transition: transform 0.2s ease, opacity 0.2s ease, visibility 0.2s;
-        box-shadow: var(--shadow-xl);
-    }
-    
-    .menuPanel::before {
-        display: none;
-    }
-    
-    .menuPanel.active {
-        visibility: visible;
-        opacity: 1;
-        transform: translateY(0);
-    }
-    
+    /* Hide mobile menu panels on desktop */
+    .menuPanel,
     .menuOverlay {
-        background: rgba(15, 23, 42, 0.25);
-        backdrop-filter: blur(2px);
-        -webkit-backdrop-filter: blur(2px);
+        display: none !important;
+    }
+    
+    .mainContent {
+        padding-top: calc(var(--top-menu-height) + var(--space-5));
+        padding-bottom: var(--space-5);
     }
     
     .layersModule {
@@ -1299,8 +1482,8 @@ input, select {
     
     .mainContent {
         padding: var(--space-5);
+        padding-top: calc(var(--top-menu-height) + var(--space-5));
         gap: var(--space-5);
-        padding-bottom: calc(var(--bottom-nav-height) + var(--space-5) + env(safe-area-inset-bottom, 0px));
     }
 }
 
