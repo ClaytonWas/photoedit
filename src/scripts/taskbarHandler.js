@@ -282,7 +282,7 @@ function handleKeyboardShortcuts(event) {
     } else if (key === 's') {
         event.preventDefault()
         if (imageEditor) {
-            imageEditor.downloadCanvas()
+            imageEditor.quickExport()
         }
     }
 }
@@ -2471,10 +2471,10 @@ window.addEventListener('load', () => {
         openFileButton.addEventListener('click', triggerOpenFileDialog)
     }
 
-    const saveActionButton = document.getElementById('saveAction')
-    if (saveActionButton) {
-        saveActionButton.addEventListener('click', async () => {
-            console.log('Save button clicked, imageEditor:', imageEditor)
+    const exportActionButton = document.getElementById('exportAction')
+    if (exportActionButton) {
+        exportActionButton.addEventListener('click', async () => {
+            console.log('Export button clicked, imageEditor:', imageEditor)
             if (!imageEditor) {
                 console.log('No imageEditor, returning early')
                 return
@@ -3046,9 +3046,9 @@ window.addEventListener('load', () => {
         
         // FILE MENU
         document.getElementById('desktopOpenFile')?.addEventListener('click', () => closeAndRun(triggerOpenFileDialog))
-        document.getElementById('desktopSaveAction')?.addEventListener('click', () => closeAndRun(() => {
+        document.getElementById('desktopExportAction')?.addEventListener('click', () => closeAndRun(async () => {
             if (!imageEditor) return
-            imageEditor.downloadCanvas()
+            await imageEditor.quickExport()
         }))
         document.getElementById('desktopCreateGifBtn')?.addEventListener('click', () => closeAndRun(openGifAnimatorDialog))
         document.getElementById('desktopEditGifBtn')?.addEventListener('click', () => closeAndRun(openGifFrameEditorDialog))

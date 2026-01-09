@@ -55,10 +55,41 @@ export class ImageEditor {
         this.commitSnapshot('Reset image')
     }
 
-    quickExport() {
+    async quickExport() {
+        const filename = `${this.name}_PhotoEditsExport.${this.extension}`
+        
+        // Try to use File System Access API for proper "Save As" dialog
+        if ('showSaveFilePicker' in window) {
+            try {
+                const mimeType = this.type || 'image/png'
+                const extension = this.extension || 'png'
+                
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{
+                        description: `${extension.toUpperCase()} Image`,
+                        accept: { [mimeType]: [`.${extension}`] }
+                    }]
+                })
+                
+                const writable = await fileHandle.createWritable()
+                const blob = await new Promise(resolve => 
+                    this.canvas.toBlob(resolve, mimeType)
+                )
+                await writable.write(blob)
+                await writable.close()
+                return
+            } catch (err) {
+                // User cancelled or API failed, fall back to download
+                if (err.name === 'AbortError') return
+                console.warn('File System Access API failed, falling back to download:', err)
+            }
+        }
+        
+        // Fallback: auto-download for browsers without File System Access API
         const exportAnchor = document.createElement('a')
         exportAnchor.href = this.canvas.toDataURL(this.type)
-        exportAnchor.download = `${this.name}_PhotoEditsExport.${this.extension}`
+        exportAnchor.download = filename
         exportAnchor.click()
     }
 
