@@ -101,13 +101,39 @@ function openCropPanel(focusManualFields = false) {
 }
 
 function closeCropPanel() {
+    // Leaving cursor-crop mode armed would keep window.isCropping true, which disables
+    // panning and zooming for the rest of the session.
+    cancelCursorCropSelection()
     const panel = getCropPanel()
     if (!panel) return
     panel.classList.add('hidden')
 }
 
+// Cleanup handle for an in-progress cursor selection, so it can be torn down whether
+// the user completes the drag, restarts the selection, or closes the panel.
+let activeCropSelectionCleanup = null
+
+function cancelCursorCropSelection() {
+    if (activeCropSelectionCleanup) {
+        const cleanup = activeCropSelectionCleanup
+        activeCropSelectionCleanup = null
+        cleanup()
+    }
+
+    window.isCropping = false
+
+    const imageCanvasDiv = document.getElementById('imageCanvasDiv')
+    if (imageCanvasDiv) {
+        imageCanvasDiv.style.cursor = 'grab'
+    }
+}
+
 function triggerCursorCropSelection() {
     if (!imageEditor) return
+
+    // Restart cleanly if a previous selection is still armed.
+    cancelCursorCropSelection()
+
     openCropPanel()
     window.isCropping = true // Disable dragging in canvasHandler.js if cropping
 
@@ -116,12 +142,7 @@ function triggerCursorCropSelection() {
         imageCanvasDiv.style.cursor = 'default'
     }
     
-    const disableSelection = enableSelection((selection) => {
-        if (imageCanvasDiv) {
-            imageCanvasDiv.style.cursor = 'grab'
-        }
-        window.isCropping = false
-
+    activeCropSelectionCleanup = enableSelection((selection) => {
         let { startHeight, startWidth, endHeight, endWidth } = selection
 
         if (startHeight > endHeight) {
@@ -136,7 +157,7 @@ function triggerCursorCropSelection() {
         safeSetInputValue('cropEndHeight', endHeight)
         safeSetInputValue('cropEndWidth', endWidth)
 
-        disableSelection()
+        cancelCursorCropSelection()
     })
 }
 
@@ -493,6 +514,17 @@ function enableSelection(callback) {
 }
 
 function resetEditor() {
+    // Playback drives the shared canvas, so it has to stop before a new image takes over.
+    stopGifPlayback()
+    const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
+    if (gifPlayStopBtn) {
+        gifPlayStopBtn.classList.remove('playing')
+    }
+
+    // Drop any armed cursor-crop selection so pan/zoom stays usable.
+    cancelCursorCropSelection()
+    stopRenderStatusPolling()
+
     if (imageEditor) {
         imageEditor = null
     }
@@ -546,12 +578,25 @@ async function uploadImages() {
 }
 
 /**
+ * Split a filename into its base name and lower-cased extension (without the dot).
+ * Files with no extension keep their full name instead of collapsing to an empty string.
+ */
+function splitFileName(fileName) {
+    const dotIndex = fileName.lastIndexOf('.')
+    if (dotIndex <= 0) return { baseName: fileName, extension: '' }
+    return {
+        baseName: fileName.substring(0, dotIndex),
+        extension: fileName.substring(dotIndex + 1).toLowerCase()
+    }
+}
+
+/**
  * Check if a file is a supported image (standard format or RAW)
  */
 function isImageFile(file) {
     if (file.type.startsWith('image/')) return true
-    const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-    return RAW_EXTENSIONS.has(ext)
+    const { extension } = splitFileName(file.name)
+    return extension ? RAW_EXTENSIONS.has(`.${extension}`) : false
 }
 
 /**
@@ -655,15 +700,15 @@ async function processDroppedImages(files) {
         const file = files[0]
         resetEditor()
 
-        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-        const isRaw = RAW_EXTENSIONS.has(fileExtension)
+        const { baseName, extension: fileExtension } = splitFileName(file.name)
+        const isRaw = RAW_EXTENSIONS.has(`.${fileExtension}`)
 
         if (isRaw) {
             await uploadRawImage(file)
             return
         }
 
-        const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')
+        const isGif = file.type === 'image/gif' || fileExtension === 'gif'
 
         if (isGif) {
             // Load GIF with frame stack
@@ -689,7 +734,7 @@ async function processDroppedImages(files) {
                     ctx.putImageData(frame.imageData, 0, 0)
 
                     const image = new Image()
-                    const name = file.name.substring(0, file.name.lastIndexOf('.'))
+                    const name = baseName
                     const type = file.type || 'image/gif'
                     const extension = 'gif'
                     const mainCanvas = document.getElementById('imageCanvas')
@@ -726,9 +771,11 @@ async function processDroppedImages(files) {
             const reader = new FileReader()
             const image = new Image()
 
-            const name = file.name.substring(0, file.name.lastIndexOf('.'))
-            const type = file.type
-            const extension = type.slice(6)
+            const name = baseName
+            // Prefer the browser-reported MIME type, but fall back to the filename so a
+            // file with a missing type still gets a usable type/extension pair.
+            const type = file.type || (fileExtension ? `image/${fileExtension}` : 'image/png')
+            const extension = type.slice(6) || fileExtension || 'png'
             const canvas = document.getElementById('imageCanvas')
 
             reader.onload = () => {
@@ -901,8 +948,7 @@ async function uploadMultipleAsGif(files) {
  * Supports both standard image formats and RAW files (via embedded preview extraction)
  */
 async function loadImageFromFile(file) {
-    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-    const isRaw = RAW_EXTENSIONS.has(fileExtension)
+    const isRaw = RAW_EXTENSIONS.has(`.${splitFileName(file.name).extension}`)
     
     if (isRaw) {
         return await extractRawPreview(file)
@@ -1130,7 +1176,7 @@ async function uploadRawImage(file) {
         const image = await extractRawPreview(file)
         
         // File Metadata
-        const name = file.name.substring(0, file.name.lastIndexOf('.'))
+        const { baseName: name } = splitFileName(file.name)
         const type = 'image/jpeg' // Preview is always JPEG
         const extension = 'jpg'
         const canvas = document.getElementById('imageCanvas')
@@ -1485,7 +1531,11 @@ function populateGifAnimatorParameters() {
     // Set default values
     updateGifAnimatorDefaults()
 
-    select.addEventListener('change', updateGifAnimatorDefaults)
+    // The <select> is reused across dialog openings, so bind the listener only once.
+    if (!select.dataset.defaultsListenerBound) {
+        select.dataset.defaultsListenerBound = 'true'
+        select.addEventListener('change', updateGifAnimatorDefaults)
+    }
 }
 
 function updateGifAnimatorDefaults() {
@@ -2958,13 +3008,10 @@ window.addEventListener('load', () => {
     
     // Reset Window Layout
     document.getElementById('resetWindowLayout')?.addEventListener('click', () => {
-        // Clear saved window states
-        localStorage.removeItem('wm-window-states')
-        
-        // Reload the page to reset everything
-        if (confirm('This will reset all window positions and reload the page. Continue?')) {
-            location.reload()
-        }
+        // Ask before discarding the layout, then clear and reload.
+        if (!confirm('This will reset all window positions and reload the page. Continue?')) return
+        windowManager.clearAllSavedStates()
+        location.reload()
     })
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3212,10 +3259,9 @@ window.addEventListener('load', () => {
             openImageStatsWindow(imageEditor)
         }))
         document.getElementById('desktopResetLayout')?.addEventListener('click', () => closeAndRun(() => {
-            localStorage.removeItem('wm-window-states')
-            if (confirm('This will reset all window positions and reload the page. Continue?')) {
-                location.reload()
-            }
+            if (!confirm('This will reset all window positions and reload the page. Continue?')) return
+            windowManager.clearAllSavedStates()
+            location.reload()
         }))
         
         // Sync Edit GIF button visibility

@@ -47,7 +47,9 @@ export function initImageStats(editor) {
  */
 function calculateImageStats(imageData) {
     const data = imageData.data
-    const pixelCount = data.length / 4
+    // Transparent pixels are skipped in the loop below, so count the sampled pixels as
+    // we go — dividing by the full buffer length skews every mean and standard deviation.
+    let pixelCount = 0
     
     // Initialize accumulators
     let sumR = 0, sumG = 0, sumB = 0, sumLum = 0
@@ -72,6 +74,8 @@ function calculateImageStats(imageData) {
         // Skip transparent pixels
         if (a === 0) continue
         
+        pixelCount++
+        
         // Luminance (Rec. 709)
         const lum = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b)
         
@@ -92,21 +96,26 @@ function calculateImageStats(imageData) {
         histogram.lum[lum]++
     }
     
+    // Guard every division: a fully transparent image samples no pixels at all.
+    const sampleCount = pixelCount || 1
+
     // Calculate means
-    const meanR = sumR / pixelCount
-    const meanG = sumG / pixelCount
-    const meanB = sumB / pixelCount
-    const meanLum = sumLum / pixelCount
+    const meanR = sumR / sampleCount
+    const meanG = sumG / sampleCount
+    const meanB = sumB / sampleCount
+    const meanLum = sumLum / sampleCount
     
-    // Calculate standard deviations
-    const stdR = Math.sqrt((sumR2 / pixelCount) - (meanR * meanR))
-    const stdG = Math.sqrt((sumG2 / pixelCount) - (meanG * meanG))
-    const stdB = Math.sqrt((sumB2 / pixelCount) - (meanB * meanB))
-    const stdLum = Math.sqrt((sumLum2 / pixelCount) - (meanLum * meanLum))
+    // Calculate standard deviations. Clamp at zero because floating-point error can push
+    // the variance very slightly negative when every sample is identical.
+    const stdDev = (sumOfSquares, mean) => Math.sqrt(Math.max(0, (sumOfSquares / sampleCount) - (mean * mean)))
+    const stdR = stdDev(sumR2, meanR)
+    const stdG = stdDev(sumG2, meanG)
+    const stdB = stdDev(sumB2, meanB)
+    const stdLum = stdDev(sumLum2, meanLum)
     
     // Calculate percentiles from histogram
     const getPercentile = (hist, percentile) => {
-        const target = (percentile / 100) * pixelCount
+        const target = (percentile / 100) * sampleCount
         let cumulative = 0
         for (let i = 0; i < 256; i++) {
             cumulative += hist[i]
@@ -115,6 +124,11 @@ function calculateImageStats(imageData) {
         return 255
     }
     
+    // Nothing sampled: fall back to zeroes instead of reporting the 255 sentinels.
+    if (pixelCount === 0) {
+        minR = minG = minB = minLum = 0
+    }
+
     // Dynamic range
     const dynamicRange = maxLum - minLum
     const dynamicRangeStops = Math.log2(Math.max(1, maxLum) / Math.max(1, minLum))

@@ -77,7 +77,9 @@ function calculateHistogram(imageData) {
     let totalR = 0, totalG = 0, totalB = 0
     let minR = 255, minG = 255, minB = 255
     let maxR = 0, maxG = 0, maxB = 0
-    const pixelCount = data.length / 4
+    // Fully transparent pixels are skipped below, so the averages must divide by the
+    // number of pixels actually sampled rather than by every pixel in the buffer.
+    let pixelCount = 0
     
     for (let i = 0; i < data.length; i += 4) {
         const r = data[i]
@@ -86,6 +88,8 @@ function calculateHistogram(imageData) {
         // Skip fully transparent pixels
         if (data[i + 3] === 0) continue
         
+        pixelCount++
+
         red[r]++
         green[g]++
         blue[b]++
@@ -112,10 +116,12 @@ function calculateHistogram(imageData) {
         blue: Array.from(blue),
         luminance: Array.from(luminance),
         stats: {
-            avgR: Math.round(totalR / pixelCount),
-            avgG: Math.round(totalG / pixelCount),
-            avgB: Math.round(totalB / pixelCount),
-            minR, minG, minB,
+            avgR: pixelCount ? Math.round(totalR / pixelCount) : 0,
+            avgG: pixelCount ? Math.round(totalG / pixelCount) : 0,
+            avgB: pixelCount ? Math.round(totalB / pixelCount) : 0,
+            minR: pixelCount ? minR : 0,
+            minG: pixelCount ? minG : 0,
+            minB: pixelCount ? minB : 0,
             maxR, maxG, maxB,
             pixelCount
         }
@@ -150,7 +156,9 @@ function updateChart(histogramData) {
         ...histogramData.luminance
     )
     
-    const normalize = (arr) => arr.map(v => (v / maxValue) * 100)
+    // A fully transparent (or empty) image has no counted pixels; without this guard
+    // every bar becomes NaN and Chart.js renders nothing.
+    const normalize = (arr) => maxValue > 0 ? arr.map(v => (v / maxValue) * 100) : arr.map(() => 0)
     
     const labels = Array.from({ length: 256 }, (_, i) => i)
     

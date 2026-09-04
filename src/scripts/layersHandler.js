@@ -240,8 +240,18 @@ export function renderLayerProperties(imageEditor) {
     populateProperties(mobilePropertiesDiv)
 }
 
-window.addEventListener('imageEditorReady', (event) => {
-    const imageEditor = event.detail.instance
+// These controls live in static DOM that outlives any single editor, so they are wired
+// up once. Re-binding on every `imageEditorReady` left one live handler per image ever
+// opened, each still driving a superseded editor.
+let layerControlsInitialised = false
+
+// Always act on the editor that is currently loaded, not the one captured at bind time.
+const getEditor = () => window.getActiveEditor?.() ?? window.imageEditor ?? null
+
+window.addEventListener('imageEditorReady', () => {
+    if (layerControlsInitialised) return
+    layerControlsInitialised = true
+
     const layersList_HTMLElement = document.getElementById('layersList')
     const mobileLayersList_HTMLElement = document.getElementById('mobileLayersList')
 
@@ -252,7 +262,10 @@ window.addEventListener('imageEditorReady', (event) => {
         // Clicks on layerDiv's to select layer.
         listElement.addEventListener('click', (event) => {
             event.stopPropagation()
-            
+
+            const imageEditor = getEditor()
+            if (!imageEditor) return
+
             const selectedLayer_HTMLDiv = event.target.closest('.layerDiv')
             if(selectedLayer_HTMLDiv) {
                 // Update selection in all layer lists
@@ -272,19 +285,26 @@ window.addEventListener('imageEditorReady', (event) => {
         // Double clicks on layerDiv's to rename selected layer.
         listElement.addEventListener('dblclick', (event) => {
             event.stopPropagation()
-            
+
+            const imageEditor = getEditor()
+            if (!imageEditor) return
+
             let selectedDivName = event.target.closest('.layerDivName')
             if (!selectedDivName) return
 
             const selectedDiv = event.target.closest('.layerDiv')
             const selectedIndex = Number(selectedDiv?.dataset.index)
-            if (Number.isNaN(selectedIndex) || selectedIndex === undefined) return
+            if (Number.isNaN(selectedIndex)) return
+
+            const layer = imageEditor.layerManager.layers[selectedIndex]
+            if (!layer) return
+
             const currentName = selectedDivName.textContent
 
             const nameInput = document.createElement('input')
             nameInput.type = 'text'
             nameInput.name = 'newInput'
-            nameInput.value = imageEditor.layerManager.layers[selectedIndex].name
+            nameInput.value = layer.name
             selectedDivName.textContent = ''
             selectedDivName.appendChild(nameInput)
 
@@ -317,12 +337,14 @@ window.addEventListener('imageEditorReady', (event) => {
     const setupDeleteHandler = (buttonId) => {
         const deleteButton = document.getElementById(buttonId)
         deleteButton?.addEventListener('click', () => {
+            const imageEditor = getEditor()
+            if (!imageEditor) return
             const selectedLayerIndex = imageEditor.getSelectedIndex()
             if (selectedLayerIndex !== null) {
                 imageEditor.deleteLayer(selectedLayerIndex)
             }
             renderLayersList(imageEditor)
-            renderLayerProperties(imageEditor, selectedLayerIndex)
+            renderLayerProperties(imageEditor)
         })
     }
     
@@ -330,6 +352,8 @@ window.addEventListener('imageEditorReady', (event) => {
     setupDeleteHandler('mobileDeleteLayer')
 
     const handleLayerMove = (direction) => {
+        const imageEditor = getEditor()
+        if (!imageEditor) return
         const selectedLayerIndex = imageEditor.getSelectedIndex()
         if (selectedLayerIndex === null || selectedLayerIndex === undefined) return
         const newIndex = direction === 'up'

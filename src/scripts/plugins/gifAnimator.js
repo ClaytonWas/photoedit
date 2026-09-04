@@ -1007,6 +1007,7 @@ export function startGifPlayback(imageEditor, onFrameChange) {
             stopGifPlayback()
             return
         }
+        gifFrameStack.currentFrameIndex = currentIndex
         
         // Draw frame to editor canvas
         const canvas = document.createElement('canvas')
@@ -1030,6 +1031,9 @@ export function startGifPlayback(imageEditor, onFrameChange) {
             const delay = frame.delay || 100
             gifPlaybackInterval = setTimeout(() => {
                 currentIndex = (currentIndex + 1) % gifFrameStack.length
+                // Keep the stack's cursor in step so the frame editor and a later
+                // "save frame" act on the frame that is actually on screen.
+                gifFrameStack.currentFrameIndex = currentIndex
                 playNextFrame()
             }, delay)
         }

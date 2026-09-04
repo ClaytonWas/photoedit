@@ -8,19 +8,27 @@ const DEFAULT_IMAGE_PROPERTIES = {
     extension: 'png'
 }
 
+/**
+ * Write a value into an input unless the user is currently editing it.
+ * Renders fire constantly while sliders move, and each one refreshes these fields;
+ * without this guard a half-typed width or name is wiped out mid-edit.
+ */
+function setInputValuePreservingEdits(element, value) {
+    if (!element) return
+    if (document.activeElement === element) return
+    if (element.value !== String(value)) {
+        element.value = value
+    }
+}
+
 function updateDimensionInputs(imageEditor) {
-    const widthInput = document.getElementById('imageWidthInput')
-    const heightInput = document.getElementById('imageHeightInput')
-    const windowWidthInput = document.getElementById('windowImageWidthInput')
-    const windowHeightInput = document.getElementById('windowImageHeightInput')
-    
     const width = Math.round(imageEditor.image.width)
     const height = Math.round(imageEditor.image.height)
-    
-    if (widthInput) widthInput.value = width
-    if (heightInput) heightInput.value = height
-    if (windowWidthInput) windowWidthInput.value = width
-    if (windowHeightInput) windowHeightInput.value = height
+
+    setInputValuePreservingEdits(document.getElementById('imageWidthInput'), width)
+    setInputValuePreservingEdits(document.getElementById('imageHeightInput'), height)
+    setInputValuePreservingEdits(document.getElementById('windowImageWidthInput'), width)
+    setInputValuePreservingEdits(document.getElementById('windowImageHeightInput'), height)
 }
 
 /**
@@ -169,35 +177,40 @@ function setupMetadataControls(imageEditor) {
 }
 
 export function initializeModifiedImageDataModule(imageEditor) {
-    document.getElementById('titleNameModified').textContent = 'Name:'
-    const imageNameInput = document.getElementById('imageNameInput')
-    const windowImageNameInput = document.getElementById('windowImageNameInput')
-    if (imageNameInput) {
-        imageNameInput.value = imageEditor.name
-    }
-    if (windowImageNameInput) {
-        windowImageNameInput.value = imageEditor.name
-    }
+    if (!imageEditor) return
 
-    document.getElementById('titleDimensionsModified').textContent = 'Dimensions:'
+    const titleName = document.getElementById('titleNameModified')
+    if (titleName) titleName.textContent = 'Name:'
+
+    setInputValuePreservingEdits(document.getElementById('imageNameInput'), imageEditor.name)
+    setInputValuePreservingEdits(document.getElementById('windowImageNameInput'), imageEditor.name)
+
+    const titleDimensions = document.getElementById('titleDimensionsModified')
+    if (titleDimensions) titleDimensions.textContent = 'Dimensions:'
     updateDimensionInputs(imageEditor)
 
-    document.getElementById('titleExtensionModified').textContent = 'Extension:'
+    const titleExtension = document.getElementById('titleExtensionModified')
+    if (titleExtension) titleExtension.textContent = 'Extension:'
     updateExtensionSelector(imageEditor)
 
     setupMetadataControls(imageEditor)
 }
+
+// The pan/zoom listeners bind to static DOM, so they are wired up once for the whole
+// session. Re-binding them on every `imageEditorReady` piled up a duplicate set of
+// handlers (and a reference to the superseded editor) each time an image was opened.
+let canvasNavigationInitialised = false
 
 window.addEventListener('imageEditorReady', (event) => {
     let imageEditor = event.detail.instance;
     imageEditor.loadImage()
     initializeModifiedImageDataModule(imageEditor)
 
+    if (canvasNavigationInitialised) return
+    canvasNavigationInitialised = true
 
     const viewingModule = document.querySelector('.imageViewingModule')
     const canvasDiv = document.querySelector('#imageCanvasDiv')
-    const canvas = imageEditor.canvas
-    const context = imageEditor.context
 
     let isPanning = false
     let startPoint = { x: 0, y: 0 }

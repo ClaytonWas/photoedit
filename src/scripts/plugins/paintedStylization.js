@@ -78,9 +78,10 @@ export function paintedStylization(image, parameters = {}) {
     }
 
     // Pre-calculate stroke offsets to avoid repeated trig in inner loop
+    const halfStrokeWidth = strokeWidth >> 1
     const strokeOffsets = []
     for (let len = 0; len < strokeLength; len++) {
-        for (let w = -strokeWidth >> 1; w < strokeWidth >> 1; w++) {
+        for (let w = -halfStrokeWidth; w < strokeWidth - halfStrokeWidth; w++) {
             strokeOffsets.push({
                 dx: Math.round(cosAngle * len + cosPerp * w),
                 dy: Math.round(sinAngle * len + sinPerp * w)
@@ -165,11 +166,13 @@ export function vectorsInSpace(image, parameters = {}) {
     const cosPerp = Math.cos(radians + Math.PI / 2)
     const sinPerp = Math.sin(radians + Math.PI / 2)
     
-    // Pre-calculate stroke offsets
+    // Pre-calculate stroke offsets.
+    // The span is centred on the sample and always covers `strokeWidth` columns,
+    // so a width of 1 still draws a single-pixel stroke.
     const halfWidth = strokeWidth >> 1
     const strokeOffsets = []
     for (let len = 0; len < strokeLength; len++) {
-        for (let w = -halfWidth; w < halfWidth; w++) {
+        for (let w = -halfWidth; w < strokeWidth - halfWidth; w++) {
             strokeOffsets.push({
                 dx: Math.round(cosAngle * len + cosPerp * w),
                 dy: Math.round(sinAngle * len + sinPerp * w)

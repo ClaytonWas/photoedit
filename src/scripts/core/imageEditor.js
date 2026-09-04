@@ -230,10 +230,15 @@ export class ImageEditor {
 
     renderFullQuality() {
         if (this.isRendering) {
+            // A render is already in flight. Remember that the state changed again so
+            // the in-flight pass re-runs afterwards, otherwise this request is lost
+            // and the canvas keeps showing stale pixels.
+            this.renderRequested = true
             return
         }
 
         this.isRendering = true
+        this.renderRequested = false
         this.fullQualityRenderTimeout = null // Clear the timeout since we're starting the render
         this.dispatchStateChange('Render started')
 
@@ -250,10 +255,18 @@ export class ImageEditor {
             } catch (error) {
                 console.error('Full quality render error:', error)
                 this.isRendering = false
+                this.renderRequested = false
                 this.dispatchStateChange('Render failed')
                 return
             }
             this.isRendering = false
+
+            if (this.renderRequested) {
+                this.renderRequested = false
+                this.renderFullQuality()
+                return
+            }
+
             this.dispatchStateChange('Render complete')
         })
     }
@@ -301,14 +314,16 @@ export class ImageEditor {
     }
 
 
-    bilinearInterpolation() {
-        console.warn('Bilinear interpolation is not implemented yet.')
-        return Promise.resolve()
+    // Bilinear and nearest-neighbour resampling are not implemented yet. They fall back to
+    // the browser's own resampler so the resize still happens instead of silently no-opping.
+    bilinearInterpolation(newWidth, newHeight) {
+        console.warn('Bilinear interpolation is not implemented yet; using the default resampler.')
+        return this.defaultInterpolation(newWidth, newHeight)
     }
 
-    nearestNeighbourInterpolation() {
-        console.warn('Nearest neighbour interpolation is not implemented yet.')
-        return Promise.resolve()
+    nearestNeighbourInterpolation(newWidth, newHeight) {
+        console.warn('Nearest neighbour interpolation is not implemented yet; using the default resampler.')
+        return this.defaultInterpolation(newWidth, newHeight)
     }
 
     defaultInterpolation(newWidth, newHeight) {
@@ -512,8 +527,19 @@ export class ImageEditor {
 
     crop(originHeight, originWidth, endHeight, endWidth) {
         return new Promise((resolve) => {
-            const newHeight = Math.abs(endHeight - originHeight)
-            const newWidth = Math.abs(endWidth - originWidth)
+            // The selection can be dragged in any direction, so normalise the corners
+            // and clamp them to the image before deriving the crop rectangle. Using the
+            // raw origin would read outside the source and produce a blank result.
+            const imageWidth = this.image.width
+            const imageHeight = this.image.height
+
+            const left = Math.max(0, Math.min(Math.min(originWidth, endWidth), imageWidth))
+            const top = Math.max(0, Math.min(Math.min(originHeight, endHeight), imageHeight))
+            const right = Math.max(0, Math.min(Math.max(originWidth, endWidth), imageWidth))
+            const bottom = Math.max(0, Math.min(Math.max(originHeight, endHeight), imageHeight))
+
+            const newWidth = Math.round(right - left)
+            const newHeight = Math.round(bottom - top)
 
             if (!newHeight || !newWidth) {
                 resolve()
@@ -528,8 +554,8 @@ export class ImageEditor {
 
             tempContext.drawImage(
                 this.image,
-                originWidth,
-                originHeight,
+                left,
+                top,
                 newWidth,
                 newHeight,
                 0,
@@ -652,7 +678,7 @@ export class ImageEditor {
                 reason,
                 undoAvailable: this.history.canUndo(),
                 redoAvailable: this.history.canRedo(),
-                isRendering: this.isRendering || this.isPreviewRendering || this.fullQualityRenderTimeout !== null,
+                isRendering: this.isBusy,
                 renderFailed: reason === 'Render failed'
             }
         }))
@@ -664,7 +690,7 @@ export class ImageEditor {
     waitForRenderComplete() {
         return new Promise((resolve) => {
             const checkRenderState = () => {
-                if (!this.isRendering && !this.isPreviewRendering && !this.fullQualityRenderTimeout && !this.renderTimeout) {
+                if (!this.isBusy) {
                     resolve()
                 } else {
                     requestAnimationFrame(checkRenderState)
@@ -678,6 +704,11 @@ export class ImageEditor {
      * Returns true if any render is in progress or queued
      */
     get isBusy() {
-        return this.isRendering || this.isPreviewRendering || this.fullQualityRenderTimeout !== null || this.renderTimeout !== null
+        return this.isRendering
+            || this.isPreviewRendering
+            || this.renderRequested
+            || this.previewRequested
+            || this.fullQualityRenderTimeout !== null
+            || this.renderTimeout !== null
     }
 }
