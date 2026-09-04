@@ -5,7 +5,7 @@ import { paintedStylization, pointsInSpace, vectorsInSpace, sobelEdges, sobelEdg
 import { filmEffects } from './plugins/filmEffects.js'
 import { greyscale } from './plugins/greyscale.js'
 import { sepia } from './plugins/sepia.js'
-import { createSliderAnimation, exportSliderAnimationAsGif, getAnimatableParameters, previewAnimation, availableEasings, createMultiParameterAnimation, downloadBlob, loadGifFrames, gifFrameStack, loadFrameToEditor, saveEditorToFrame, exportFrameStackAsGif, isGifPlaying, startGifPlayback, stopGifPlayback, toggleGifPlayback, estimateGifFileSize, formatFileSize } from './plugins/gifAnimator.js'
+import { createSliderAnimation, exportSliderAnimationAsGif, getAnimatableParameters, previewAnimation, availableEasings, createMultiParameterAnimation, downloadBlob, loadGifFrames, gifFrameStack, loadFrameToEditor, saveEditorToFrame, exportFrameStackAsGif, applyLayerStackToFrames, isGifPlaying, startGifPlayback, stopGifPlayback, toggleGifPlayback, estimateGifFileSize, formatFileSize } from './plugins/gifAnimator.js'
 import { openHistogramWindow, initHistogram, queueHistogramUpdate, isHistogramOpen } from './plugins/histogram.js'
 import { openColorInfoWindow, initColorInfo, isColorInfoOpen } from './plugins/colorInfo.js'
 import { openImageStatsWindow, isImageStatsOpen, refreshImageStats } from './plugins/imageStats.js'
@@ -2023,13 +2023,9 @@ function setupGifFrameEditorEvents() {
 
     document.getElementById('gifSaveFrame')?.addEventListener('click', () => {
         if (imageEditor && gifFrameStack.length > 0) {
+            // setFrame bumps the frame's revision, so its cache entry is already
+            // invalid; no manual key surgery needed.
             saveEditorToFrame(imageEditor, gifFrameStack.currentFrameIndex)
-            // Clear thumbnail cache for updated frame
-            const frame = gifFrameStack.getFrame(gifFrameStack.currentFrameIndex)
-            if (frame) {
-                const cacheKey = `${gifFrameStack.currentFrameIndex}_${frame.imageData.width}_${frame.imageData.height}`
-                gifThumbnailCache.delete(cacheKey)
-            }
             renderGifFrameList()
         }
     })
@@ -2125,18 +2121,11 @@ function setupGifFrameEditorEvents() {
             tempCtx.imageSmoothingEnabled = true
             tempCtx.imageSmoothingQuality = 'high'
             
-            // Draw the original frame scaled to new size
-            tempCtx.drawImage(frame.canvas, 0, 0, newWidth, newHeight)
-            
-            // Get the resized image data
-            const newImageData = tempCtx.getImageData(0, 0, newWidth, newHeight)
-            
-            // Update the frame
-            frame.imageData = newImageData
-            frame.canvas.width = newWidth
-            frame.canvas.height = newHeight
-            const frameCtx = frame.canvas.getContext('2d')
-            frameCtx.putImageData(newImageData, 0, 0)
+            // Frames hold pixels only, so render through the stack's shared scratch.
+            const source = gifFrameStack.renderFrameToScratch(i)
+            if (!source) continue
+            tempCtx.drawImage(source, 0, 0, newWidth, newHeight)
+            gifFrameStack.setFrame(i, tempCtx.getImageData(0, 0, newWidth, newHeight))
         }
         
         // Update frame stack dimensions
@@ -2190,14 +2179,16 @@ const THUMBNAIL_MAX_SIZE = 80 // Max width/height for thumbnails
 
 function generateThumbnail(frame, index) {
     // Check cache first
-    const cacheKey = `${index}_${frame.imageData.width}_${frame.imageData.height}`
+    // Keyed on identity and revision: reordering cannot serve a stale image, and
+    // an edited frame invalidates itself.
+    const cacheKey = `${frame.id}:${frame.rev}:${THUMBNAIL_MAX_SIZE}`
     if (gifThumbnailCache.has(cacheKey)) {
         return gifThumbnailCache.get(cacheKey)
     }
     
     // Calculate thumbnail dimensions maintaining aspect ratio
-    const srcWidth = frame.canvas.width
-    const srcHeight = frame.canvas.height
+    const srcWidth = frame.imageData.width
+    const srcHeight = frame.imageData.height
     const scale = Math.min(THUMBNAIL_MAX_SIZE / srcWidth, THUMBNAIL_MAX_SIZE / srcHeight, 1)
     const thumbWidth = Math.round(srcWidth * scale)
     const thumbHeight = Math.round(srcHeight * scale)
@@ -2213,7 +2204,8 @@ function generateThumbnail(frame, index) {
     thumbCtx.imageSmoothingQuality = 'medium'
     
     // Draw scaled down version
-    thumbCtx.drawImage(frame.canvas, 0, 0, thumbWidth, thumbHeight)
+    const source = gifFrameStack.renderFrameToScratch(index)
+    if (source) thumbCtx.drawImage(source, 0, 0, thumbWidth, thumbHeight)
     
     // Cache the data URL
     const dataUrl = thumbCanvas.toDataURL('image/jpeg', 0.7)
@@ -2311,6 +2303,8 @@ window.loadGifFrames = loadGifFrames
 window.loadFrameToEditor = loadFrameToEditor
 window.saveEditorToFrame = saveEditorToFrame
 window.exportFrameStackAsGif = exportFrameStackAsGif
+window.applyLayerStackToFrames = applyLayerStackToFrames
+window.createMultiParameterAnimation = createMultiParameterAnimation
 window.isGifPlaying = isGifPlaying
 window.startGifPlayback = startGifPlayback
 window.stopGifPlayback = stopGifPlayback

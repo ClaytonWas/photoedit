@@ -325,6 +325,24 @@ export class ImageEditor {
         })
     }
 
+    /**
+     * Composite the current stack at full resolution and return the pixels.
+     *
+     * Reads nothing from the visible canvas, so it cannot capture a half-finished
+     * or preview-scale frame - which is how a blurry 0.25-scale preview used to end
+     * up baked into a saved GIF frame.
+     */
+    renderToImageData() {
+        const base = this.getBaseImageData()
+        const imageData = this.cloneImageData(base)
+        const byteLength = imageData.data.length
+        if (!this.compositeScratch || this.compositeScratch.length !== byteLength) {
+            this.compositeScratch = new Uint8ClampedArray(byteLength)
+        }
+        this.layerManager.applyLayerEffects(imageData, this.compositeScratch)
+        return imageData
+    }
+
     ensureBaseImageCanvas() {
         if (!this.baseImageCanvas) {
             this.baseImageCanvas = document.createElement('canvas')
