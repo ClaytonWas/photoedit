@@ -79,23 +79,26 @@ export function blendInto(base, overlay, opacity, mode = 'normal') {
         return
     }
 
-    // At full opacity the interpolation below reduces to the overlay exactly, so
-    // take the memcpy instead of walking every pixel.
-    if (opacity >= 1) {
-        base.set(overlay)
-        return
-    }
-
-    // The overlay is the base with an effect applied, so blending is a straight
-    // interpolation by layer opacity. Weighting by the overlay's own alpha (as
-    // this used to) only half-applied the effect to translucent pixels and drove
-    // alpha above the source value - a pixel at alpha 128 came back at 192.
+    // The overlay is the base with an effect applied, so colour interpolates by the
+    // layer's opacity alone. Weighting by the overlay's own alpha (as this once did)
+    // only half-applied the effect to translucent pixels.
+    //
+    // Alpha takes the maximum rather than interpolating: an effect that draws - and
+    // so raises alpha - adds coverage, while one that clears alpha cannot punch a
+    // hole through the image underneath. A layer that genuinely means to replace the
+    // image, transparency included, uses 'replace' mode. On an opaque image (the
+    // common case) this is a no-op, since max(255, x) is 255.
     const retain = 1 - opacity
     for (let i = 0; i < base.length; i += 4) {
+        const baseAlpha = base[i + 3]
+        const overlayAlpha = overlay[i + 3]
+
         base[i] = base[i] * retain + overlay[i] * opacity
         base[i + 1] = base[i + 1] * retain + overlay[i + 1] * opacity
         base[i + 2] = base[i + 2] * retain + overlay[i + 2] * opacity
-        base[i + 3] = base[i + 3] * retain + overlay[i + 3] * opacity
+        if (overlayAlpha > baseAlpha) {
+            base[i + 3] = baseAlpha + (overlayAlpha - baseAlpha) * opacity
+        }
     }
 }
 

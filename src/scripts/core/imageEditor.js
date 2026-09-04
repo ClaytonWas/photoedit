@@ -39,6 +39,13 @@ export class ImageEditor {
         // Full-quality compositing runs in a worker so a slider drag never blocks
         // the main thread. Falls back to inline compositing if it is unavailable.
         this.renderService = new RenderService()
+        // Set by dispose(). Async work started before teardown must not paint the
+        // canvas the replacement editor now owns.
+        this.disposed = false
+        // Monotonic stamp on every canvas write. A preview scheduled before a
+        // full-quality frame can resolve after it, so each writer checks that it is
+        // still the newest before painting.
+        this.paintSequence = 0
         // Reused per-layer working buffers, so an N-layer stack does not allocate
         // N full frames on every render.
         this.compositeScratch = null
@@ -191,9 +198,18 @@ export class ImageEditor {
 
         this.isPreviewRendering = true
         this.previewRequested = false
+        const previewSequence = ++this.paintSequence
         this.dispatchStateChange('Render started')
 
         requestAnimationFrame(() => {
+            if (this.disposed) { this.isPreviewRendering = false; return }
+            // A full-quality frame landed while this was queued - it is strictly
+            // better, so do not overwrite it with the preview.
+            if (previewSequence !== this.paintSequence) {
+                this.isPreviewRendering = false
+                if (this.previewRequested) { this.previewRequested = false }
+                return
+            }
             try {
                 const baseCanvas = this.ensureBaseImageCanvas()
                 const scale = this.previewScale
@@ -256,6 +272,7 @@ export class ImageEditor {
         this.dispatchStateChange('Render started')
 
         const settle = (succeeded) => {
+            if (this.disposed) { this.isRendering = false; return }
             this.isRendering = false
             if (this.renderRequested) {
                 this.renderRequested = false
@@ -268,20 +285,31 @@ export class ImageEditor {
         const descriptors = this.layerManager.toDescriptors()
 
         if (this.canOffloadRender(descriptors)) {
-            // Touch the base first: this populates the cache and hands the pixels to
-            // the worker if they have changed.
-            this.getBaseImageData()
+            try {
+                // Touch the base first: this populates the cache and hands the pixels
+                // to the worker if they have changed.
+                this.getBaseImageData()
+            } catch (error) {
+                // Without this the editor stays wedged at isRendering forever and the
+                // status indicator never leaves "Rendering".
+                console.error('Could not read the base image:', error)
+                settle(false)
+                return
+            }
             this.renderService.render(descriptors)
                 .then((result) => {
+                    if (this.disposed) return
                     if (!result) {
                         // Worker went away or its base was stale - render inline instead.
                         this.renderFullQualityInline(settle)
                         return
                     }
+                    this.paintSequence++
                     this.context.putImageData(result, 0, 0)
                     settle(true)
                 })
                 .catch((error) => {
+                    if (this.disposed) return
                     console.warn('Worker render failed; falling back to main thread.', error)
                     this.renderFullQualityInline(settle)
                 })
@@ -305,6 +333,7 @@ export class ImageEditor {
 
     renderFullQualityInline(settle) {
         requestAnimationFrame(() => {
+            if (this.disposed) return
             try {
                 const baseImageData = this.getBaseImageData()
                 const imageData = this.cloneImageData(baseImageData)
@@ -315,6 +344,7 @@ export class ImageEditor {
                 }
 
                 this.layerManager.applyLayerEffects(imageData, this.compositeScratch)
+                this.paintSequence++
                 this.context.putImageData(imageData, 0, 0)
             } catch (error) {
                 console.error('Full quality render error:', error)
@@ -637,6 +667,12 @@ export class ImageEditor {
             cropped = temp
         }
 
+        // createImageBitmap is async; the editor may have been replaced while it ran.
+        if (this.disposed) {
+            cropped.close?.()
+            return
+        }
+
         this.canvas.width = width
         this.canvas.height = height
         this.image = cropped
@@ -806,6 +842,7 @@ export class ImageEditor {
     }
 
     dispatchStateChange(reason) {
+        if (this.disposed) return
         window.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT, {
             detail: {
                 instance: this,
@@ -839,6 +876,7 @@ export class ImageEditor {
      * and cached frames do not outlive it.
      */
     dispose() {
+        this.disposed = true
         if (this.renderTimeout) clearTimeout(this.renderTimeout)
         if (this.fullQualityRenderTimeout) clearTimeout(this.fullQualityRenderTimeout)
         this.renderTimeout = null

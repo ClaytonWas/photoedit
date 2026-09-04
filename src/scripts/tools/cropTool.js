@@ -182,11 +182,13 @@ export class CropTool {
         if (w < 0) { x += w; w = -w }
         if (h < 0) { y += h; h = -h }
 
-        w = Math.max(1, Math.min(w, iw))
-        h = Math.max(1, Math.min(h, ih))
-        x = Math.max(0, Math.min(x, iw - w))
-        y = Math.max(0, Math.min(y, ih - h))
-        return { x, y, width: w, height: h }
+        // Clip against the image rather than translating: sliding an oversized rect
+        // back inside would move the edge the user is not dragging.
+        const left = Math.max(0, Math.min(x, iw - 1))
+        const top = Math.max(0, Math.min(y, ih - 1))
+        const right = Math.max(left + 1, Math.min(x + w, iw))
+        const bottom = Math.max(top + 1, Math.min(y + h, ih))
+        return { x: left, y: top, width: right - left, height: bottom - top }
     }
 
     /** Reshape `rect` to the locked aspect, holding the corner opposite `anchor`. */
@@ -215,7 +217,18 @@ export class CropTool {
     // ----------------------------------------------------------------- pointers
 
     handlePointerDown(event) {
-        if (event.button !== undefined && event.button !== 0) return  // ignore right/middle
+        // Middle button, and a second simultaneous pointer, belong to navigation.
+        // The overlay covers the whole viewport, so without letting these through
+        // panning and pinch-zoom would be impossible while the tool is active.
+        if (event.button === 1 || (this.drag && event.pointerId !== this.drag.pointerId)) {
+            this.drag = null
+            this.scheduleDraw()
+            return
+        }
+        if (event.button !== undefined && event.button !== 0) return  // ignore right-click
+        // Space or Alt held: pan instead of crop.
+        if (event.altKey) return
+
         const image = this.viewport.clientToImage(event.clientX, event.clientY)
         if (!image) return
 

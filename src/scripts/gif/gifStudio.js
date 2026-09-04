@@ -15,6 +15,7 @@ import { windowManager } from '../core/windowManager.js'
 import {
     gifFrameStack,
     loadGifFrames,
+    loadFrameToEditor,
     exportFrameStackAsGif,
     applyLayerStackToFrames,
     createMultiParameterAnimation,
@@ -187,6 +188,7 @@ function studioMarkup() {
                     <label class="gsField">Loop
                         <select data-role="ex-loop">
                             <option value="0" selected>Forever</option>
+                            <option value="source">Same as source</option>
                             <option value="-1">Once</option>
                             <option value="1">2 times</option>
                             <option value="4">5 times</option>
@@ -299,6 +301,20 @@ function renderStrip() {
 
     const active = strip.children[gifFrameStack.currentFrameIndex]
     active?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}
+
+/** Cheap per-frame update during playback: move the marker, touch nothing else. */
+function updatePlayhead(index) {
+    if (!root) return
+    const counter = $('counter')
+    if (counter) counter.textContent = `${index + 1} / ${gifFrameStack.length}`
+    const scrub = $('scrub')
+    if (scrub && document.activeElement !== scrub) scrub.value = String(index)
+    const strip = $('strip')
+    if (!strip) return
+    const previous = strip.querySelector('.gsCellCurrent')
+    if (previous) previous.classList.remove('gsCellCurrent')
+    strip.children[index]?.classList.add('gsCellCurrent')
 }
 
 function renderBakeHint() {
@@ -420,8 +436,14 @@ async function handleAction(action, event) {
             $('file-images').click(); break
 
         case 'play':
-            if (isGifPlaying()) stopGifPlayback()
-            else if (editor) startGifPlayback(editor, () => refresh())
+            if (isGifPlaying()) {
+                stopGifPlayback()
+            } else if (editor) {
+                // Update only the playhead per frame. Rebuilding the whole strip
+                // (innerHTML plus a thumbnail per frame) on every displayed frame
+                // made playback slower than the GIF it was playing.
+                startGifPlayback(editor, (index) => updatePlayhead(index))
+            }
             refresh(); break
 
         case 'first': gotoFrame(0); break
@@ -471,10 +493,7 @@ async function handleAction(action, event) {
         case 'move-right': moveSelection(1); break
 
         case 'load-frame':
-            if (editor) {
-                const { loadFrameToEditor } = await import('../plugins/gifAnimator.js')
-                loadFrameToEditor(editor, gifFrameStack.currentFrameIndex)
-            }
+            if (editor) loadFrameToEditor(editor, gifFrameStack.currentFrameIndex)
             break
 
         case 'bake-selected': await bake(selectedIndices()); break
@@ -507,6 +526,9 @@ function gotoFrame(index) {
     if (!count) return
     stopGifPlayback()
     gifFrameStack.currentFrameIndex = Math.max(0, Math.min(index, count - 1))
+    // Previewing only: the editor's base image is unchanged, so nothing may write
+    // the canvas back into this frame.
+    gifFrameStack.editingFrameIndex = null
     const editor = getEditor()
     const frame = gifFrameStack.currentFrame
     if (editor && frame) {
@@ -523,11 +545,17 @@ function gotoFrame(index) {
 function moveSelection(direction) {
     const targets = selectedIndices()
     if (!targets.length) return
+
+    // Refuse the whole move if any selected frame is already against that edge.
+    // Moving the rest anyway slid them past the blocked ones and scrambled a
+    // contiguous run.
+    const limit = direction < 0 ? 0 : gifFrameStack.length - 1
+    if (targets.some(index => index === limit)) return
+
     const ordered = direction < 0 ? targets : [...targets].reverse()
     const moved = new Set()
     for (const index of ordered) {
         const to = index + direction
-        if (to < 0 || to >= gifFrameStack.length) { moved.add(index); continue }
         gifFrameStack.moveFrame(index, to)
         moved.add(to)
     }
@@ -592,6 +620,19 @@ async function buildAnimation() {
     }
 }
 
+function showImportError(message) {
+    const empty = $('empty')
+    if (!empty) return
+    let line = empty.querySelector('.gsImportError')
+    if (!line) {
+        line = document.createElement('p')
+        line.className = 'gsHint gsError gsImportError'
+        empty.appendChild(line)
+    }
+    line.textContent = message
+    refresh()
+}
+
 function clearResult() {
     if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null }
     resultBlob = null
@@ -618,7 +659,9 @@ async function encode() {
         const blob = await exportFrameStackAsGif(gifFrameStack, {
             quality: parseInt($('ex-quality').value, 10) || 10,
             dither: $('ex-dither').value || false,
-            repeat: parseInt($('ex-loop').value, 10) || 0,
+            repeat: $('ex-loop').value === 'source'
+                ? (gifFrameStack.loopCount ?? 0)
+                : parseInt($('ex-loop').value, 10) || 0,
             signal: encodeController.signal,
             onProgress: (percent) => {
                 fill.style.width = `${percent}%`
@@ -687,7 +730,9 @@ function wire(contentElement) {
             selection.clear()
             refresh()
         } catch (error) {
-            setStatus('bake-hint', `Could not read GIF: ${error.message}`, true)
+            // The frames panel is hidden while the stack is empty, so report on the
+            // empty state instead - otherwise the message goes into a hidden element.
+            showImportError(`Could not read GIF: ${error.message}`)
         }
     })
 
@@ -696,11 +741,20 @@ function wire(contentElement) {
         event.target.value = ''
         if (!files.length) return
         const frames = []
+        // Fix the target size once. Reading it per file meant an import into an empty
+        // stack sized every frame from itself, producing a stack of mixed dimensions
+        // that gif.js then reads past the end of.
+        let targetWidth = gifFrameStack.width || 0
+        let targetHeight = gifFrameStack.height || 0
         for (const file of files) {
             const bitmap = await createImageBitmap(file).catch(() => null)
             if (!bitmap) continue
-            const width = gifFrameStack.width || bitmap.width
-            const height = gifFrameStack.height || bitmap.height
+            if (!targetWidth || !targetHeight) {
+                targetWidth = bitmap.width
+                targetHeight = bitmap.height
+            }
+            const width = targetWidth
+            const height = targetHeight
             const canvas = document.createElement('canvas')
             canvas.width = width
             canvas.height = height
@@ -746,11 +800,30 @@ function wire(contentElement) {
 // ── public API ────────────────────────────────────────────────────────────────
 
 export function openGifStudio() {
-    if (studioWindow) {
+    if (studioWindow && root) {
         studioWindow.focus()
         studioWindow.show()
         refresh()
         return studioWindow
+    }
+
+    // A window with this id may still exist in the manager (mobile panels, and any
+    // path that closes without running our onClose). createWindow would return it
+    // without calling onCreate, leaving `root` null and every later query throwing.
+    const existing = windowManager.getWindow('gif-studio')
+    if (existing) {
+        studioWindow = existing
+        const content = existing.getContentElement()
+        if (content && content.querySelector('.gs')) {
+            wire(content)
+            existing.focus()
+            existing.show()
+            refresh()
+            return existing
+        }
+        existing.close()
+        studioWindow = null
+        root = null
     }
 
     const content = document.createElement('div')

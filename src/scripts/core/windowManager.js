@@ -1126,6 +1126,9 @@ class WindowManager {
     closeTabGroup(groupId) {
         const tabGroup = this.tabGroups.get(groupId)
         if (!tabGroup) return
+
+        // Release any layout space this group was reserving.
+        document.documentElement.style.setProperty('--docked-right-inset', '0px')
         
         // Close all windows in the group
         const tabsToClose = [...tabGroup.tabs]
@@ -1246,6 +1249,9 @@ class WindowManager {
     dissolveTabGroup(groupId) {
         const tabGroup = this.tabGroups.get(groupId)
         if (!tabGroup || tabGroup.tabs.length !== 1) return
+
+        // Release any layout space this group was reserving.
+        document.documentElement.style.setProperty('--docked-right-inset', '0px')
         
         const windowId = tabGroup.tabs[0]
         const win = this.windows.get(windowId)

@@ -156,7 +156,8 @@ export function vectorsInSpace(image, parameters = {}) {
     const r = parameters.R ?? 255
     const g = parameters.G ?? 255
     const b = parameters.B ?? 255
-    const a = parameters.A ?? 255
+    const alphaByte = Math.min(Math.max(parameters.A ?? 255, 0), 255)
+    const strokeAlpha = alphaByte / 255
 
     const radians = ((parameters.angle ?? 90) * Math.PI) / 180
     
@@ -192,10 +193,21 @@ export function vectorsInSpace(image, parameters = {}) {
     
             if (vx >= 0 && vx < width && vy >= 0 && vy < height) {
                 const idx = (vy * width + vx) << 2
-                data[idx] = r
-                data[idx + 1] = g
-                data[idx + 2] = b
-                data[idx + 3] = a
+                // A is stroke opacity. Blend it into the colour rather than writing
+                // the alpha channel: compositing preserves the base image's alpha, so
+                // writing alpha here would either be ignored or punch a hole.
+                if (strokeAlpha >= 1) {
+                    data[idx] = r
+                    data[idx + 1] = g
+                    data[idx + 2] = b
+                } else {
+                    const keep = 1 - strokeAlpha
+                    data[idx] = data[idx] * keep + r * strokeAlpha
+                    data[idx + 1] = data[idx + 1] * keep + g * strokeAlpha
+                    data[idx + 2] = data[idx + 2] * keep + b * strokeAlpha
+                }
+                // Mark coverage so a stroke over a transparent region still shows.
+                if (alphaByte > data[idx + 3]) data[idx + 3] = alphaByte
             }
         }
     }

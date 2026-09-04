@@ -24,6 +24,10 @@ class GifFrameStack {
         this.width = 0
         this.height = 0
         this.currentFrameIndex = 0
+        // Which frame, if any, is actually loaded into the editor as its base image.
+        // Distinct from currentFrameIndex, which only tracks what is being previewed:
+        // writing back to a merely-previewed frame overwrites it with the wrong pixels.
+        this.editingFrameIndex = null
         this.loopCount = 0        // 0 = forever, matching the GIF default
         this.nextId = 1
         this.scratch = null
@@ -87,6 +91,21 @@ class GifFrameStack {
         return made.length
     }
 
+    /**
+     * Recompute the stack's nominal size from its frames. Frames are padded or
+     * cropped to this on export, so it must bound them all.
+     */
+    syncDimensions() {
+        let width = 0
+        let height = 0
+        for (const frame of this.frames) {
+            if (frame.imageData.width > width) width = frame.imageData.width
+            if (frame.imageData.height > height) height = frame.imageData.height
+        }
+        this.width = width
+        this.height = height
+    }
+
     getFrame(index) {
         return this.frames[index] || null
     }
@@ -96,12 +115,10 @@ class GifFrameStack {
         if (!frame) return
         frame.imageData = imageData
         frame.rev++
-        // Writing a differently sized frame used to leave the stack's dimensions
-        // stale, which silently corrupted export.
-        if (this.frames.length === 1 || index === 0) {
-            this.width = imageData.width
-            this.height = imageData.height
-        }
+        // The stack's dimensions are what the encoder is told to emit, so they must
+        // always describe the frames. Keeping them only in step with frame 0 let a
+        // resized middle frame be read past the end of during export.
+        this.syncDimensions()
     }
 
     setDelay(index, delay) {
@@ -153,6 +170,7 @@ class GifFrameStack {
         this.width = 0
         this.height = 0
         this.currentFrameIndex = 0
+        this.editingFrameIndex = null
         this.loopCount = 0
     }
 }
@@ -450,6 +468,9 @@ function decodeLZW(data, minCodeSize, pixelCount) {
     let available = clearCode + 2
     let previousCode = -1
     let stackTop = 0
+    // First character of the previously emitted string. The KwKwK case needs the
+    // FIRST character of the previous entry, not its last.
+    let firstChar = 0
 
     let bitBuffer = 0
     let bitCount = 0
@@ -480,15 +501,18 @@ function decodeLZW(data, minCodeSize, pixelCount) {
 
             if (previousCode === -1) {
                 if (code >= available) break
-                stack[stackTop++] = suffix[code]
+                firstChar = suffix[code]
+                stack[stackTop++] = firstChar
                 previousCode = code
                 continue
             }
 
             let current = code
             if (code >= available) {
-                // KwKwK case: the code being defined right now.
-                stack[stackTop++] = suffix[previousCode]
+                // KwKwK: this code is the entry being defined by this very step, so
+                // its expansion is the previous string followed by that string's
+                // FIRST character.
+                stack[stackTop++] = firstChar
                 current = previousCode
             }
             while (current >= clearCode) {
@@ -496,11 +520,12 @@ function decodeLZW(data, minCodeSize, pixelCount) {
                 current = prefix[current]
                 if (stackTop >= stack.length) return output // corrupt chain guard
             }
-            stack[stackTop++] = suffix[current]
+            firstChar = suffix[current]
+            stack[stackTop++] = firstChar
 
             if (available < 4096) {
                 prefix[available] = previousCode
-                suffix[available] = suffix[current]
+                suffix[available] = firstChar
                 available++
                 if ((available & codeMask) === 0 && available < 4096) {
                     codeSize++
@@ -633,13 +658,16 @@ export function exportFrameStackAsGif(frameStack = gifFrameStack, options = {}) 
         const gif = new GIF(gifOptions)
 
         for (const frame of frameStack.frames) {
-            if (hasAnyTransparency) {
-                const prepared = prepareImageDataForGif(frame.imageData)
-                gif.addFrame(prepared, { delay: frame.delay, copy: true, dispose: 2 })
-            } else {
-                // gif.js accepts ImageData directly, so no per-frame canvas is needed.
-                gif.addFrame(frame.imageData, { delay: frame.delay, copy: true })
-            }
+            // gif.js indexes each frame's buffer by the encoder's declared width and
+            // height, so a frame of any other size must be normalised first or it is
+            // read out of bounds.
+            const source = (frame.imageData.width === frameStack.width && frame.imageData.height === frameStack.height)
+                ? frame.imageData
+                : fitImageData(frame.imageData, frameStack.width, frameStack.height)
+            const payload = hasAnyTransparency ? prepareImageDataForGif(source) : source
+            gif.addFrame(payload, hasAnyTransparency
+                ? { delay: frame.delay, copy: true, dispose: 2 }
+                : { delay: frame.delay, copy: true })
         }
 
         gif.on('progress', (p) => onProgress(Math.round(p * 100)))
@@ -662,6 +690,20 @@ export function exportFrameStackAsGif(frameStack = gifFrameStack, options = {}) 
     })
 }
 
+/** Centre a frame's pixels inside a canvas of the stack's nominal size. */
+function fitImageData(source, width, height) {
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    const scratch = document.createElement('canvas')
+    scratch.width = source.width
+    scratch.height = source.height
+    scratch.getContext('2d').putImageData(source, 0, 0)
+    ctx.drawImage(scratch, Math.round((width - source.width) / 2), Math.round((height - source.height) / 2))
+    return ctx.getImageData(0, 0, width, height)
+}
+
 /**
  * Apply the editor's current layer stack to a range of frames.
  *
@@ -669,6 +711,8 @@ export function exportFrameStackAsGif(frameStack = gifFrameStack, options = {}) 
  * and save each one by hand through the editor canvas - a full PNG round trip per
  * frame. This works directly on pixels: no DOM, no encode, no canvas resize.
  */
+let bakeInFlight = false
+
 export async function applyLayerStackToFrames(imageEditor, options = {}) {
     const {
         stack = gifFrameStack,
@@ -677,18 +721,26 @@ export async function applyLayerStackToFrames(imageEditor, options = {}) {
         signal = null
     } = options
     if (!imageEditor || stack.length === 0) return 0
+    // The loop yields, so a second bake could interleave and double-apply effects.
+    if (bakeInFlight) throw new Error('A bake is already running')
+    bakeInFlight = true
 
-    const targets = indices ?? stack.frames.map((_, i) => i)
+    // Resolve targets to frame objects up front: indices shift if the timeline is
+    // reordered while the loop is yielding.
+    const targets = (indices ?? stack.frames.map((_, i) => i))
+        .map(index => stack.frames[index])
+        .filter(Boolean)
     const descriptors = imageEditor.layerManager.toDescriptors()
     if (!descriptors.length) return 0
 
     let scratch = null
     let done = 0
 
-    for (const index of targets) {
+    try {
+    for (const frame of targets) {
         if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError')
-        const frame = stack.frames[index]
-        if (!frame) continue
+        const index = stack.frames.indexOf(frame)
+        if (index === -1) continue   // deleted while we were yielding
 
         const source = frame.imageData
         const copy = new ImageData(
@@ -708,6 +760,9 @@ export async function applyLayerStackToFrames(imageEditor, options = {}) {
         if (done % 4 === 0) await new Promise(resolve => setTimeout(resolve, 0))
     }
     return done
+    } finally {
+        bakeInFlight = false
+    }
 }
 
 /**
@@ -1150,14 +1205,26 @@ export function loadFrameToEditor(imageEditor, frameIndex) {
     imageEditor.requestRender(true)
 
     gifFrameStack.currentFrameIndex = frameIndex
+    // Only an explicit load makes the editor's base image this frame, so only now
+    // is it safe to write the editor's output back to it.
+    gifFrameStack.editingFrameIndex = frameIndex
     return true
 }
 
 /**
  * Save current editor state back to frame stack
  */
+/**
+ * Write the editor's composited output back into a frame.
+ *
+ * Refuses unless that frame was explicitly loaded for editing. Merely previewing a
+ * frame (scrubbing, playback) paints the canvas without changing the editor's base
+ * image, so writing back would replace the previewed frame with a render of
+ * whichever frame is actually loaded - silent, unrecoverable pixel loss.
+ */
 export function saveEditorToFrame(imageEditor, frameIndex) {
     if (!imageEditor || frameIndex < 0 || frameIndex >= gifFrameStack.length) return false
+    if (gifFrameStack.editingFrameIndex !== frameIndex) return false
 
     // Composite fresh at full resolution rather than scraping the visible canvas,
     // which may still be showing the quarter-scale preview mid-drag.
@@ -1175,7 +1242,6 @@ export function saveEditorToFrame(imageEditor, frameIndex) {
  */
 let gifPlaybackHandle = null
 let gifPlaybackRunning = false
-let gifPlaybackRestore = null
 
 export function isGifPlaying() {
     return gifPlaybackRunning
@@ -1195,7 +1261,6 @@ export function startGifPlayback(imageEditor, onFrameChange) {
     // are now blitted straight onto the visible canvas.
     const canvas = imageEditor.canvas
     const context = imageEditor.context
-    const restore = { width: canvas.width, height: canvas.height }
 
     const drawFrame = (i) => {
         const frame = gifFrameStack.getFrame(i)
@@ -1207,6 +1272,7 @@ export function startGifPlayback(imageEditor, onFrameChange) {
         }
         context.putImageData(frame.imageData, 0, 0)
         gifFrameStack.currentFrameIndex = i
+        gifFrameStack.editingFrameIndex = null   // previewing, not editing
         if (onFrameChange) onFrameChange(i)
         return true
     }
@@ -1237,7 +1303,6 @@ export function startGifPlayback(imageEditor, onFrameChange) {
     }
 
     gifPlaybackHandle = requestAnimationFrame(tick)
-    gifPlaybackRestore = restore
     return true
 }
 
@@ -1247,7 +1312,6 @@ export function stopGifPlayback() {
         cancelAnimationFrame(gifPlaybackHandle)
         gifPlaybackHandle = null
     }
-    gifPlaybackRestore = null
 }
 
 export function toggleGifPlayback(imageEditor, onFrameChange) {

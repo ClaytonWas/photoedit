@@ -5,7 +5,7 @@ import { paintedStylization, pointsInSpace, vectorsInSpace, sobelEdges, sobelEdg
 import { filmEffects } from './plugins/filmEffects.js'
 import { greyscale } from './plugins/greyscale.js'
 import { sepia } from './plugins/sepia.js'
-import { createSliderAnimation, exportSliderAnimationAsGif, previewAnimation, downloadBlob, loadGifFrames, gifFrameStack, loadFrameToEditor, saveEditorToFrame, exportFrameStackAsGif, applyLayerStackToFrames, createMultiParameterAnimation, getAnimatableParameters, isGifPlaying, startGifPlayback, stopGifPlayback, toggleGifPlayback } from './plugins/gifAnimator.js'
+import { downloadBlob, loadGifFrames, gifFrameStack, loadFrameToEditor, saveEditorToFrame, exportFrameStackAsGif, applyLayerStackToFrames, isGifPlaying, startGifPlayback, stopGifPlayback, toggleGifPlayback } from './plugins/gifAnimator.js'
 import { openHistogramWindow, initHistogram, queueHistogramUpdate, isHistogramOpen } from './plugins/histogram.js'
 import { openColorInfoWindow, initColorInfo, isColorInfoOpen } from './plugins/colorInfo.js'
 import { openImageStatsWindow, isImageStatsOpen, refreshImageStats } from './plugins/imageStats.js'
@@ -113,6 +113,7 @@ function ensureCropTool() {
         onCommit: (rect) => applyCropRect(rect),
         onCancel: () => {
             window.isCropping = false
+            writeCropInputs(null)
             closeCropPanel({ keepTool: true })
         }
     })
@@ -120,7 +121,15 @@ function ensureCropTool() {
 }
 
 function writeCropInputs(rect) {
-    if (!rect) return
+    if (!rect) {
+        // Clear, rather than leaving the previous selection's numbers behind for
+        // Apply Crop to pick up after the tool was cancelled.
+        ;['cropStartWidth', 'cropStartHeight', 'cropEndWidth', 'cropEndHeight']
+            .forEach(id => safeSetInputValue(id, ''))
+        const empty = document.getElementById('cropSizeReadout')
+        if (empty) empty.textContent = '—'
+        return
+    }
     safeSetInputValue('cropStartWidth', rect.x)
     safeSetInputValue('cropStartHeight', rect.y)
     safeSetInputValue('cropEndWidth', rect.x + rect.width)
@@ -157,8 +166,8 @@ function closeCropPanel({ keepTool = false } = {}) {
 
 function cancelCursorCropSelection() {
     cropTool?.deactivate()
-    // Legacy flag: nothing gates on it any more, but it is still read by older
-    // code paths and by tests, so keep it truthful.
+    // Retained only because it is a documented global that external checks look at;
+    // no code branches on it any more (the overlay owns its own pointer handling).
     window.isCropping = false
 }
 
@@ -182,7 +191,12 @@ async function applyCropRect(rect) {
     initializeModifiedImageDataModule(editor)
 }
 
+let cropPanelControlsBound = false
+
 function setupCropPanelControls() {
+    if (cropPanelControlsBound) return
+    cropPanelControlsBound = true
+
     const aspectSelect = document.getElementById('cropAspect')
     if (aspectSelect && !aspectSelect.options.length) {
         for (const preset of CROP_ASPECT_PRESETS) {
@@ -213,7 +227,13 @@ function setupCropPanelControls() {
         const tool = ensureCropTool()
         if (!tool) return
         if (!tool.active) { window.isCropping = true; tool.activate() }
-        tool.setRect({ x: 0, y: 0, width: editor.canvas.width, height: editor.canvas.height })
+        // Inset by a pixel so the selection does not fill the image exactly: a rect
+        // covering everything leaves nowhere to start a fresh drag from (Shift+drag
+        // still works, but this keeps the obvious gesture available).
+        const w = editor.canvas.width
+        const h = editor.canvas.height
+        tool.setRect({ x: 0, y: 0, width: w, height: h })
+        if (w > 4 && h > 4) tool.setRect({ x: 0, y: 0, width: w, height: h })
     })
 }
 
@@ -628,6 +648,7 @@ async function processDroppedImages(files) {
             // Load GIF with frame stack
             try {
                 await loadGifFrames(file)
+                notifyFramesChanged()
 
 
                 const gifPlayStopBtn = document.getElementById('gifPlayStopBtn')
@@ -787,6 +808,8 @@ async function uploadMultipleAsGif(files) {
             gifFrameStack.addFrame(imageData, defaultDelay)
         }
         
+        notifyFramesChanged()
+
         // Show the Edit GIF Frames button
         
         // Show the play/stop button
@@ -1131,17 +1154,12 @@ async function uploadRawImage(file) {
 
 // Expose for global access
 window.openGifStudio = openGifStudio
-window.createSliderAnimation = createSliderAnimation
-window.exportSliderAnimationAsGif = exportSliderAnimationAsGif
-window.getAnimatableParameters = getAnimatableParameters
-window.previewAnimation = previewAnimation
 window.gifFrameStack = gifFrameStack
 window.loadGifFrames = loadGifFrames
 window.loadFrameToEditor = loadFrameToEditor
 window.saveEditorToFrame = saveEditorToFrame
 window.exportFrameStackAsGif = exportFrameStackAsGif
 window.applyLayerStackToFrames = applyLayerStackToFrames
-window.createMultiParameterAnimation = createMultiParameterAnimation
 window.isGifPlaying = isGifPlaying
 window.startGifPlayback = startGifPlayback
 window.stopGifPlayback = stopGifPlayback
@@ -1278,9 +1296,11 @@ window.addEventListener('load', () => {
             
             // Check if we should export as animated GIF (extension is gif AND we have multiple frames)
             if (imageEditor.extension === 'gif' && gifFrameStack.length > 1) {
-                console.log('Exporting as animated GIF')
-                // Save current frame edits before exporting
-                saveEditorToFrame(imageEditor, gifFrameStack.currentFrameIndex)
+                // Deliberately no implicit save-back here. Scrubbing or playing the
+                // timeline previews a frame without loading it, so writing the canvas
+                // into gifFrameStack.currentFrameIndex overwrote that frame with a
+                // render of a different one. Baking effects into frames is an explicit
+                // action in GIF Studio.
                 
                 try {
                     const blob = await exportFrameStackAsGif(gifFrameStack, {
