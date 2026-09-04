@@ -1373,6 +1373,9 @@ class WindowManager {
     undockTabGroup(groupId) {
         const tabGroup = this.tabGroups.get(groupId)
         if (!tabGroup || !tabGroup.state.docked) return
+
+        // Release any layout space the dock was reserving.
+        document.documentElement.style.setProperty('--docked-right-inset', '0px')
         
         // Restore pre-dock state
         if (tabGroup.state.preDockState) {

@@ -288,6 +288,9 @@ export class CropTool {
             this.scheduleDraw()
             return
         }
+        // Handles are suppressed mid-drag, so the tool has to repaint once the
+        // gesture ends or they never appear.
+        this.scheduleDraw()
         this.onChange(this.getRect())
     }
 
