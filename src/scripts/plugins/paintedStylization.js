@@ -78,9 +78,10 @@ export function paintedStylization(image, parameters = {}) {
     }
 
     // Pre-calculate stroke offsets to avoid repeated trig in inner loop
+    const halfStrokeWidth = strokeWidth >> 1
     const strokeOffsets = []
     for (let len = 0; len < strokeLength; len++) {
-        for (let w = -strokeWidth >> 1; w < strokeWidth >> 1; w++) {
+        for (let w = -halfStrokeWidth; w < strokeWidth - halfStrokeWidth; w++) {
             strokeOffsets.push({
                 dx: Math.round(cosAngle * len + cosPerp * w),
                 dy: Math.round(sinAngle * len + sinPerp * w)
@@ -155,7 +156,8 @@ export function vectorsInSpace(image, parameters = {}) {
     const r = parameters.R ?? 255
     const g = parameters.G ?? 255
     const b = parameters.B ?? 255
-    const a = parameters.A ?? 255
+    const alphaByte = Math.min(Math.max(parameters.A ?? 255, 0), 255)
+    const strokeAlpha = alphaByte / 255
 
     const radians = ((parameters.angle ?? 90) * Math.PI) / 180
     
@@ -165,11 +167,13 @@ export function vectorsInSpace(image, parameters = {}) {
     const cosPerp = Math.cos(radians + Math.PI / 2)
     const sinPerp = Math.sin(radians + Math.PI / 2)
     
-    // Pre-calculate stroke offsets
+    // Pre-calculate stroke offsets.
+    // The span is centred on the sample and always covers `strokeWidth` columns,
+    // so a width of 1 still draws a single-pixel stroke.
     const halfWidth = strokeWidth >> 1
     const strokeOffsets = []
     for (let len = 0; len < strokeLength; len++) {
-        for (let w = -halfWidth; w < halfWidth; w++) {
+        for (let w = -halfWidth; w < strokeWidth - halfWidth; w++) {
             strokeOffsets.push({
                 dx: Math.round(cosAngle * len + cosPerp * w),
                 dy: Math.round(sinAngle * len + sinPerp * w)
@@ -189,342 +193,158 @@ export function vectorsInSpace(image, parameters = {}) {
     
             if (vx >= 0 && vx < width && vy >= 0 && vy < height) {
                 const idx = (vy * width + vx) << 2
-                data[idx] = r
-                data[idx + 1] = g
-                data[idx + 2] = b
-                data[idx + 3] = a
+                // A is stroke opacity. Blend it into the colour rather than writing
+                // the alpha channel: compositing preserves the base image's alpha, so
+                // writing alpha here would either be ignored or punch a hole.
+                if (strokeAlpha >= 1) {
+                    data[idx] = r
+                    data[idx + 1] = g
+                    data[idx + 2] = b
+                } else {
+                    const keep = 1 - strokeAlpha
+                    data[idx] = data[idx] * keep + r * strokeAlpha
+                    data[idx + 1] = data[idx + 1] * keep + g * strokeAlpha
+                    data[idx + 2] = data[idx + 2] * keep + b * strokeAlpha
+                }
+                // Mark coverage so a stroke over a transparent region still shows.
+                if (alphaByte > data[idx + 3]) data[idx + 3] = alphaByte
             }
         }
     }
 
     return data
+}
+
+// ── Edge detection ────────────────────────────────────────────────────────────
+// Sobel and Prewitt, flat and direction-coloured, were four near-identical copies
+// of the same 60-line loop. They now share one kernel; only the coefficients and
+// the colouring differ.
+
+const SOBEL = { a: 2 }    // Gx = [-1,0,1; -2,0,2; -1,0,1]
+const PREWITT = { a: 1 }  // Gx = [-1,0,1; -1,0,1; -1,0,1]
+
+function parseHex(colour, fallback) {
+    const hex = typeof colour === 'string' && colour.length >= 7 ? colour : fallback
+    return [
+        parseInt(hex.slice(1, 3), 16) || 0,
+        parseInt(hex.slice(3, 5), 16) || 0,
+        parseInt(hex.slice(5, 7), 16) || 0
+    ]
+}
+
+/** Clear the frame to the chosen background before edges are drawn over it. */
+function fillBackground(data, transparent, blackout) {
+    if (!transparent && !blackout) return
+    const alpha = transparent ? 0 : 255
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = 0
+        data[i + 1] = 0
+        data[i + 2] = 0
+        data[i + 3] = alpha
+    }
+}
+
+/**
+ * Shared gradient-magnitude edge pass.
+ *
+ * @param {object} kernel      { a } - the centre-row/column weight (2 = Sobel, 1 = Prewitt)
+ * @param {function} paint     (data, i, gx, gy, magnitude) => void, called for each edge pixel
+ */
+function detectEdges(image, parameters, kernel, paint) {
+    const width = image.width
+    const height = image.height
+    const data = image.data
+    const reference = new Uint8ClampedArray(data)
+    const threshold = parameters.edgeThreshold ?? 100
+    const a = kernel.a
+
+    fillBackground(
+        data,
+        parameters.transparentBackground ?? false,
+        parameters.blackoutBackground ?? true
+    )
+
+    for (let y = 0; y < height; y++) {
+        const rowOffset = y * width
+        const y0 = y > 0 ? y - 1 : 0
+        const y2 = y < height - 1 ? y + 1 : height - 1
+        const row0 = y0 * width
+        const row2 = y2 * width
+
+        for (let x = 0; x < width; x++) {
+            const x0 = x > 0 ? x - 1 : 0
+            const x2 = x < width - 1 ? x + 1 : width - 1
+
+            // Channel sums stand in for intensity; the /3 is folded into the
+            // magnitude below so the threshold keeps its original meaning.
+            const i00 = (row0 + x0) << 2, i01 = (row0 + x) << 2, i02 = (row0 + x2) << 2
+            const i10 = (rowOffset + x0) << 2, i12 = (rowOffset + x2) << 2
+            const i20 = (row2 + x0) << 2, i21 = (row2 + x) << 2, i22 = (row2 + x2) << 2
+
+            const p00 = reference[i00] + reference[i00 + 1] + reference[i00 + 2]
+            const p01 = reference[i01] + reference[i01 + 1] + reference[i01 + 2]
+            const p02 = reference[i02] + reference[i02 + 1] + reference[i02 + 2]
+            const p10 = reference[i10] + reference[i10 + 1] + reference[i10 + 2]
+            const p12 = reference[i12] + reference[i12 + 1] + reference[i12 + 2]
+            const p20 = reference[i20] + reference[i20 + 1] + reference[i20 + 2]
+            const p21 = reference[i21] + reference[i21 + 1] + reference[i21 + 2]
+            const p22 = reference[i22] + reference[i22 + 1] + reference[i22 + 2]
+
+            const gx = -p00 + p02 - a * p10 + a * p12 - p20 + p22
+            const gy = -p00 - a * p01 - p02 + p20 + a * p21 + p22
+            const magnitude = Math.sqrt(gx * gx + gy * gy) * 0.333333
+
+            if (magnitude > threshold) {
+                paint(data, (rowOffset + x) << 2, gx, gy, magnitude)
+            }
+        }
+    }
+
+    return data
+}
+
+function flatPainter(parameters) {
+    const [r, g, b] = parseHex(parameters.edgeColor, '#ffffff')
+    return (data, i) => {
+        data[i] = r
+        data[i + 1] = g
+        data[i + 2] = b
+        data[i + 3] = 255
+    }
+}
+
+function directionPainter(parameters) {
+    const [xr, xg, xb] = parseHex(parameters.colorX, '#ff0000')
+    const [yr, yg, yb] = parseHex(parameters.colorY, '#00ff00')
+    return (data, i, gx, gy, magnitude) => {
+        // Blend the two colours by how horizontal vs vertical the gradient is.
+        const inverse = 1 / (magnitude * 3)
+        const nx = Math.abs(gx) * inverse
+        const ny = Math.abs(gy) * inverse
+        data[i] = Math.min(255, (nx * xr + ny * yr) | 0)
+        data[i + 1] = Math.min(255, (nx * xg + ny * yg) | 0)
+        data[i + 2] = Math.min(255, (nx * xb + ny * yb) | 0)
+        data[i + 3] = 255
+    }
 }
 
 export function sobelEdges(image, parameters = {}) {
-    const width = image.width
-    const height = image.height
-    const data = image.data
-    const refData = new Uint8ClampedArray(data)
-    const edgeThreshold = parameters.edgeThreshold ?? 100
-    const blackoutBackground = parameters.blackoutBackground ?? true
-    const transparentBackground = parameters.transparentBackground ?? false
-    const edgeColor = parameters.edgeColor ?? '#ffffff'
-    
-    // Parse edge color
-    const edgeR = parseInt(edgeColor.slice(1, 3), 16)
-    const edgeG = parseInt(edgeColor.slice(3, 5), 16)
-    const edgeB = parseInt(edgeColor.slice(5, 7), 16)
-
-    // Clear to black or transparent if needed
-    if (transparentBackground) {
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = 0
-            data[i + 1] = 0
-            data[i + 2] = 0
-            data[i + 3] = 0
-        }
-    } else if (blackoutBackground) {
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = 0
-            data[i + 1] = 0
-            data[i + 2] = 0
-            data[i + 3] = 255
-        }   
-    }
-
-    // Process with unrolled Sobel kernel
-    for (let y = 0; y < height; y++) {
-        const yOffset = y * width
-        const y0 = y > 0 ? y - 1 : 0
-        const y2 = y < height - 1 ? y + 1 : height - 1
-        
-        for (let x = 0; x < width; x++) {
-            const x0 = x > 0 ? x - 1 : 0
-            const x2 = x < width - 1 ? x + 1 : width - 1
-            
-            // Get pixel intensities (unrolled)
-            const i00 = (y0 * width + x0) << 2
-            const i01 = (y0 * width + x) << 2
-            const i02 = (y0 * width + x2) << 2
-            const i10 = (yOffset + x0) << 2
-            const i12 = (yOffset + x2) << 2
-            const i20 = (y2 * width + x0) << 2
-            const i21 = (y2 * width + x) << 2
-            const i22 = (y2 * width + x2) << 2
-            
-            const p00 = refData[i00] + refData[i00 + 1] + refData[i00 + 2]
-            const p01 = refData[i01] + refData[i01 + 1] + refData[i01 + 2]
-            const p02 = refData[i02] + refData[i02 + 1] + refData[i02 + 2]
-            const p10 = refData[i10] + refData[i10 + 1] + refData[i10 + 2]
-            const p12 = refData[i12] + refData[i12 + 1] + refData[i12 + 2]
-            const p20 = refData[i20] + refData[i20 + 1] + refData[i20 + 2]
-            const p21 = refData[i21] + refData[i21 + 1] + refData[i21 + 2]
-            const p22 = refData[i22] + refData[i22 + 1] + refData[i22 + 2]
-            
-            // Sobel gradients (skip /3 since we're just comparing to threshold)
-            const gx = -p00 + p02 - 2*p10 + 2*p12 - p20 + p22
-            const gy = -p00 - 2*p01 - p02 + p20 + 2*p21 + p22
-            const magnitude = Math.sqrt(gx * gx + gy * gy) * 0.333333
-            
-            const i = (yOffset + x) << 2
-            if (magnitude > edgeThreshold) {
-                data[i] = edgeR
-                data[i + 1] = edgeG
-                data[i + 2] = edgeB
-                data[i + 3] = 255
-            }
-        }
-    }
-
-    return data
+    return detectEdges(image, parameters, SOBEL, flatPainter(parameters))
 }
 
 export function sobelEdgesColouredDirections(image, parameters = {}) {
-    const width = image.width
-    const height = image.height
-    const data = image.data
-    const refData = new Uint8ClampedArray(data)
-    const edgeThreshold = parameters.edgeThreshold ?? 100
-    const blackoutBackground = parameters.blackoutBackground ?? true
-    const transparentBackground = parameters.transparentBackground ?? false
-    const colorX = parameters.colorX ?? '#ff0000'  // Horizontal edges color (default red)
-    const colorY = parameters.colorY ?? '#00ff00'  // Vertical edges color (default green)
-    
-    // Parse colors
-    const colorXR = parseInt(colorX.slice(1, 3), 16)
-    const colorXG = parseInt(colorX.slice(3, 5), 16)
-    const colorXB = parseInt(colorX.slice(5, 7), 16)
-    const colorYR = parseInt(colorY.slice(1, 3), 16)
-    const colorYG = parseInt(colorY.slice(3, 5), 16)
-    const colorYB = parseInt(colorY.slice(5, 7), 16)
-
-    if (transparentBackground) {
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = 0
-            data[i + 1] = 0
-            data[i + 2] = 0
-            data[i + 3] = 0
-        }
-    } else if (blackoutBackground) {
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = 0
-            data[i + 1] = 0
-            data[i + 2] = 0
-            data[i + 3] = 255
-        }   
-    }
-
-    for (let y = 0; y < height; y++) {
-        const yOffset = y * width
-        const y0 = y > 0 ? y - 1 : 0
-        const y2 = y < height - 1 ? y + 1 : height - 1
-        
-        for (let x = 0; x < width; x++) {
-            const x0 = x > 0 ? x - 1 : 0
-            const x2 = x < width - 1 ? x + 1 : width - 1
-            
-            const i00 = (y0 * width + x0) << 2
-            const i01 = (y0 * width + x) << 2
-            const i02 = (y0 * width + x2) << 2
-            const i10 = (yOffset + x0) << 2
-            const i12 = (yOffset + x2) << 2
-            const i20 = (y2 * width + x0) << 2
-            const i21 = (y2 * width + x) << 2
-            const i22 = (y2 * width + x2) << 2
-            
-            const p00 = refData[i00] + refData[i00 + 1] + refData[i00 + 2]
-            const p01 = refData[i01] + refData[i01 + 1] + refData[i01 + 2]
-            const p02 = refData[i02] + refData[i02 + 1] + refData[i02 + 2]
-            const p10 = refData[i10] + refData[i10 + 1] + refData[i10 + 2]
-            const p12 = refData[i12] + refData[i12 + 1] + refData[i12 + 2]
-            const p20 = refData[i20] + refData[i20 + 1] + refData[i20 + 2]
-            const p21 = refData[i21] + refData[i21 + 1] + refData[i21 + 2]
-            const p22 = refData[i22] + refData[i22 + 1] + refData[i22 + 2]
-            
-            const gx = -p00 + p02 - 2*p10 + 2*p12 - p20 + p22
-            const gy = -p00 - 2*p01 - p02 + p20 + 2*p21 + p22
-            const magnitude = Math.sqrt(gx * gx + gy * gy) * 0.333333
-            
-            const i = (yOffset + x) << 2
-            if (magnitude > edgeThreshold) {
-                const invMag = 1 / (magnitude * 3)
-                const normalizedX = Math.abs(gx) * invMag
-                const normalizedY = Math.abs(gy) * invMag
-                
-                // Blend the two colors based on edge direction
-                data[i] = Math.min(255, (normalizedX * colorXR + normalizedY * colorYR) | 0)
-                data[i + 1] = Math.min(255, (normalizedX * colorXG + normalizedY * colorYG) | 0)
-                data[i + 2] = Math.min(255, (normalizedX * colorXB + normalizedY * colorYB) | 0)
-                data[i + 3] = 255
-            }
-        }
-    }
-
-    return data
+    return detectEdges(image, parameters, SOBEL, directionPainter(parameters))
 }
 
 export function prewittEdges(image, parameters = {}) {
-    const width = image.width
-    const height = image.height
-    const data = image.data
-    const refData = new Uint8ClampedArray(data)
-    const edgeThreshold = parameters.edgeThreshold ?? 100
-    const blackoutBackground = parameters.blackoutBackground ?? true
-    const transparentBackground = parameters.transparentBackground ?? false
-    const edgeColor = parameters.edgeColor ?? '#ffffff'
-    
-    // Parse edge color
-    const edgeR = parseInt(edgeColor.slice(1, 3), 16)
-    const edgeG = parseInt(edgeColor.slice(3, 5), 16)
-    const edgeB = parseInt(edgeColor.slice(5, 7), 16)
-
-    if (transparentBackground) {
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = 0
-            data[i + 1] = 0
-            data[i + 2] = 0
-            data[i + 3] = 0
-        }
-    } else if (blackoutBackground) {
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = 0
-            data[i + 1] = 0
-            data[i + 2] = 0
-            data[i + 3] = 255
-        }   
-    }
-
-    for (let y = 0; y < height; y++) {
-        const yOffset = y * width
-        const y0 = y > 0 ? y - 1 : 0
-        const y2 = y < height - 1 ? y + 1 : height - 1
-        
-        for (let x = 0; x < width; x++) {
-            const x0 = x > 0 ? x - 1 : 0
-            const x2 = x < width - 1 ? x + 1 : width - 1
-            
-            const i00 = (y0 * width + x0) << 2
-            const i01 = (y0 * width + x) << 2
-            const i02 = (y0 * width + x2) << 2
-            const i10 = (yOffset + x0) << 2
-            const i12 = (yOffset + x2) << 2
-            const i20 = (y2 * width + x0) << 2
-            const i21 = (y2 * width + x) << 2
-            const i22 = (y2 * width + x2) << 2
-            
-            const p00 = refData[i00] + refData[i00 + 1] + refData[i00 + 2]
-            const p01 = refData[i01] + refData[i01 + 1] + refData[i01 + 2]
-            const p02 = refData[i02] + refData[i02 + 1] + refData[i02 + 2]
-            const p10 = refData[i10] + refData[i10 + 1] + refData[i10 + 2]
-            const p12 = refData[i12] + refData[i12 + 1] + refData[i12 + 2]
-            const p20 = refData[i20] + refData[i20 + 1] + refData[i20 + 2]
-            const p21 = refData[i21] + refData[i21 + 1] + refData[i21 + 2]
-            const p22 = refData[i22] + refData[i22 + 1] + refData[i22 + 2]
-            
-            // Prewitt: Gx = [-1,0,1; -1,0,1; -1,0,1], Gy = [1,1,1; 0,0,0; -1,-1,-1]
-            const gx = -p00 + p02 - p10 + p12 - p20 + p22
-            const gy = p00 + p01 + p02 - p20 - p21 - p22
-            const magnitude = Math.sqrt(gx * gx + gy * gy) * 0.333333
-            
-            const i = (yOffset + x) << 2
-            if (magnitude > edgeThreshold) {
-                data[i] = edgeR
-                data[i + 1] = edgeG
-                data[i + 2] = edgeB
-                data[i + 3] = 255
-            }
-        }
-    }
-
-    return data
+    return detectEdges(image, parameters, PREWITT, flatPainter(parameters))
 }
-
-// Alias for backwards compatibility
-export const prewireEdges = prewittEdges
 
 export function prewittEdgesColouredDirections(image, parameters = {}) {
-    const width = image.width
-    const height = image.height
-    const data = image.data
-    const refData = new Uint8ClampedArray(data)
-    const edgeThreshold = parameters.edgeThreshold ?? 100
-    const blackoutBackground = parameters.blackoutBackground ?? true
-    const transparentBackground = parameters.transparentBackground ?? false
-    const colorX = parameters.colorX ?? '#ff0000'  // Horizontal edges color (default red)
-    const colorY = parameters.colorY ?? '#00ff00'  // Vertical edges color (default green)
-    
-    // Parse colors
-    const colorXR = parseInt(colorX.slice(1, 3), 16)
-    const colorXG = parseInt(colorX.slice(3, 5), 16)
-    const colorXB = parseInt(colorX.slice(5, 7), 16)
-    const colorYR = parseInt(colorY.slice(1, 3), 16)
-    const colorYG = parseInt(colorY.slice(3, 5), 16)
-    const colorYB = parseInt(colorY.slice(5, 7), 16)
-
-    if (transparentBackground) {
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = 0
-            data[i + 1] = 0
-            data[i + 2] = 0
-            data[i + 3] = 0
-        }
-    } else if (blackoutBackground) {
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = 0
-            data[i + 1] = 0
-            data[i + 2] = 0
-            data[i + 3] = 255
-        }   
-    }
-
-    for (let y = 0; y < height; y++) {
-        const yOffset = y * width
-        const y0 = y > 0 ? y - 1 : 0
-        const y2 = y < height - 1 ? y + 1 : height - 1
-        
-        for (let x = 0; x < width; x++) {
-            const x0 = x > 0 ? x - 1 : 0
-            const x2 = x < width - 1 ? x + 1 : width - 1
-            
-            const i00 = (y0 * width + x0) << 2
-            const i01 = (y0 * width + x) << 2
-            const i02 = (y0 * width + x2) << 2
-            const i10 = (yOffset + x0) << 2
-            const i12 = (yOffset + x2) << 2
-            const i20 = (y2 * width + x0) << 2
-            const i21 = (y2 * width + x) << 2
-            const i22 = (y2 * width + x2) << 2
-            
-            const p00 = refData[i00] + refData[i00 + 1] + refData[i00 + 2]
-            const p01 = refData[i01] + refData[i01 + 1] + refData[i01 + 2]
-            const p02 = refData[i02] + refData[i02 + 1] + refData[i02 + 2]
-            const p10 = refData[i10] + refData[i10 + 1] + refData[i10 + 2]
-            const p12 = refData[i12] + refData[i12 + 1] + refData[i12 + 2]
-            const p20 = refData[i20] + refData[i20 + 1] + refData[i20 + 2]
-            const p21 = refData[i21] + refData[i21 + 1] + refData[i21 + 2]
-            const p22 = refData[i22] + refData[i22 + 1] + refData[i22 + 2]
-            
-            const gx = -p00 + p02 - p10 + p12 - p20 + p22
-            const gy = p00 + p01 + p02 - p20 - p21 - p22
-            const magnitude = Math.sqrt(gx * gx + gy * gy) * 0.333333
-            
-            const i = (yOffset + x) << 2
-            if (magnitude > edgeThreshold) {
-                const invMag = 1 / (magnitude * 3)
-                const normalizedX = Math.abs(gx) * invMag
-                const normalizedY = Math.abs(gy) * invMag
-                
-                // Blend the two colors based on edge direction
-                data[i] = Math.min(255, (normalizedX * colorXR + normalizedY * colorYR) | 0)
-                data[i + 1] = Math.min(255, (normalizedX * colorXG + normalizedY * colorYG) | 0)
-                data[i + 2] = Math.min(255, (normalizedX * colorXB + normalizedY * colorYB) | 0)
-                data[i + 3] = 255
-            }
-        }
-    }
-
-    return data
+    return detectEdges(image, parameters, PREWITT, directionPainter(parameters))
 }
 
+// Aliases retained for the existing menu wiring.
+export const prewireEdges = prewittEdges
 // Alias for backwards compatibility
 export const prewireEdgesColouredDirections = prewittEdgesColouredDirections

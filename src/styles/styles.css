@@ -327,11 +327,66 @@ input, select {
     display: block;
 }
 
-.selectionOverlay {
-    pointer-events: none;
+/* Crop tool overlay.
+   Parented to .imageViewingModule, which carries no transform, so the overlay is
+   sized to the viewport rather than to the image and its coordinates are stable
+   under pan and zoom. */
+.cropOverlay {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
+    z-index: 90;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.imageViewingModule.cropping {
+    cursor: crosshair;
+}
+
+/* The play button sits inside the transformed div and would otherwise swallow
+   crop drags in the bottom-right corner. */
+.imageViewingModule.cropping .gifPlayStopBtn {
+    pointer-events: none;
+    opacity: 0.35;
+}
+
+.cropMetaRow {
+    align-items: flex-end;
+}
+
+.cropAspectLabel select {
+    width: 100%;
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+}
+
+.cropSizeReadout {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    padding-bottom: var(--space-2);
+}
+
+.cropHint {
+    margin: var(--space-2) 0 0;
+    font-size: 0.7rem;
+    line-height: 1.5;
+    color: var(--text-tertiary, #64748b);
+    text-align: center;
+}
+
+.cropHint kbd {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.68rem;
+    padding: 1px 4px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg-tertiary);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1299,6 +1354,30 @@ input, select {
     box-shadow: var(--shadow-xl);
     z-index: 120;
     animation: slideUp 0.2s ease;
+    /* The panel floats over the image. Only its controls should intercept
+       pointer events, otherwise it silently swallows crop drags aimed at the
+       part of the picture underneath it. */
+    pointer-events: none;
+}
+
+.floatingPanelHeader,
+.floatingPanel label,
+.floatingPanel button,
+.floatingPanel input,
+.floatingPanel select,
+.floatingPanel .cropSizeReadout {
+    pointer-events: auto;
+}
+
+/* On desktop the docked panels own the right edge, so keep the crop inspector
+   out of both the centre of the image and their way. */
+@media (min-width: 1024px) {
+    .floatingPanel {
+        left: var(--space-3);
+        right: auto;
+        margin: 0;
+        max-width: 320px;
+    }
 }
 
 @keyframes slideUp {
@@ -1661,3 +1740,264 @@ input, select {
     }
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GIF STUDIO
+   One window replacing the two modal dialogs, whose styles were injected into
+   document.head at runtime and half-scoped shared class names against each other.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Several elements here are display:flex, which beats the UA stylesheet's
+   [hidden] { display: none } - so the empty state stayed visible over a loaded
+   timeline. Make the attribute authoritative within the studio. */
+.gs [hidden],
+.gs[hidden] {
+    display: none !important;
+}
+
+.gs {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    font-size: 0.8rem;
+    overflow-y: auto;
+}
+
+.gsTabs {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    flex-shrink: 0;
+}
+
+.gsTab {
+    flex: 1;
+    padding: var(--space-2);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+}
+
+.gsTab:hover { color: var(--text-primary); }
+
+.gsTabActive {
+    background: var(--bg-elevated, var(--bg-secondary));
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.2));
+}
+
+.gsPanel { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.gsEmpty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-6) var(--space-4);
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.gsEmptyActions { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
+
+.gsRow { display: flex; align-items: flex-end; gap: var(--space-2); }
+.gsRow.gsWrap { flex-wrap: wrap; }
+
+.gsField {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.gsField input,
+.gsField select {
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    text-transform: none;
+    letter-spacing: normal;
+    min-width: 0;
+}
+
+.gsCheck {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.gsBtn {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.76rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--transition), border-color var(--transition);
+}
+
+.gsBtn:hover:not(:disabled) { background: var(--bg-elevated, var(--bg-secondary)); border-color: var(--accent-border, var(--border)); }
+.gsBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.gsPrimary { background: var(--accent, #6366f1); border-color: transparent; color: #fff; }
+.gsDanger { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #ef4444; }
+
+.gsIconBtn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.gsIconBtn:hover { background: var(--bg-elevated, var(--bg-secondary)); }
+
+.gsTransport { display: flex; align-items: center; gap: 4px; }
+.gsScrub { flex: 1; min-width: 40px; }
+.gsCounter {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    min-width: 52px;
+    text-align: right;
+}
+
+/* Timeline strip: horizontal, scrolling, one cell per frame. */
+.gsStrip {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: var(--space-2);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    min-height: 78px;
+    scrollbar-width: thin;
+}
+
+.gsCell {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    cursor: pointer;
+    line-height: 0;
+    overflow: hidden;
+}
+
+.gsCell img { height: 54px; width: auto; display: block; }
+.gsCellSelected { border-color: var(--accent, #6366f1); }
+.gsCellCurrent { outline: 2px solid var(--text-primary); outline-offset: -2px; }
+
+.gsCellBadge,
+.gsCellDelay {
+    position: absolute;
+    padding: 0 3px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 9px;
+    line-height: 13px;
+    color: #fff;
+    background: rgba(8, 10, 16, 0.75);
+    border-radius: 2px;
+}
+
+.gsCellBadge { top: 2px; left: 2px; }
+.gsCellDelay { bottom: 2px; right: 2px; }
+
+.gsTracks { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.gsTrack {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+}
+
+.gsTrack select { flex: 1; min-width: 0; }
+.gsTrack select,
+.gsTrackField input {
+    padding: 5px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.76rem;
+}
+
+.gsTrackField {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    width: 70px;
+}
+
+.gsTrackField input { width: 100%; }
+
+.gsProgress { display: flex; align-items: center; gap: var(--space-2); }
+.gsProgressBar { flex: 1; height: 6px; background: var(--bg-tertiary); border-radius: 3px; overflow: hidden; }
+.gsProgressFill { height: 100%; width: 0; background: var(--accent, #6366f1); transition: width 0.1s linear; }
+
+.gsResult {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+/* The browser animates this natively, so it is the real result, not an estimate. */
+.gsResult img {
+    max-width: 100%;
+    max-height: 220px;
+    align-self: center;
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+}
+
+.gsResultMeta {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.gsHint { margin: 0; font-size: 0.7rem; line-height: 1.5; color: var(--text-tertiary, #64748b); }
+.gsHint.gsError { color: #ef4444; }

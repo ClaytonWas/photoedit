@@ -206,7 +206,23 @@ function showCopyFeedback() {
 /**
  * Handle mouse move on canvas
  */
+// A 1x1 getImageData is a synchronous GPU readback. Pointer moves arrive far
+// faster than the display refreshes, so coalesce them to one sample per frame.
+let pendingMove = null
+let moveFrame = null
+
 function handleCanvasMove(e) {
+    pendingMove = { clientX: e.clientX, clientY: e.clientY }
+    if (moveFrame) return
+    moveFrame = requestAnimationFrame(() => {
+        moveFrame = null
+        const event = pendingMove
+        pendingMove = null
+        if (event) sampleCanvasPoint(event)
+    })
+}
+
+function sampleCanvasPoint(e) {
     const editor = window.getActiveEditor?.() || imageEditor
     if (!editor || !editor.canvas) return
     

@@ -1126,6 +1126,9 @@ class WindowManager {
     closeTabGroup(groupId) {
         const tabGroup = this.tabGroups.get(groupId)
         if (!tabGroup) return
+
+        // Release any layout space this group was reserving.
+        document.documentElement.style.setProperty('--docked-right-inset', '0px')
         
         // Close all windows in the group
         const tabsToClose = [...tabGroup.tabs]
@@ -1246,6 +1249,9 @@ class WindowManager {
     dissolveTabGroup(groupId) {
         const tabGroup = this.tabGroups.get(groupId)
         if (!tabGroup || tabGroup.tabs.length !== 1) return
+
+        // Release any layout space this group was reserving.
+        document.documentElement.style.setProperty('--docked-right-inset', '0px')
         
         const windowId = tabGroup.tabs[0]
         const win = this.windows.get(windowId)
@@ -1373,6 +1379,9 @@ class WindowManager {
     undockTabGroup(groupId) {
         const tabGroup = this.tabGroups.get(groupId)
         if (!tabGroup || !tabGroup.state.docked) return
+
+        // Release any layout space the dock was reserving.
+        document.documentElement.style.setProperty('--docked-right-inset', '0px')
         
         // Restore pre-dock state
         if (tabGroup.state.preDockState) {
@@ -2311,11 +2320,49 @@ class WindowManager {
     }
     
     // State persistence
+    /**
+     * Read the persisted window states.
+     * localStorage can be unavailable (private browsing, sandboxed iframes) and its
+     * contents can be corrupt, so never let a read take the whole app down.
+     */
+    readSavedStates() {
+        let raw
+        try {
+            raw = localStorage.getItem('wm-window-states')
+        } catch (error) {
+            console.warn('Window state storage is unavailable:', error)
+            return {}
+        }
+
+        if (!raw) return {}
+
+        try {
+            const parsed = JSON.parse(raw)
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                throw new Error('Stored window states are not an object')
+            }
+            return parsed
+        } catch (error) {
+            // Corrupt payload: drop it so the next save starts from a clean slate.
+            console.warn('Discarding corrupt window states:', error)
+            this.clearAllSavedStates()
+            return {}
+        }
+    }
+
+    writeSavedStates(states) {
+        try {
+            localStorage.setItem('wm-window-states', JSON.stringify(states))
+        } catch (error) {
+            console.warn('Could not persist window states:', error)
+        }
+    }
+
     saveWindowState(id) {
         const windowInstance = this.windows.get(id)
         if (!windowInstance || !windowInstance.config.persistent) return
         
-        const states = JSON.parse(localStorage.getItem('wm-window-states') || '{}')
+        const states = this.readSavedStates()
         states[id] = {
             x: windowInstance.state.x,
             y: windowInstance.state.y,
@@ -2324,22 +2371,26 @@ class WindowManager {
             docked: windowInstance.state.docked,
             preDockState: windowInstance.state.preDockState
         }
-        localStorage.setItem('wm-window-states', JSON.stringify(states))
+        this.writeSavedStates(states)
     }
     
     getSavedState(id) {
-        const states = JSON.parse(localStorage.getItem('wm-window-states') || '{}')
-        return states[id]
+        const state = this.readSavedStates()[id]
+        return state && typeof state === 'object' ? state : undefined
     }
     
     clearSavedState(id) {
-        const states = JSON.parse(localStorage.getItem('wm-window-states') || '{}')
+        const states = this.readSavedStates()
         delete states[id]
-        localStorage.setItem('wm-window-states', JSON.stringify(states))
+        this.writeSavedStates(states)
     }
     
     clearAllSavedStates() {
-        localStorage.removeItem('wm-window-states')
+        try {
+            localStorage.removeItem('wm-window-states')
+        } catch (error) {
+            console.warn('Could not clear window states:', error)
+        }
     }
     
     restoreWindowStates() {

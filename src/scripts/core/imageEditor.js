@@ -1,5 +1,6 @@
 import { LayerManager } from './layers.js'
 import { HistoryManager } from './history.js'
+import { RenderService } from './renderService.js'
 import { hsvAdjustment } from '../plugins/hsvAdjustment.js'
 
 const STATE_CHANGE_EVENT = 'imageEditorStateChanged'
@@ -34,6 +35,21 @@ export class ImageEditor {
         this.previewCanvas = null
         this.previewContext = null
         this.previewScale = 0.25
+
+        // Full-quality compositing runs in a worker so a slider drag never blocks
+        // the main thread. Falls back to inline compositing if it is unavailable.
+        this.renderService = new RenderService()
+        // Set by dispose(). Async work started before teardown must not paint the
+        // canvas the replacement editor now owns.
+        this.disposed = false
+        // Monotonic stamp on every canvas write. A preview scheduled before a
+        // full-quality frame can resolve after it, so each writer checks that it is
+        // still the newest before painting.
+        this.paintSequence = 0
+        // Reused per-layer working buffers, so an N-layer stack does not allocate
+        // N full frames on every render.
+        this.compositeScratch = null
+        this.previewScratch = null
 
         this.canvas.width = this.IMAGE.width
         this.canvas.height = this.IMAGE.height
@@ -182,9 +198,18 @@ export class ImageEditor {
 
         this.isPreviewRendering = true
         this.previewRequested = false
+        const previewSequence = ++this.paintSequence
         this.dispatchStateChange('Render started')
 
         requestAnimationFrame(() => {
+            if (this.disposed) { this.isPreviewRendering = false; return }
+            // A full-quality frame landed while this was queued - it is strictly
+            // better, so do not overwrite it with the preview.
+            if (previewSequence !== this.paintSequence) {
+                this.isPreviewRendering = false
+                if (this.previewRequested) { this.previewRequested = false }
+                return
+            }
             try {
                 const baseCanvas = this.ensureBaseImageCanvas()
                 const scale = this.previewScale
@@ -205,7 +230,11 @@ export class ImageEditor {
                 
                 // Get preview image data and apply effects
                 const previewData = this.previewContext.getImageData(0, 0, width, height)
-                this.layerManager.applyLayerEffects(previewData)
+                const previewBytes = previewData.data.length
+                if (!this.previewScratch || this.previewScratch.length !== previewBytes) {
+                    this.previewScratch = new Uint8ClampedArray(previewBytes)
+                }
+                this.layerManager.applyLayerEffects(previewData, this.previewScratch)
                 this.previewContext.putImageData(previewData, 0, 0)
 
                 // Scale up and draw to main canvas with smoothing
@@ -230,32 +259,118 @@ export class ImageEditor {
 
     renderFullQuality() {
         if (this.isRendering) {
+            // A render is already in flight. Remember that the state changed again so
+            // the in-flight pass re-runs afterwards, otherwise this request is lost
+            // and the canvas keeps showing stale pixels.
+            this.renderRequested = true
             return
         }
 
         this.isRendering = true
+        this.renderRequested = false
         this.fullQualityRenderTimeout = null // Clear the timeout since we're starting the render
         this.dispatchStateChange('Render started')
 
+        const settle = (succeeded) => {
+            if (this.disposed) { this.isRendering = false; return }
+            this.isRendering = false
+            if (this.renderRequested) {
+                this.renderRequested = false
+                this.renderFullQuality()
+                return
+            }
+            this.dispatchStateChange(succeeded ? 'Render complete' : 'Render failed')
+        }
+
+        const descriptors = this.layerManager.toDescriptors()
+
+        if (this.canOffloadRender(descriptors)) {
+            try {
+                // Touch the base first: this populates the cache and hands the pixels
+                // to the worker if they have changed.
+                this.getBaseImageData()
+            } catch (error) {
+                // Without this the editor stays wedged at isRendering forever and the
+                // status indicator never leaves "Rendering".
+                console.error('Could not read the base image:', error)
+                settle(false)
+                return
+            }
+            this.renderService.render(descriptors)
+                .then((result) => {
+                    if (this.disposed) return
+                    if (!result) {
+                        // Worker went away or its base was stale - render inline instead.
+                        this.renderFullQualityInline(settle)
+                        return
+                    }
+                    this.paintSequence++
+                    this.context.putImageData(result, 0, 0)
+                    settle(true)
+                })
+                .catch((error) => {
+                    if (this.disposed) return
+                    console.warn('Worker render failed; falling back to main thread.', error)
+                    this.renderFullQualityInline(settle)
+                })
+            return
+        }
+
+        this.renderFullQualityInline(settle)
+    }
+
+    /**
+     * True when every contributing layer is a registered effect, so the worker can
+     * reproduce the stack from ids alone.
+     */
+    canOffloadRender(descriptors) {
+        return Boolean(
+            this.renderService?.available &&
+            descriptors.length > 0 &&
+            this.layerManager.isFullyOffloadable()
+        )
+    }
+
+    renderFullQualityInline(settle) {
         requestAnimationFrame(() => {
+            if (this.disposed) return
             try {
                 const baseImageData = this.getBaseImageData()
                 const imageData = this.cloneImageData(baseImageData)
-                
-                // Apply all layer effects directly at full quality
-                this.layerManager.applyLayerEffects(imageData)
-                
-                // Draw the result to the canvas
+
+                const byteLength = imageData.data.length
+                if (!this.compositeScratch || this.compositeScratch.length !== byteLength) {
+                    this.compositeScratch = new Uint8ClampedArray(byteLength)
+                }
+
+                this.layerManager.applyLayerEffects(imageData, this.compositeScratch)
+                this.paintSequence++
                 this.context.putImageData(imageData, 0, 0)
             } catch (error) {
                 console.error('Full quality render error:', error)
-                this.isRendering = false
-                this.dispatchStateChange('Render failed')
+                settle(false)
                 return
             }
-            this.isRendering = false
-            this.dispatchStateChange('Render complete')
+            settle(true)
         })
+    }
+
+    /**
+     * Composite the current stack at full resolution and return the pixels.
+     *
+     * Reads nothing from the visible canvas, so it cannot capture a half-finished
+     * or preview-scale frame - which is how a blurry 0.25-scale preview used to end
+     * up baked into a saved GIF frame.
+     */
+    renderToImageData() {
+        const base = this.getBaseImageData()
+        const imageData = this.cloneImageData(base)
+        const byteLength = imageData.data.length
+        if (!this.compositeScratch || this.compositeScratch.length !== byteLength) {
+            this.compositeScratch = new Uint8ClampedArray(byteLength)
+        }
+        this.layerManager.applyLayerEffects(imageData, this.compositeScratch)
+        return imageData
     }
 
     ensureBaseImageCanvas() {
@@ -288,6 +403,7 @@ export class ImageEditor {
                 height
             )
             this.baseImageDirty = false
+            this.renderService?.setBase(this.baseImageCache)
         }
         return this.baseImageCache
     }
@@ -301,14 +417,16 @@ export class ImageEditor {
     }
 
 
-    bilinearInterpolation() {
-        console.warn('Bilinear interpolation is not implemented yet.')
-        return Promise.resolve()
+    // Bilinear and nearest-neighbour resampling are not implemented yet. They fall back to
+    // the browser's own resampler so the resize still happens instead of silently no-opping.
+    bilinearInterpolation(newWidth, newHeight) {
+        console.warn('Bilinear interpolation is not implemented yet; using the default resampler.')
+        return this.defaultInterpolation(newWidth, newHeight)
     }
 
-    nearestNeighbourInterpolation() {
-        console.warn('Nearest neighbour interpolation is not implemented yet.')
-        return Promise.resolve()
+    nearestNeighbourInterpolation(newWidth, newHeight) {
+        console.warn('Nearest neighbour interpolation is not implemented yet; using the default resampler.')
+        return this.defaultInterpolation(newWidth, newHeight)
     }
 
     defaultInterpolation(newWidth, newHeight) {
@@ -323,6 +441,7 @@ export class ImageEditor {
 
             const resizedImage = new Image()
             resizedImage.src = tempCanvas.toDataURL(this.TYPE)
+            resizedImage.onerror = () => resolve()
             resizedImage.onload = () => {
                 this.image = resizedImage
                 this.canvas.width = newWidth
@@ -510,10 +629,73 @@ export class ImageEditor {
         return existingIndex === -1 ? null : existingIndex
     }
 
+    /**
+     * Crop to `rect` ({x, y, width, height} in image pixels).
+     *
+     * Rasterises with createImageBitmap rather than canvas.toDataURL: no PNG/JPEG
+     * round trip, so no generation loss on repeated crops of a JPEG, no alpha
+     * flattening, and no multi-megabyte base64 string.
+     */
+    async cropRect(rect) {
+        const source = this.image
+        if (!source || !rect) return
+
+        const imageWidth = source.width
+        const imageHeight = source.height
+        const left = Math.max(0, Math.min(Math.round(rect.x), imageWidth))
+        const top = Math.max(0, Math.min(Math.round(rect.y), imageHeight))
+        const right = Math.max(left, Math.min(Math.round(rect.x + rect.width), imageWidth))
+        const bottom = Math.max(top, Math.min(Math.round(rect.y + rect.height), imageHeight))
+        const width = right - left
+        const height = bottom - top
+        if (width < 1 || height < 1) return
+
+        let cropped = null
+        if (typeof createImageBitmap === 'function') {
+            try {
+                cropped = await createImageBitmap(source, left, top, width, height)
+            } catch (error) {
+                console.warn('createImageBitmap crop failed; falling back to canvas.', error)
+            }
+        }
+
+        if (!cropped) {
+            const temp = document.createElement('canvas')
+            temp.width = width
+            temp.height = height
+            temp.getContext('2d').drawImage(source, left, top, width, height, 0, 0, width, height)
+            cropped = temp
+        }
+
+        // createImageBitmap is async; the editor may have been replaced while it ran.
+        if (this.disposed) {
+            cropped.close?.()
+            return
+        }
+
+        this.canvas.width = width
+        this.canvas.height = height
+        this.image = cropped
+        this.invalidateBaseImageCache()
+        this.requestRender(true)
+        this.commitSnapshot('Crop image')
+    }
+
     crop(originHeight, originWidth, endHeight, endWidth) {
         return new Promise((resolve) => {
-            const newHeight = Math.abs(endHeight - originHeight)
-            const newWidth = Math.abs(endWidth - originWidth)
+            // The selection can be dragged in any direction, so normalise the corners
+            // and clamp them to the image before deriving the crop rectangle. Using the
+            // raw origin would read outside the source and produce a blank result.
+            const imageWidth = this.image.width
+            const imageHeight = this.image.height
+
+            const left = Math.max(0, Math.min(Math.min(originWidth, endWidth), imageWidth))
+            const top = Math.max(0, Math.min(Math.min(originHeight, endHeight), imageHeight))
+            const right = Math.max(0, Math.min(Math.max(originWidth, endWidth), imageWidth))
+            const bottom = Math.max(0, Math.min(Math.max(originHeight, endHeight), imageHeight))
+
+            const newWidth = Math.round(right - left)
+            const newHeight = Math.round(bottom - top)
 
             if (!newHeight || !newWidth) {
                 resolve()
@@ -528,8 +710,8 @@ export class ImageEditor {
 
             tempContext.drawImage(
                 this.image,
-                originWidth,
-                originHeight,
+                left,
+                top,
                 newWidth,
                 newHeight,
                 0,
@@ -540,6 +722,7 @@ export class ImageEditor {
 
             const croppedImage = new Image()
             croppedImage.src = tempCanvas.toDataURL(this.TYPE)
+            croppedImage.onerror = () => resolve()
             croppedImage.onload = () => {
                 this.canvas.width = newWidth
                 this.canvas.height = newHeight
@@ -577,6 +760,7 @@ export class ImageEditor {
         rotatedImage.src = tempCanvas.toDataURL(this.TYPE)
 
         return new Promise((resolve) => {
+            rotatedImage.onerror = () => resolve()
             rotatedImage.onload = () => {
                 this.canvas.width = newWidth
                 this.canvas.height = newHeight
@@ -615,7 +799,11 @@ export class ImageEditor {
     createSnapshot(reason) {
         return {
             reason,
-            baseImageSrc: this.image.src,
+            // Hold the base image by reference. Operations that change it (crop,
+            // rotate, resize) always assign a brand new object, so sharing is safe -
+            // and every layer-only snapshot then costs nothing instead of another
+            // multi-megabyte data URL that has to be re-decoded on undo.
+            baseImage: this.image,
             canvasWidth: this.canvas.width,
             canvasHeight: this.canvas.height,
             layerManager: this.layerManager.clone()
@@ -624,7 +812,12 @@ export class ImageEditor {
 
     async restoreSnapshot(snapshot, reason) {
         this.isRestoringState = true
-        await this.replaceImage(snapshot.baseImageSrc)
+        if (snapshot.baseImage) {
+            this.image = snapshot.baseImage
+            this.invalidateBaseImageCache()
+        } else if (snapshot.baseImageSrc) {
+            await this.replaceImage(snapshot.baseImageSrc) // pre-existing snapshots
+        }
         this.canvas.width = snapshot.canvasWidth
         this.canvas.height = snapshot.canvasHeight
         this.layerManager = snapshot.layerManager.clone()
@@ -634,25 +827,29 @@ export class ImageEditor {
     }
 
     replaceImage(src) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const newImage = new Image()
-            newImage.src = src
             newImage.onload = () => {
                 this.image = newImage
                 this.invalidateBaseImageCache()
                 resolve()
             }
+            // Without this the promise never settles and every awaiting handler
+            // hangs silently.
+            newImage.onerror = () => reject(new Error('Could not decode image data'))
+            newImage.src = src
         })
     }
 
     dispatchStateChange(reason) {
+        if (this.disposed) return
         window.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT, {
             detail: {
                 instance: this,
                 reason,
                 undoAvailable: this.history.canUndo(),
                 redoAvailable: this.history.canRedo(),
-                isRendering: this.isRendering || this.isPreviewRendering || this.fullQualityRenderTimeout !== null,
+                isRendering: this.isBusy,
                 renderFailed: reason === 'Render failed'
             }
         }))
@@ -664,7 +861,7 @@ export class ImageEditor {
     waitForRenderComplete() {
         return new Promise((resolve) => {
             const checkRenderState = () => {
-                if (!this.isRendering && !this.isPreviewRendering && !this.fullQualityRenderTimeout && !this.renderTimeout) {
+                if (!this.isBusy) {
                     resolve()
                 } else {
                     requestAnimationFrame(checkRenderState)
@@ -675,9 +872,31 @@ export class ImageEditor {
     }
 
     /**
+     * Tear down owned resources. Called when the editor is replaced so its worker
+     * and cached frames do not outlive it.
+     */
+    dispose() {
+        this.disposed = true
+        if (this.renderTimeout) clearTimeout(this.renderTimeout)
+        if (this.fullQualityRenderTimeout) clearTimeout(this.fullQualityRenderTimeout)
+        this.renderTimeout = null
+        this.fullQualityRenderTimeout = null
+        this.renderService?.dispose()
+        this.renderService = null
+        this.compositeScratch = null
+        this.previewScratch = null
+        this.baseImageCache = null
+    }
+
+    /**
      * Returns true if any render is in progress or queued
      */
     get isBusy() {
-        return this.isRendering || this.isPreviewRendering || this.fullQualityRenderTimeout !== null || this.renderTimeout !== null
+        return this.isRendering
+            || this.isPreviewRendering
+            || this.renderRequested
+            || this.previewRequested
+            || this.fullQualityRenderTimeout !== null
+            || this.renderTimeout !== null
     }
 }

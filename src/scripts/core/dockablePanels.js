@@ -127,7 +127,20 @@ function setupDefaultDockedLayout() {
         }
         
         tabGroup.element.classList.add('wm-docked')
+
+        // The docked group is position:fixed over everything, so without this the
+        // canvas extends underneath it and the right quarter of the image is
+        // permanently hidden.
+        setDockedRightInset(dockStyle.width)
     })
+}
+
+/**
+ * Reserve horizontal space in the main layout for a right-docked panel.
+ * Pass 0 to release it.
+ */
+export function setDockedRightInset(width) {
+    document.documentElement.style.setProperty('--docked-right-inset', `${Math.max(0, Math.round(width))}px`)
 }
 
 /**
@@ -677,10 +690,12 @@ function updateLayoutStyles() {
     const style = document.createElement('style')
     style.id = 'dockable-layout-styles'
     style.textContent = `
-        /* Full canvas workspace */
+        /* Full canvas workspace, minus whatever a right-docked panel occupies. */
         .mainContent {
             padding: 8px !important;
             padding-bottom: calc(var(--bottom-nav-height) + 8px + env(safe-area-inset-bottom, 0px)) !important;
+            padding-right: calc(8px + var(--docked-right-inset, 0px)) !important;
+            transition: padding-right 0.15s ease;
         }
         
         .imageModule {

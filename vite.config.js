@@ -5,17 +5,18 @@ export default defineConfig({
     publicDir: 'public',
     build: {
         outDir: 'dist',
-        emptyOutDir: true,
-        rollupOptions: {
-            output: {
-                // Ensure workers are properly handled in production
-                workerFileNames: 'workers/[name]-[hash].js'
-            }
-        }
+        emptyOutDir: true
     },
     worker: {
         format: 'es',
-        plugins: []
+        // Vite 6+ expects a factory here, not a plain array.
+        plugins: () => [],
+        rollupOptions: {
+            output: {
+                // Worker naming belongs to the worker bundle; on build.rollupOptions
+                // Rollup rejects it as an unknown option and the setting is ignored.
+                entryFileNames: 'workers/[name]-[hash].js'
+            }
+        }
     }
 })
-
