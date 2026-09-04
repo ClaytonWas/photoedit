@@ -79,27 +79,22 @@ export function blendInto(base, overlay, opacity, mode = 'normal') {
         return
     }
 
-    // Fully opaque overlay at full strength is a straight copy; skip the per-pixel
-    // arithmetic entirely, which is the common case for most effects.
+    // At full opacity the interpolation below reduces to the overlay exactly, so
+    // take the memcpy instead of walking every pixel.
     if (opacity >= 1) {
-        let allOpaque = true
-        for (let i = 3; i < overlay.length; i += 4) {
-            if (overlay[i] !== 255) { allOpaque = false; break }
-        }
-        if (allOpaque) {
-            base.set(overlay)
-            return
-        }
+        base.set(overlay)
+        return
     }
 
+    // The overlay is the base with an effect applied, so blending is a straight
+    // interpolation by layer opacity. Weighting by the overlay's own alpha (as
+    // this used to) only half-applied the effect to translucent pixels and drove
+    // alpha above the source value - a pixel at alpha 128 came back at 192.
+    const retain = 1 - opacity
     for (let i = 0; i < base.length; i += 4) {
-        const overlayAlpha = overlay[i + 3] / 255
-        const strength = opacity * overlayAlpha
-        const retain = 1 - strength
-
-        base[i] = base[i] * retain + overlay[i] * strength
-        base[i + 1] = base[i + 1] * retain + overlay[i + 1] * strength
-        base[i + 2] = base[i + 2] * retain + overlay[i + 2] * strength
+        base[i] = base[i] * retain + overlay[i] * opacity
+        base[i + 1] = base[i + 1] * retain + overlay[i + 1] * opacity
+        base[i + 2] = base[i + 2] * retain + overlay[i + 2] * opacity
         base[i + 3] = base[i + 3] * retain + overlay[i + 3] * opacity
     }
 }

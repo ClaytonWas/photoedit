@@ -10,6 +10,7 @@
 
 import { Chart, registerables } from 'chart.js'
 import { windowManager } from '../core/windowManager.js'
+import { sampleCanvas } from '../core/imageSampler.js'
 
 // Register Chart.js components
 Chart.register(...registerables)
@@ -19,6 +20,8 @@ let histogramWindow = null
 let histogramChart = null
 let imageEditor = null
 let updateQueued = false
+// Retained so the stats readout can report the true pixel count, not the sample size.
+let lastSample = null
 let channelVisibility = {
     red: true,
     green: true,
@@ -134,10 +137,16 @@ function calculateHistogram(imageData) {
 function getImageData() {
     const editor = window.getActiveEditor?.() || imageEditor || window.imageEditor
     if (!editor || !editor.canvas) return null
-    
-    const ctx = editor.canvas.getContext('2d')
-    return ctx.getImageData(0, 0, editor.canvas.width, editor.canvas.height)
+
+    // Point-sampled rather than a full readback: the tonal distribution is
+    // preserved, but a 4MP image no longer costs a full GPU stall plus a 4M-pixel
+    // walk on every completed render.
+    const sample = sampleCanvas(editor.canvas)
+    if (!sample) return null
+    lastSample = sample
+    return sample.imageData
 }
+
 
 /**
  * Create or update the histogram chart
@@ -308,7 +317,7 @@ function updateStats(stats) {
         </div>
         <div class="hist-stat-row">
             <span class="hist-stat-label">Pixels:</span>
-            <span class="hist-stat-value">${stats.pixelCount.toLocaleString()}</span>
+            <span class="hist-stat-value">${(lastSample?.totalPixels ?? stats.pixelCount).toLocaleString()}</span>
         </div>
         <div class="hist-stat-divider"></div>
         <div class="hist-stat-row">
