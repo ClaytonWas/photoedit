@@ -1,3 +1,6 @@
+import { compositeLayers, toLayerDescriptors, blendInto } from './composite.js'
+import { getEffectId } from './effectRegistry.js'
+
 let layerIdCounter = 0
 
 function generateLayerId() {
@@ -89,9 +92,10 @@ export class Layer {
 
     static extractEffectId(effect) {
         if (!effect) return null
-        if (effect.effectId) return effect.effectId
-        if (effect.name) return effect.name
-        return null
+        // Registry lookup is by function identity, so aliased exports resolve to the
+        // id the render worker actually knows. Fall back to the declared name for
+        // effects that are not registered (they stay main-thread only).
+        return getEffectId(effect) ?? effect.effectId ?? effect.name ?? null
     }
 }
 
@@ -215,50 +219,30 @@ export class LayerManager {
         return this.layers[this.selectedLayerIndex] ?? null
     }
 
-    applyLayerEffects(image) {
+    /**
+     * Serialisable form of the visible stack, for handing to the render worker.
+     */
+    toDescriptors() {
+        return toLayerDescriptors(this.layers)
+    }
+
+    /**
+     * True when every contributing layer is a registered effect and can therefore
+     * be reproduced by the worker.
+     */
+    isFullyOffloadable() {
+        return this.layers.every(layer =>
+            !layer.effect || !layer.visible || layer.opacity <= 0 || getEffectId(layer.effect) !== null
+        )
+    }
+
+    applyLayerEffects(image, scratch = null) {
         if (!image) return
-        const { data, width, height } = image
-
-        this.layers.forEach(layer => {
-            if (!layer.effect || !layer.visible || layer.opacity <= 0) return
-
-            const layerImage = new ImageData(
-                new Uint8ClampedArray(data),
-                width,
-                height
-            )
-
-            layer.applyEffect(layerImage)
-            
-            // Check if this layer has transparentBackground enabled
-            const hasTransparentBg = layer.effectParameters?.transparentBackground?.value === true
-            this.blendImageData(data, layerImage.data, layer.opacity, hasTransparentBg ? 'replace' : 'normal')
-        })
+        compositeLayers(image, this.toDescriptors(), scratch)
     }
 
     blendImageData(base, overlay, opacity, blendMode = 'normal') {
-        if (blendMode === 'replace') {
-            // Replace mode: layer completely replaces base image
-            for (let i = 0; i < base.length; i += 4) {
-                base[i] = overlay[i]
-                base[i + 1] = overlay[i + 1]
-                base[i + 2] = overlay[i + 2]
-                base[i + 3] = Math.round(overlay[i + 3] * opacity)
-            }
-            return
-        }
-        
-        // Normal blend mode
-        for (let i = 0; i < base.length; i += 4) {
-            const overlayAlpha = overlay[i + 3] / 255
-            const effectiveOpacity = opacity * overlayAlpha
-            const baseRetain = 1 - effectiveOpacity
-            
-            base[i] = base[i] * baseRetain + overlay[i] * effectiveOpacity
-            base[i + 1] = base[i + 1] * baseRetain + overlay[i + 1] * effectiveOpacity
-            base[i + 2] = base[i + 2] * baseRetain + overlay[i + 2] * effectiveOpacity
-            base[i + 3] = base[i + 3] * baseRetain + overlay[i + 3] * opacity
-        }
+        blendInto(base, overlay, opacity, blendMode)
     }
 
     clone() {

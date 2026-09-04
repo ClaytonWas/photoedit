@@ -1,94 +1,88 @@
-import { greyscale } from '../plugins/greyscale.js'
-import { sepia } from '../plugins/sepia.js'
-import { filmEffects } from '../plugins/filmEffects.js'
-import { paintedStylization, pointsInSpace, vectorsInSpace, sobelEdges, sobelEdgesColouredDirections, prewireEdges, prewireEdgesColouredDirections } from '../plugins/paintedStylization.js'
-import { hsvAdjustment } from '../plugins/hsvAdjustment.js'
+/**
+ * Off-main-thread layer compositing.
+ *
+ * The worker holds its own copy of the base image so a render only has to send
+ * the layer descriptors, not the pixels. Results come back as transferable
+ * buffers, so neither direction copies a full frame.
+ *
+ * Protocol
+ *   -> { type: 'setBase', generation, width, height, buffer }   (buffer transferred in)
+ *   -> { type: 'render',  jobId, generation, layers }
+ *   -> { type: 'release' }
+ *   <- { type: 'rendered', jobId, generation, width, height, buffer }  (buffer transferred out)
+ *   <- { type: 'stale',    jobId, generation }      base changed under us; caller should resend
+ *   <- { type: 'error',    jobId, message }
+ */
+import { compositeLayers } from '../core/composite.js'
 
-const effectRegistry = {
-    greyscale,
-    sepia,
-    filmEffects,
-    paintedStylization,
-    pointsInSpace,
-    vectorsInSpace,
-    sobelEdges,
-    sobelEdgesColouredDirections,
-    prewireEdges,
-    prewireEdgesColouredDirections,
-    hsvAdjustment
-}
-
-const blendImageData = (base, overlay, opacity) => {
-    for (let i = 0; i < base.length; i += 4) {
-        base[i] = base[i] * (1 - opacity) + overlay[i] * opacity
-        base[i + 1] = base[i + 1] * (1 - opacity) + overlay[i + 1] * opacity
-        base[i + 2] = base[i + 2] * (1 - opacity) + overlay[i + 2] * opacity
-        base[i + 3] = 255
-    }
-}
-
-const getEffectParams = (effectParameters = {}) => {
-    const params = {}
-    Object.entries(effectParameters).forEach(([key, config]) => {
-        params[key] = config?.value
-    })
-    return params
-}
+let base = null          // { generation, width, height, data: Uint8ClampedArray }
+let scratch = null       // reused per-layer working buffer
+let output = null        // reused result buffer, handed away on each post
 
 self.addEventListener('message', (event) => {
-    const { jobId, baseImageData, layers } = event.data
-    if (!baseImageData) {
-        self.postMessage({ jobId, error: 'Missing base image data' })
+    const message = event.data
+    if (!message) return
+
+    if (message.type === 'setBase') {
+        base = {
+            generation: message.generation,
+            width: message.width,
+            height: message.height,
+            data: new Uint8ClampedArray(message.buffer)
+        }
+        // Buffers sized for the previous image are useless now.
+        scratch = null
+        output = null
         return
     }
 
-    const baseArray = new Uint8ClampedArray(baseImageData.data)
-    const width = baseImageData.width
-    const height = baseImageData.height
-
-    const workingArray = new Uint8ClampedArray(baseArray)
-
-    const hasLayers = Array.isArray(layers) && layers.length > 0
-    if (!hasLayers) {
-        self.postMessage({
-            jobId,
-            imageData: {
-                width,
-                height,
-                data: workingArray.buffer
-            }
-        }, [workingArray.buffer])
+    if (message.type === 'release') {
+        base = null
+        scratch = null
+        output = null
         return
     }
 
-    layers.forEach(layer => {
-        if (!layer.visible || layer.opacity <= 0 || !layer.effectId) return
-        const effect = effectRegistry[layer.effectId]
-        if (typeof effect !== 'function') return
+    if (message.type !== 'render') return
 
-        const overlay = new ImageData(
-            new Uint8ClampedArray(workingArray),
-            width,
-            height
+    const { jobId, generation, layers } = message
+
+    if (!base) {
+        self.postMessage({ type: 'stale', jobId, generation })
+        return
+    }
+
+    // The main thread may have moved on to a new base while this job was queued.
+    if (generation !== base.generation) {
+        self.postMessage({ type: 'stale', jobId, generation: base.generation })
+        return
+    }
+
+    try {
+        const { width, height, data } = base
+        const byteLength = data.length
+
+        // `output` is transferred away after every post, which detaches its buffer,
+        // so re-allocate whenever the previous one is gone or the wrong size.
+        if (!output || output.length !== byteLength || output.buffer.byteLength === 0) {
+            output = new Uint8ClampedArray(byteLength)
+        }
+        output.set(data)
+
+        if (!scratch || scratch.length !== byteLength) {
+            scratch = new Uint8ClampedArray(byteLength)
+        }
+
+        compositeLayers({ data: output, width, height }, layers, scratch)
+
+        const buffer = output.buffer
+        output = null // ownership moves to the main thread
+
+        self.postMessage(
+            { type: 'rendered', jobId, generation, width, height, buffer },
+            [buffer]
         )
-
-        const params = getEffectParams(layer.effectParameters)
-
-        try {
-            effect(overlay, params)
-            blendImageData(workingArray, overlay.data, layer.opacity)
-        } catch (error) {
-            console.error(`Worker failed to render effect ${layer.effectId}`, error)
-        }
-    })
-
-    self.postMessage({
-        jobId,
-        imageData: {
-            width,
-            height,
-            data: workingArray.buffer
-        }
-    }, [workingArray.buffer])
+    } catch (error) {
+        self.postMessage({ type: 'error', jobId, message: error?.message || String(error) })
+    }
 })
-

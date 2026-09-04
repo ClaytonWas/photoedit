@@ -454,6 +454,12 @@
             <button id="closeCropPanel" aria-label="Close crop panel">×</button>
         </div>
         <div class="floatingPanelBody">
+            <div class="floatingPanelRow cropMetaRow">
+                <label class="cropAspectLabel">Ratio
+                    <select id="cropAspect"></select>
+                </label>
+                <span class="cropSizeReadout" id="cropSizeReadout">—</span>
+            </div>
             <div class="floatingPanelRow">
                 <label>Start X
                     <input type="number" id="cropStartWidth" placeholder="0" />
@@ -471,9 +477,11 @@
                 </label>
             </div>
             <div class="panelActions">
+                <button id="cropSelectAll">Select All</button>
                 <button id="cursorCrop">Use Cursor</button>
                 <button id="applyCrop">Apply Crop</button>
             </div>
+            <p class="cropHint">Drag to select · handles resize · <kbd>Shift</kbd>+drag redraws · arrows nudge · <kbd>Enter</kbd> crop · <kbd>Esc</kbd> cancel</p>
         </div>
     </div>
 

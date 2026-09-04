@@ -327,11 +327,66 @@ input, select {
     display: block;
 }
 
-.selectionOverlay {
-    pointer-events: none;
+/* Crop tool overlay.
+   Parented to .imageViewingModule, which carries no transform, so the overlay is
+   sized to the viewport rather than to the image and its coordinates are stable
+   under pan and zoom. */
+.cropOverlay {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
+    z-index: 90;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.imageViewingModule.cropping {
+    cursor: crosshair;
+}
+
+/* The play button sits inside the transformed div and would otherwise swallow
+   crop drags in the bottom-right corner. */
+.imageViewingModule.cropping .gifPlayStopBtn {
+    pointer-events: none;
+    opacity: 0.35;
+}
+
+.cropMetaRow {
+    align-items: flex-end;
+}
+
+.cropAspectLabel select {
+    width: 100%;
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+}
+
+.cropSizeReadout {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    padding-bottom: var(--space-2);
+}
+
+.cropHint {
+    margin: var(--space-2) 0 0;
+    font-size: 0.7rem;
+    line-height: 1.5;
+    color: var(--text-tertiary, #64748b);
+    text-align: center;
+}
+
+.cropHint kbd {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.68rem;
+    padding: 1px 4px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg-tertiary);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1299,6 +1354,30 @@ input, select {
     box-shadow: var(--shadow-xl);
     z-index: 120;
     animation: slideUp 0.2s ease;
+    /* The panel floats over the image. Only its controls should intercept
+       pointer events, otherwise it silently swallows crop drags aimed at the
+       part of the picture underneath it. */
+    pointer-events: none;
+}
+
+.floatingPanelHeader,
+.floatingPanel label,
+.floatingPanel button,
+.floatingPanel input,
+.floatingPanel select,
+.floatingPanel .cropSizeReadout {
+    pointer-events: auto;
+}
+
+/* On desktop the docked panels own the right edge, so keep the crop inspector
+   out of both the centre of the image and their way. */
+@media (min-width: 1024px) {
+    .floatingPanel {
+        left: var(--space-3);
+        right: auto;
+        margin: 0;
+        max-width: 320px;
+    }
 }
 
 @keyframes slideUp {

@@ -11,6 +11,8 @@ import { openColorInfoWindow, initColorInfo, isColorInfoOpen } from './plugins/c
 import { openImageStatsWindow, isImageStatsOpen, refreshImageStats } from './plugins/imageStats.js'
 import { toggleLayersWindow, toggleImagePropertiesWindow, getLayersWindow, getImagePropertiesWindow } from './core/dockablePanels.js'
 import { windowManager } from './core/windowManager.js'
+import { viewport } from './core/viewport.js'
+import { CropTool, CROP_ASPECT_PRESETS } from './tools/cropTool.js'
 import * as exifr from 'exifr'
 
 // RAW file extensions supported via embedded preview extraction (Set for O(1) lookup)
@@ -91,113 +93,127 @@ function getCropPanel() {
     return document.getElementById('cropPanel')
 }
 
+// ── Crop tool ──────────────────────────────────────────────────────────────────
+// The tool owns the selection; the panel is a numeric inspector for it rather than
+// the thing that commits the crop.
+
+let cropTool = null
+
+function ensureCropTool() {
+    if (cropTool) return cropTool
+    const host = document.querySelector('.imageViewingModule')
+    if (!host) return null
+
+    cropTool = new CropTool({
+        host,
+        viewport,
+        getEditor: () => getActiveEditor(),
+        onChange: (rect) => writeCropInputs(rect),
+        onCommit: (rect) => applyCropRect(rect),
+        onCancel: () => {
+            window.isCropping = false
+            closeCropPanel({ keepTool: true })
+        }
+    })
+    return cropTool
+}
+
+function writeCropInputs(rect) {
+    if (!rect) return
+    safeSetInputValue('cropStartWidth', rect.x)
+    safeSetInputValue('cropStartHeight', rect.y)
+    safeSetInputValue('cropEndWidth', rect.x + rect.width)
+    safeSetInputValue('cropEndHeight', rect.y + rect.height)
+    const readout = document.getElementById('cropSizeReadout')
+    if (readout) readout.textContent = `${rect.width} × ${rect.height}`
+}
+
+function readCropInputs() {
+    const values = ['cropStartWidth', 'cropStartHeight', 'cropEndWidth', 'cropEndHeight']
+        .map(id => parseInt(document.getElementById(id)?.value, 10))
+    if (values.some(Number.isNaN)) return null
+    const [sx, sy, ex, ey] = values
+    return {
+        x: Math.min(sx, ex),
+        y: Math.min(sy, ey),
+        width: Math.abs(ex - sx),
+        height: Math.abs(ey - sy)
+    }
+}
+
 function openCropPanel(focusManualFields = false) {
     const panel = getCropPanel()
     if (!panel) return
     panel.classList.remove('hidden')
-    if (focusManualFields) {
-        focusElementById('cropStartWidth')
-    }
+    if (focusManualFields) focusElementById('cropStartWidth')
 }
 
-function closeCropPanel() {
-    // Leaving cursor-crop mode armed would keep window.isCropping true, which disables
-    // panning and zooming for the rest of the session.
-    cancelCursorCropSelection()
+function closeCropPanel({ keepTool = false } = {}) {
+    if (!keepTool) cancelCursorCropSelection()
     const panel = getCropPanel()
-    if (!panel) return
-    panel.classList.add('hidden')
+    if (panel) panel.classList.add('hidden')
 }
-
-// Cleanup handle for an in-progress cursor selection, so it can be torn down whether
-// the user completes the drag, restarts the selection, or closes the panel.
-let activeCropSelectionCleanup = null
 
 function cancelCursorCropSelection() {
-    if (activeCropSelectionCleanup) {
-        const cleanup = activeCropSelectionCleanup
-        activeCropSelectionCleanup = null
-        cleanup()
-    }
-
+    cropTool?.deactivate()
+    // Legacy flag: nothing gates on it any more, but it is still read by older
+    // code paths and by tests, so keep it truthful.
     window.isCropping = false
-
-    const imageCanvasDiv = document.getElementById('imageCanvasDiv')
-    if (imageCanvasDiv) {
-        imageCanvasDiv.style.cursor = 'grab'
-    }
 }
 
 function triggerCursorCropSelection() {
-    if (!imageEditor) return
-
-    // Restart cleanly if a previous selection is still armed.
-    cancelCursorCropSelection()
-
+    if (!getActiveEditor()) return
+    const tool = ensureCropTool()
+    if (!tool) return
     openCropPanel()
-    window.isCropping = true // Disable dragging in canvasHandler.js if cropping
+    window.isCropping = true
+    tool.activate()
+}
 
-    const imageCanvasDiv = document.getElementById('imageCanvasDiv')
-    if (imageCanvasDiv) {
-        imageCanvasDiv.style.cursor = 'default'
+async function applyCropRect(rect) {
+    const editor = getActiveEditor()
+    if (!editor || !rect) return
+    cancelCursorCropSelection()
+    closeCropPanel({ keepTool: true })
+    await editor.cropRect(rect)
+    updateCropInputsFromEditor(editor)
+    updateDimensionControlsFromEditor(editor)
+    initializeModifiedImageDataModule(editor)
+}
+
+function setupCropPanelControls() {
+    const aspectSelect = document.getElementById('cropAspect')
+    if (aspectSelect && !aspectSelect.options.length) {
+        for (const preset of CROP_ASPECT_PRESETS) {
+            const option = document.createElement('option')
+            option.value = String(preset.ratio)
+            option.textContent = preset.label
+            aspectSelect.appendChild(option)
+        }
+        aspectSelect.addEventListener('change', () => {
+            const raw = aspectSelect.value
+            const ratio = raw === 'null' ? null : raw === 'original' ? 'original' : Number(raw)
+            ensureCropTool()?.setAspect(ratio)
+        })
     }
-    
-    activeCropSelectionCleanup = enableSelection((selection) => {
-        let { startHeight, startWidth, endHeight, endWidth } = selection
 
-        if (startHeight > endHeight) {
-            ;[startHeight, endHeight] = [endHeight, startHeight]
-        }
-        if (startWidth > endWidth) {
-            ;[startWidth, endWidth] = [endWidth, startWidth]
-        }
-        
-        safeSetInputValue('cropStartHeight', startHeight)
-        safeSetInputValue('cropStartWidth', startWidth)
-        safeSetInputValue('cropEndHeight', endHeight)
-        safeSetInputValue('cropEndWidth', endWidth)
+    // Typing in the numeric fields drives the on-canvas rectangle.
+    for (const id of ['cropStartWidth', 'cropStartHeight', 'cropEndWidth', 'cropEndHeight']) {
+        const input = document.getElementById(id)
+        input?.addEventListener('input', () => {
+            const rect = readCropInputs()
+            if (rect && cropTool?.active) cropTool.setRect(rect, { silent: true })
+        })
+    }
 
-        cancelCursorCropSelection()
+    document.getElementById('cropSelectAll')?.addEventListener('click', () => {
+        const editor = getActiveEditor()
+        if (!editor) return
+        const tool = ensureCropTool()
+        if (!tool) return
+        if (!tool.active) { window.isCropping = true; tool.activate() }
+        tool.setRect({ x: 0, y: 0, width: editor.canvas.width, height: editor.canvas.height })
     })
-}
-
-function positionSelectionOverlay(canvas, overlay) {
-    if (!canvas || !overlay || !canvas.parentElement) return
-    // Position the overlay to match the canvas's position within the parent container
-    // Use offsetLeft/Top to get the canvas position relative to its offset parent
-    overlay.style.left = `${canvas.offsetLeft}px`
-    overlay.style.top = `${canvas.offsetTop}px`
-}
-
-function getSelectionOverlay(canvas, rect) {
-    if (!canvas || !canvas.parentElement) return null
-    let overlay = canvas.parentElement.querySelector('.selectionOverlay')
-    if (!overlay) {
-        overlay = document.createElement('canvas')
-        overlay.className = 'selectionOverlay'
-        canvas.parentElement.appendChild(overlay)
-    }
-
-    // The overlay canvas needs to match the actual canvas pixel dimensions
-    // for accurate drawing coordinates. The CSS will handle visual scaling.
-    overlay.width = canvas.width
-    overlay.height = canvas.height
-    
-    // Match the visual size of the main canvas (offsetWidth/Height reflect CSS-constrained size)
-    // This ensures the overlay aligns visually with the canvas
-    overlay.style.width = `${canvas.offsetWidth}px`
-    overlay.style.height = `${canvas.offsetHeight}px`
-    overlay.style.position = 'absolute'
-    positionSelectionOverlay(canvas, overlay)
-    return overlay
-}
-
-function removeSelectionOverlay(canvas) {
-    if (!canvas || !canvas.parentElement) return
-    const overlay = canvas.parentElement.querySelector('.selectionOverlay')
-    if (overlay) {
-        overlay.remove()
-    }
 }
 
 function adjustDimensionsByFactor(factor) {
@@ -408,111 +424,6 @@ function stopRenderStatusPolling() {
     }
 }
 
-function enableSelection(callback) {
-    const canvas = document.getElementById('imageCanvas')
-    const canvasDiv = document.getElementById('imageCanvasDiv')
-    let isSelecting = false
-    let startX, startY, endX, endY
-    let overlayCanvas = null
-    let overlayContext = null
-
-    function getCanvasCoordinates(clientX, clientY) {
-        const rect = canvas.getBoundingClientRect()
-        
-        // Get the CSS transform scale from imageCanvasDiv
-        // The transform is in format: translate(Xpx, Ypx) scale(N)
-        let cssScale = 1
-        if (canvasDiv) {
-            const transform = canvasDiv.style.transform
-            const scaleMatch = transform.match(/scale\(([^)]+)\)/)
-            if (scaleMatch) {
-                cssScale = parseFloat(scaleMatch[1]) || 1
-            }
-        }
-        
-        // The bounding rect is already scaled by CSS transform,
-        // so we need to account for that when calculating coordinates
-        // rect.width = canvas.width * cssScale (approximately, due to CSS)
-        // We want to convert client coords to canvas pixel coords
-        const x = (clientX - rect.left) * (canvas.width / rect.width)
-        const y = (clientY - rect.top) * (canvas.height / rect.height)
-
-        return { x, y }
-    }
-
-    // Store event listener functions in named variables
-    const handleMouseDown = (e) => {
-        const { x, y } = getCanvasCoordinates(e.clientX, e.clientY)
-        startX = x
-        startY = y
-        endX = x  // Initialize end to start position
-        endY = y
-        isSelecting = true
-        overlayCanvas = getSelectionOverlay(canvas)
-        overlayContext = overlayCanvas ? overlayCanvas.getContext('2d') : null
-        if (overlayContext) {
-            positionSelectionOverlay(canvas, overlayCanvas)
-            overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
-        }
-    }
-
-    const handleMouseMove = (e) => {
-        if (!isSelecting) return
-
-        const { x, y } = getCanvasCoordinates(e.clientX, e.clientY)
-        endX = x
-        endY = y
-
-        if (!overlayContext) return
-        overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
-        overlayContext.strokeStyle = 'rgba(255, 255, 255, 0.95)'
-        overlayContext.lineWidth = 2
-        overlayContext.setLineDash([12, 8])
-        // Draw directly in canvas coordinates since overlay matches canvas dimensions
-        overlayContext.strokeRect(startX, startY, endX - startX, endY - startY)
-    }
-
-    const handleMouseUp = () => {
-        isSelecting = false
-        if (overlayContext) {
-            overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
-        }
-
-        // Ensure we have valid coordinates
-        if (startX === undefined || startY === undefined || endX === undefined || endY === undefined) {
-            return
-        }
-
-        // Return selection coordinates via callback
-        const selection = {
-            startHeight: Math.round(startY),
-            startWidth: Math.round(startX),
-            endHeight: Math.round(endY),
-            endWidth: Math.round(endX)
-        };
-
-        if (typeof callback === 'function') {
-            callback(selection);
-        }
-    };
-
-    // Add event listeners
-    canvas.addEventListener('mousedown', handleMouseDown)
-    canvas.addEventListener('mousemove', handleMouseMove)
-    canvas.addEventListener('mouseup', handleMouseUp)
-
-    // Return a cleanup function
-    return function disableSelection() {
-        canvas.removeEventListener('mousedown', handleMouseDown)
-        canvas.removeEventListener('mousemove', handleMouseMove)
-        canvas.removeEventListener('mouseup', handleMouseUp)
-        if (overlayContext && overlayCanvas) {
-            overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
-        }
-        removeSelectionOverlay(canvas)
-    };
-}
-
 function resetEditor() {
     // Playback drives the shared canvas, so it has to stop before a new image takes over.
     stopGifPlayback()
@@ -526,6 +437,8 @@ function resetEditor() {
     stopRenderStatusPolling()
 
     if (imageEditor) {
+        // Release the render worker and cached frames of the outgoing editor.
+        imageEditor.dispose?.()
         imageEditor = null
     }
     if (window.imageEditor) {
@@ -2624,41 +2537,15 @@ window.addEventListener('load', () => {
     const applyCropButton = document.getElementById('applyCrop')
     if (applyCropButton) {
         applyCropButton.addEventListener('click', async () => {
-            if (!imageEditor) return
-
-            const startHeightInput = document.getElementById('cropStartHeight')
-            const startWidthInput = document.getElementById('cropStartWidth')
-            const endHeightInput = document.getElementById('cropEndHeight')
-            const endWidthInput = document.getElementById('cropEndWidth')
-
-            if (!startHeightInput || !startWidthInput || !endHeightInput || !endWidthInput) return
-
-            let startHeight = parseInt(startHeightInput.value, 10)
-            let startWidth = parseInt(startWidthInput.value, 10)
-            let endHeight = parseInt(endHeightInput.value, 10)
-            let endWidth = parseInt(endWidthInput.value, 10)
-
-            if ([startHeight, startWidth, endHeight, endWidth].some(value => Number.isNaN(value))) {
-                return
-            }
-
-            if (startHeight > endHeight) {
-                ;[startHeight, endHeight] = [endHeight, startHeight]
-            }
-
-            if (startWidth > endWidth) {
-                ;[startWidth, endWidth] = [endWidth, startWidth]
-            }
-
-            await imageEditor.crop(startHeight, startWidth, endHeight, endWidth)
-
-            setTimeout(() => {
-                updateCropInputsFromEditor(imageEditor)
-                updateDimensionControlsFromEditor(imageEditor)
-                initializeModifiedImageDataModule(imageEditor)
-            }, 50)
+            // Prefer the tool's live rectangle; fall back to the numeric fields when
+            // the panel is being used on its own.
+            const rect = (cropTool?.active && cropTool.getRect()) || readCropInputs()
+            if (!rect || rect.width < 1 || rect.height < 1) return
+            await applyCropRect(rect)
         })
     }
+
+    setupCropPanelControls()
 
     const resetImageButton = document.getElementById('resetImage')
     if (resetImageButton) {
